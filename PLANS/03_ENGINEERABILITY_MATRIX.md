@@ -1,7 +1,7 @@
-# 03 — Engineerability Matrix (all 97 indicators)
+# 03 — Engineerability Matrix *(derived view — all 102 indicators)*
 
 > The reference doc that answers *"what can the engine measure, how, and with what tool?"* for every row in the catalog.
-> Source of truth: `../CODEDEBT_AUDIT_RUBRIC/*`. Depends on `02_TRUST_SCORING_MODEL.md` (status semantics) and feeds `04_V1_SCOPE.md`.
+> **Derived view:** the canonical per-indicator `Engine tier` / `Default status` / `Scope/overlaps` fields now live on each row in the encyclopedia (`../CODEDEBT_AUDIT_RUBRIC/*`); this matrix is a consolidated read-out and the home of the per-tool mapping. Source of truth: `../CODEDEBT_AUDIT_RUBRIC/*`. Depends on `02_TRUST_SCORING_MODEL.md` (status semantics) and feeds `04_V1_SCOPE.md`.
 
 ---
 
@@ -53,8 +53,10 @@ Tools column = the OSS/standard tool that produces the signal. `GH API` = GitHub
 | ARCH-06 | Architectural generation | A | estimated | structural checks: DI presence, module boundaries on disk, unit-test-without-stack experiment (static proxy) | ✅ |
 | ARCH-07 | Global mutable state / hidden deps | A | estimated | greps for singletons, static mutable, direct `new Date()`/DB in logic; static approximation | ✅ |
 | ARCH-08 | Duplication debt | A | measured | `jscpd`, PMD-CPD, SonarQube duplication | ✅ |
-| ARCH-09 | Nullable/untyped code debt | A | measured | `mypy --strict`/`pyright` coverage, TS `no-explicit-any`, `strictNullChecks` state | ✅ |
-| ARCH-10 | Duplicated cross-cutting concerns | A | estimated | grep: count manual auth/logging/error-mapping sites vs. middleware | ⚠️ (sprint 2) |
+| ARCH-09 | Agentic operability / AI codebase-readiness | A | estimated | navigation-aids match disk, seam index, test-to-code proximity, fresh-clone single-command harness | ⚠️ (v1) |
+| ARCH-10 | Feature-flag & configuration debt | A | estimated | hardcoded-toggle grep, prod-config-in-repo scan, flag age via git blame | ✅ |
+| ARCH-11 | Nullable/untyped code debt *(deep-dive)* | A | measured | `mypy --strict`/`pyright` coverage, TS `no-explicit-any`, `strictNullChecks` state | ⚠️ (deep) |
+| ARCH-12 | Duplicated cross-cutting concerns *(deep-dive)* | A | estimated | grep: count manual auth/logging/error-mapping sites vs. middleware | ⚠️ (deep) |
 
 ## 3. Testing & Quality Engineering
 
@@ -128,8 +130,10 @@ Tools column = the OSS/standard tool that produces the signal. `GH API` = GitHub
 | VEL-06 | Bus factor | A | measured | `git shortlog -sne`, per-file authorship, review coverage | ✅ |
 | VEL-07 | Env reproducibility | A | estimated | canonical config presence, Dockerfile/compose parity, IaC config | ⚠️ (estimated) |
 | VEL-08 | Manual release steps | A | measured | CI config: deploy jobs present? release path automation; prod-edit scripts grep | ✅ |
-| VEL-09 | DX tooling | A | measured | Makefile/Taskfile/`just`/npm scripts of record, scaffolding, watch mode | ⚠️ (sprint 2) |
-| VEL-10 | Incident recovery / MTTR | D | unknown | needs PagerDuty/incident tooling | ❌ |
+| VEL-09 | PR & code-review hygiene | A | measured | GH PR API: review coverage %, median/p95 size, latency, bypass/direct-push rate | ✅ |
+| VEL-10 | Branching & monorepo strategy legacy | A | measured | git topology: branch age, trunk-green, merge-window config, cross-repo change span | ✅ |
+| VEL-11 | DX tooling *(deep-dive)* | B | measured | DX inventory (task runner, scaffolding, watch) + inner-loop cold-start timing | ⚠️ (deep) |
+| VEL-12 | Incident recovery / MTTR *(deep-dive)* | D | unknown | needs PagerDuty/incident tooling | ❌ (deep) |
 
 ## 8. Performance & Cloud/Infrastructure Fit
 
@@ -171,7 +175,8 @@ Tools column = the OSS/standard tool that produces the signal. `GH API` = GitHub
 | FE-04 | Browser/platform support drift | A | estimated | browserlist presence+currency, responsive heuristics, polyfill-for-obsolete grep | ⚠️ (estimated) |
 | FE-05 | Client architecture debt | A | measured | component LOC distribution, global-store count, testability seams | ✅ |
 | FE-06 | Design system / UI consistency | A | estimated | primitive-dup count, design-token adoption, hardcoded-color grep | ⚠️ (estimated) |
-| FE-07 | Mobile / offline support | C | unknown | needs runtime/service-worker audit | ❌ |
+| FE-07 | i18n / localization debt | A | unknown | hardcoded-string scan, i18n lib + extraction presence, locale/token coverage | ⚠️ (estimated) |
+| FE-08 | Mobile / offline support *(deep-dive)* | C | unknown | needs runtime/service-worker audit | ❌ (deep) |
 
 ---
 

@@ -1,6 +1,6 @@
 # 08 — Performance & Cloud/Infrastructure Fit
 
-> **Weight:** 10% · **Standard:** PERF-01…08 · **Deep-dive:** PERF-09, 10
+> **Weight:** 10% base · 9% FE-active · **Standard:** PERF-01…08 · **Deep-dive:** PERF-09, 10
 >
 > **One-line thesis:** The runtime is a verdict on the architecture. A system that leaks memory, can't observe itself, and refuses to scale isn't "mildly inefficient" — it's telling you its design era on every request.
 
@@ -11,6 +11,7 @@
 ## Standard indicators
 
 ### PERF-01 — Observability Gaps
+**Engine tier:** B · **Default status:** measured · **Scope/overlaps:** metrics/logs/traces coverage; SLO/budget discipline is PERF-07, logging duplication is ARCH-12
 - **Definition:** The system cannot answer basic questions about its own runtime — no structured metrics (RED/USE), no distributed tracing (or tracing only in the new corner), no meaningful logging conventions, and debugging is done by SSH-ing and tailing raw output.
 - **Why it signals obsolescence:** Observability is the feedback loop of operations — "what is the system doing right now?" A system without it is run by flashlight. Modern practice (OpenTelemetry, metrics, logs, traces + SLOs) is a baseline; its absence forces archaeology on every incident and every performance question, and it silently blocks most modernization (you can't improve what you can't measure).
 - **Where it manifests:** No metrics endpoint/agent, `print`/`console.log` as the observability layer, no correlation between request and logs, no distributed tracing across services, debugging prod by `ssh` + `tail -f`, "why is it slow" answered by screenshots.
@@ -22,10 +23,11 @@
 - **Blast radius:** Incident MTTR, performance diagnosis, capacity planning, SLOs (impossible without metrics), modernization decision data, security visibility.
 - **Remediation playbook:** Quick win: add structured logging + request IDs everywhere (framework middleware), stand up a metrics endpoint with RED/U; USE basics, emit the top 6 metrics. Structural fix: OpenTelemetry adoption (auto-instrumentation), tracing across services, an SLO + error-budget loop, observability as a deployment requirement (no deploy without instrumentation).
 - **Gold standard / target state:** Every service emits metrics/logs/traces standardly, requests are correlated end-to-end, dashboards answer latency/errors/capacity in seconds, and "why is it slow" never requires SSH.
-- **Scoring guidance:** 3 = OTel-standard full coverage; 2 = partial; 1 = logs-only, no metrics/tracing; 0 = blind operational flashlight.
+- **Scoring criteria (0–3, per global core-path taxonomy):** 3 = OTel-standard full coverage; 2 = partial; 1 = logs-only, no metrics/tracing; 0 = blind operational flashlight.
 - **Verify effort:** 🔶 ~2–4 h — instrumentation audit + timed diagnosis.
 
 ### PERF-02 — Legacy Deployment Model
+**Engine tier:** B · **Default status:** estimated · **Scope/overlaps:** deployment/immutability model; IaC provisioning is PERF-06, DR posture is PERF-10
 - **Definition:** The system runs on bare metal/VMs or a hand-managed fleet where servers are purchased, configured by hand (or by fragile scripts), statefully modified over time, and replaced/infra changes are a project rather than a deployment concern.
 - **Why it signals obsolescence:** The deployment model is infrastructure's era stamp. Containerization + orchestration + immutable infra is the modern baseline because it's reproducible, scalable, and auditable; the pre-container model is slow, snowflake-prone, and is where "upgrades" become multi-week efforts. Not every VM is legacy — but VMs configured by throwing commands at them are.
 - **Where it manifests:** `ssh`-configured servers, golden images that drift after setup, no containers anywhere, capacity added by buying/allocating a VM, deploys that are "git pull on the host," snowflake servers named after the intern who set them up, no immutable/rebuilt concept.
@@ -37,10 +39,11 @@
 - **Blast radius:** Scale speed, provisioning cost, drift bugs, deploy risk, disaster recovery (rebuild from what?), modernization sequencing.
 - **Remediation playbook:** Quick win: containerize the app (it's usually the smallest step), move VM provisioning to IaC (Terraform/cloud-init), codify the laptop script. Structural fix: immutable, containerized, orchestrated deployment (K8s/ECS) with IaC for everything, auto-scaling-ready, snowflakes eliminated by rebuild-from-code.
 - **Gold standard / target state:** Everything containerized + IaC-managed, instances are cattle (rebuildable in minutes), scale is a config change, drift impossible by construction.
-- **Scoring guidance:** 3 = containers + IaC; 2 = partial; 1 = VMs + IaC-light; 0 = hand-configured snowflakes.
+- **Scoring criteria (0–3, per global core-path taxonomy):** 3 = containers + IaC; 2 = partial; 1 = VMs + IaC-light; 0 = hand-configured snowflakes.
 - **Verify effort:** 🔶 ~2–4 h — infra inventory + "add an instance" test.
 
 ### PERF-03 — Resource Waste / Leakage
+**Engine tier:** B · **Default status:** unknown · **Scope/overlaps:** memory/resource leaks and restart rituals; cost-side waste is PERF-09, scaling mechanics are PERF-04
 - **Definition:** The system leaks or wastes resources as routine — memory leaks that force scheduled restarts, unbounded caches, connection/thread sprawl, oversized instances, or processes that degrade until reboot.
 - **Why it signals obsolescence:** Leaks are the runtime's passive decay: the system gets worse the longer it runs, and the fix ("restart it weekly") is a maintenance ritual, not an engineering answer. Bounded caches and clean resource handling are baseline expectations; their absence points to code that predates memory hygiene and to infrastructure tuned by folklore.
 - **Where it manifests:** Scheduled restarts to "clear memory," unbounded in-memory caches/`HashMap` growth, connection-pool leaks, goroutine/thread sprawl, restarts-of-record in the on-call runbook, "memory looks weird" tickets, oversized instances rented so a leak fits.
@@ -52,10 +55,11 @@
 - **Blast radius:** Availability (OOM crashes), cost (oversized instances), on-call rituals, latency degradation with uptime, data integrity (crashed mid-write).
 - **Remediation playbook:** Quick win: profile to find the leak(s), bound the caches (TTL + size limit), fix the top 3 resource leaks, enable heap diagnostics. Structural fix: memory discipline as a code review concern, load tests that run > 24h to expose slow leaks, resource limits + monitoring (RSS trend), right-size instances to reality.
 - **Gold standard / target state:** No restart ritual; heap flat over weeks; caches bounded and sized deliberately; utilization reviewed; no OOM under 3–5× load.
-- **Scoring guidance:** 3 = no leak, high utilization; 2 = restart ritual in place; 1 = leaks under spikes; 0 = regular crashes at standard load.
+- **Scoring criteria (0–3, per global core-path taxonomy):** 3 = no leak, high utilization; 2 = restart ritual in place; 1 = leaks under spikes; 0 = regular crashes at standard load.
 - **Verify effort:** 🔷 ~1–2 days — profiling + memory monitoring.
 
 ### PERF-04 — Monolithic Scaling Bottleneck
+**Engine tier:** B · **Default status:** estimated · **Scope/overlaps:** horizontal-scale ceiling mechanics; the DB half is DATA-05, capacity policy is PERF-05
 - **Definition:** The system can only scale vertically — the DB or the app can't split, shard, or go horizontal, so traffic growth means bigger instances and eventually a wall, with lock/content/state preventing distribution.
 - **Why it signals obsolescence:** A single point that must get bigger is an architectural ceiling: it caps growth at the size of one machine and makes spikes a purchasing problem. Modern scale is *distribution* (horizontal + sharding + decompositions); the inability to distribute is the design signature of a pre-scale era — and of a system that has spent its "scale budget" (DATA-05 is the DB half).
 - **Where it manifests:** "We scaled to 64 vCPU, 256 GB," vertical-only guidance, state in-memory that can't be shared, a DB lock/statelessness wall, sharding "impossible because of joins," a single writer bottleneck, load tests that hit a wall at N instances.
@@ -67,10 +71,11 @@
 - **Blast radius:** Growth ceiling, spike discounts/capacity purchases, cost, availability under load, feature velocity (every scale fix is architectural).
 - **Remediation playbook:** Quick win: statelessness fixes (move session/key state to a distributed store), add read replicas + a cache tier to lift the DB ceiling, shard the hottest table. Structural fix: the scalability roadmap — decompose the hot path (bounded contexts, API/events per DATA-02), sharding strategy, and a horizontal-efficiency load-test gate (new instance must add value).
 - **Gold standard / target state:** Adding instances scales throughput linearly past the previous wall; vertical spending is an exception not a norm; load tests prove horizontal efficiency.
-- **Scoring guidance:** 3 = horizontally efficient; 2 = partially horizontal, vertical safety valve; 1 = wall visible, vertical-only for spikes; 0 = instance-size ceiling, growth ≈ new hardware.
+- **Scoring criteria (0–3, per global core-path taxonomy):** 3 = horizontally efficient; 2 = partially horizontal, vertical safety valve; 1 = wall visible, vertical-only for spikes; 0 = instance-size ceiling, growth ≈ new hardware.
 - **Verify effort:** 🔷 ~1–2 days — load-test scale experiment.
 
 ### PERF-05 — No Auto-Scaling / Capacity Planning
+**Engine tier:** B · **Default status:** estimated · **Scope/overlaps:** capacity policy and autoscaling; scaling mechanics are PERF-04, resource waste is PERF-03
 - **Definition:** Capacity is static and manual — no autoscaling (still "provision for the peak"), no capacity planning discipline, load surprises hit prod, and scaling is done by humans reacting to pages.
 - **Why it signals obsolescence:** Static capacity is a choice between wasting money (peaks provisioned always) or failing (demand exceeds fixtures). Autoscaling + telemetry-driven planning is the modern baseline; its absence means the system "hopes" about demand — and hope is where outages come from. Pairs with PERF-03/04; this is the *policy* while those are the *mechanics*.
 - **Where it manifests:** No HPA/ASG, instance counts hand-set, "scale up" is a runbook action, capacity reviews happen after incidents, no load forecasting, spikes trigger "we need more servers" tickets, employee sales events' traffic is a surprise.
@@ -82,10 +87,11 @@
 - **Blast radius:** Availability under spikes, cost (always-peak provision), on-call heroics, growth surprises, feature campaigns.
 - **Remediation playbook:** Quick win: set HPA/ASG on the top 5 workloads with sane thresholds, add utilization + headroom dashboards, run the scheduled-campaign checklist. Structural fix: autoscaling everywhere + telemetry-driven capacity reviewing (monthly), load-testing against forecast demand, SLO-based scaling decisions.
 - **Gold standard / target state:** Autoscaling covers critical workloads; capacity changes are system-driven by policy; spikes are non-events; waste is continuously right-sized.
-- **Scoring guidance:** 3 = autoscaled everything; 2 = partial, manual for critical; 1 = manual scaling with dashboards; 0 = no scaling machinery, hand-on-dial.
+- **Scoring criteria (0–3, per global core-path taxonomy):** 3 = autoscaled everything; 2 = partial, manual for critical; 1 = manual scaling with dashboards; 0 = no scaling machinery, hand-on-dial.
 - **Verify effort:** 🔶 ~2–4 h — config audit + utilization history.
 
 ### PERF-06 — Missing IaC / Config Drift
+**Engine tier:** A · **Default status:** estimated · **Scope/overlaps:** IaC coverage and drift detection; deployment model is PERF-02, rebuild/DR readiness is PERF-10
 - **Definition:** Infrastructure is not defined in code — servers/networks/load-balancers/queues are created and modified through consoles or scripts, with no reproducible declaration, so environments drift and rebuilding anything is a project.
 - **Why it signals obsolescence:** IaC is the difference between infrastructure being a *reproducible artifact* and being *an accumulation of manual acts*. Without it, nothing infra can be reproduced, upgraded, or audited cheaply (the 12-factor-adjacent "treat servers as cattle" baseline). Config drift is the operational symptom: nominal-identical envs that differ in invisible ways.
 - **Where it manifests:** Terraform/CloudFormation/Pulumi absent or < 50% coverage, infra built by clicking (console), "how is our VPC configured?" answered with screenshots, config changes made directly on resources with no precedent, snowflake envs, no drift detection.
@@ -97,10 +103,11 @@
 - **Blast radius:** DR readiness, environment rebuilds, audit, drift bugs, scale (IaC is the lever), security (configured-by-accident infra).
 - **Remediation playbook:** Quick win: adopt Terraform/Pulumi for the top resource types (VPC/DB/compute), add drift detection (initial run finds the gap), codify the "documented console changes" retroactively. Structural fix: full IaC coverage with state remote + plan-diffs in CI, admin access least-privilege, rebuild-from-code as a tested path, drift = CI failure.
 - **Gold standard / target state:** Everything in code, changes flow through CI-plan-review, drift is zero or alerted, and rebuilding an env is an afternoon exercise.
-- **Scoring guidance:** 3 = full IaC + drift gate; 2 = partial coverage; 1 = scattered IaC, console dominant; 0 = no IaC, irreproducible infra.
+- **Scoring criteria (0–3, per global core-path taxonomy):** 3 = full IaC + drift gate; 2 = partial coverage; 1 = scattered IaC, console dominant; 0 = no IaC, irreproducible infra.
 - **Verify effort:** 🔶 ~2–4 h — resource vs. code audit + drift run.
 
 ### PERF-07 — No SLOs / Performance Budgets
+**Engine tier:** C · **Default status:** unknown · **Scope/overlaps:** SLO/error-budget discipline; the metrics feeding it are PERF-01, cost/request budget is PERF-09
 - **Definition:** The system has no service-level objectives, no latency/availability budgets, no performance regression gates, and no load-testing baseline — "fast enough" means "nobody complained loudly today."
 - **Why it signals obsolescence:** SLOs are how performance stops being a mood. Their absence means performance debt is invisible until users revolt, and every "is it OK now?" is a vibes check. Modern practice (latency budgets, error budgets, load-test baselines, perf regression gates in CI) turns performance into a verifiable property. A system without budgets can't even *see* that it's obsolete.
 - **Where it manifests:** No latency targets, no error-budget tracking, p95 unknown, "it got slower" with no baseline, no load test in CI, perf regressions discovered by user complaints, "SPOF acceptable" undocumented.
@@ -112,10 +119,11 @@
 - **Blast radius:** User experience decay, growth (perf is a growth lever), cost (perf bugs manifest as infra spend), incident severity, trust.
 - **Remediation playbook:** Quick win: define SLOs for the top 3 services (latency p95 + availability), measure them with the metrics you added (PERF-01), add a synthetic check for the money path. Structural fix: error budgets + burn alerts, a CI perf gate (load-test baseline run on PRs), latency regression reports in the deploy loop, SLO review as a ritual.
 - **Gold standard / target state:** Every service has an SLO, measured and burned-alerted; CI catches perf regressions; latency baselines are historical and trusted.
-- **Scoring guidance:** 3 = SLOs everywhere + gates; 2 = some services measured; 1 = informal targets; 0 = no numbers at all, drift by feeling.
+- **Scoring criteria (0–3, per global core-path taxonomy):** 3 = SLOs everywhere + gates; 2 = some services measured; 1 = informal targets; 0 = no numbers at all, drift by feeling.
 - **Verify effort:** 🔶 ~2–4 h — SLO inventory + baseline availability.
 
 ### PERF-08 — Runtime Waste & Startup Latency
+**Engine tier:** B · **Default status:** measured · **Scope/overlaps:** startup latency and idle footprint; autoscaling viability is PERF-05, dev inner-loop is VEL-11
 - **Definition:** The runtime itself is heavy — minutes-long cold starts, huge memory footprints at idle, no lazy initialization, heavy boot-time work in every process, or a runtime chosen for era reasons that makes every action expensive.
 - **Why it signals obsolescence:** Startup latency/footprint is a direct cost of era-technical choices: it kills autoscaling value (cold adds take too long), wastes money at idle, and makes interactive tooling sluggish. It's a *micro*symptom that compounds into *macro*costs, and it's typical of "framework-everything" legacy builds.
 - **Where it manifests:** Cold start > 60s–minutes, idle footprint > 1+ GB per worker, everything initialized at boot (JIT-heavy, DI everything, loading 400 classes), no lazy loading, containers that take too long to be useful, "the app takes forever to restart" on deploy.
@@ -124,10 +132,10 @@
 - **Yellow flag (warning):** Cold start 30–60s, idle footprint notable, lazy init partial. *(Rationale: warning — model cost, tolerable at low scale.)*
 - **Red flag (critical):** Minutes-long cold starts (kills autoscaling), or huge idle footprints (bankrupt-on-scale players), or restart is so slow deploys are painful. *(Rationale: the runtime tax is bigger than the code it carries.)*
 - **Example symptom:** "Every new instance takes 3 minutes to become useful; scaling for a burst is pointless — by 3 minutes the burst is over. Idle JRockit-era app sits at 2.1 GB doing nothing. Autoscaling was 'tried' and abandoned."
-- **Blast radius:** Autoscaling viability, idle cost, deploy pain, image size, dev inner loop (VEL-09), marginal perf of every cold action.
+- **Blast radius:** Autoscaling viability, idle cost, deploy pain, image size, dev inner loop (VEL-11), marginal perf of every cold action.
 - **Remediation playbook:** Quick win: lazy-init the greedy startup work, trim the boot-time DI/registrations, enable JVM/cache warmup layers. Structural fix: runtime modernization (container-native runtimes, startup budget with a gate, deferred-cost architecture), image size budgets, "cold start < 10s" as an autoscaling prerequisite.
 - **Gold standard / target state:** Cold start < 10–15s, idle footprint proportional to need, autoscaling actually scales because instances become useful fast, zero "startup work" that could be lazy.
-- **Scoring guidance:** 3 = lean startup; 2 = moderate (30–60s); 1 = minutes + heavy idle; 0 = minute-scale cold starts blocking scaling.
+- **Scoring criteria (0–3, per global core-path taxonomy):** 3 = lean startup; 2 = moderate (30–60s); 1 = minutes + heavy idle; 0 = minute-scale cold starts blocking scaling.
 - **Verify effort:** 🔶 ~2–4 h — startup profiling.
 
 ---
@@ -135,6 +143,7 @@
 ## Deep-dive indicators
 
 ### PERF-09 — Cost Efficiency / FinOps
+**Engine tier:** B · **Default status:** unknown · **Scope/overlaps:** spend attribution and rightsizing; resource-waste mechanics are PERF-03, autoscaling waste is PERF-05
 - **Definition:** The cloud/infra bill is bloated — oversized instances, idle resources, orphaned/stale resources, no cost attribution per team/service, no rightsizing reviews, and cost is late-inspected ("it's money, whatever") rather than engineered.
 - **Why it signals obsolescence:** Waste is a *structural* signal: a codebase designed for an era before cost visibility (unused clusters, always-on dev envs, 24/7 oversized fleets) leaks money in ways money-discipline would fix. FinOps isn't cosmetic — it's a proxy for engineering discipline, and cost overruns are why modernization budgets get starved (the waste would fund the fix).
 - **Where it manifests:** Instances sized 4× what's needed, dev envs running 24/7, orphaned volumes/clusters, no per-team cost tags, no rightsizing review, automatic scaling absent so over-provisioned always, "the bill went up and we shrugged."
@@ -146,10 +155,11 @@
 - **Blast radius:** Budget, modernization funding, unit economics, audit/governance, growth margin.
 - **Remediation playbook:** Quick win: tag/attribution, kill the obvious idle/orphaned resources, right-size the top 10 oversized instances, set a budget alert. Structural fix: FinOps cadence (monthly rightsizing + utilization review), autoscaling-for-cost (scale-to-zero for dev), cost dashboards per team/service, and a cost/request SLO.
 - **Gold standard / target state:** Spend is attributed, tracked vs. usage, auto-right-sized, budgets alert, and waste < 10% of bill with an explanation for the rest.
-- **Scoring guidance:** (deep-dive — no rubric row) 3 = attributed + right-sized; 2 = partial attribution, some waste; 1 = minimal visibility, waste growing; 0 = invisible bill, massive waste.
+- **Scoring criteria (0–3, per global core-path taxonomy):** (deep-dive — folds into the category when run) 3 = attributed + right-sized; 2 = partial attribution, some waste; 1 = minimal visibility, waste growing; 0 = invisible bill, massive waste.
 - **Verify effort:** 🔷 ~1–2 days — cost analytics + resource audit.
 
 ### PERF-10 — Disaster Recovery & Resiliency
+**Engine tier:** D · **Default status:** unknown · **Scope/overlaps:** DR drills and RTO/RPO; backup restore is DATA-06, rebuild-from-IaC is PERF-06
 - **Definition:** There's no demonstrable disaster-recovery capability — no DR drills, no documented RTO/RPO, single-region/AZ with no plan, no cross-region data strategy, and recovery logic (if any) has never been exercised. "Resilience" is a hope.
 - **Why it signals obsolescence:** DR is the final verdict on infrastructure posture — it's the difference between "we have servers" and "we have a business that survives a datacenter event." Modern platform practice treats region/AZ distribution + tested failover as a baseline for anything production-critical. A system that can't answer "what happens if this region dies" has inherited a pre-cloud mental model.
 - **Where it manifests:** Single region/AZ for everything, no RTO/RPO numbers, DR "runbook" that's a google doc from 2016, no failover tests ever run, backups (DATA-06) not tied to a restore plan, "we'd figure it out" as the DR plan.
@@ -161,5 +171,5 @@
 - **Blast radius:** Company continuity, availability SLOs, customer trust, insurance/regulatory (DR required), brand (a "cloud outage kills us" story).
 - **Remediation playbook:** Quick win: write the DR plan (real: recover critical path), define RTO/RPO per tier, take documented cross-region snapshots for the critical DB, run a tabletop then a real drill. Structural fix: ring-fence the critical path into multi-AZ → multi-region with tested failover, async replication strategy, automated failover runbooks, drills scheduled quarterly as a non-negotiable ritual.
 - **Gold standard / target state:** Critical path survives a region event within RTO (drilled and proven), RTO/RPO documented, drills are boring quarterly calendar items, recovery is automated not theatrical.
-- **Scoring guidance:** (deep-dive — no rubric row) 3 = multi-region, drilled, RTO met; 2 = multi-AZ, drills rough; 1 = single-region with plan in head; 0 = no DR, region event = shutdown.
+- **Scoring criteria (0–3, per global core-path taxonomy):** (deep-dive — folds into the category when run) 3 = multi-region, drilled, RTO met; 2 = multi-AZ, drills rough; 1 = single-region with plan in head; 0 = no DR, region event = shutdown.
 - **Verify effort:** 🔷 ~1–2 days — DR audit + (ideally) a drill.

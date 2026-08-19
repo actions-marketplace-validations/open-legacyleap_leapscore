@@ -1,16 +1,17 @@
 # 02 — Architecture & Code Quality
 
-> **Weight:** 15% · **Standard:** ARCH-01…08 · **Deep-dive:** ARCH-09, 10
+> **Weight:** 15% base · 13.5% FE-active · **Standard:** ARCH-01…10 · **Deep-dive:** ARCH-11, 12
 >
 > **One-line thesis:** Architecture debt is the shape of the code disagreeing with what the code now needs to do. When the shape is wrong, every future feature is a fight.
 
-**Category summary:** Scores the internal structure of the codebase — complexity, coupling, boundaries, dead code, churn hot spots, architectural era, and state hygiene. This is the highest-weight *engineering* category (15%) because architecture determines whether a system can be modernized incrementally at all or must be treated as a rewrite candidate.
+**Category summary:** Scores the internal structure of the codebase — complexity, coupling, boundaries, dead code, churn hot spots, architectural era, state hygiene, agentic operability, and config/flag discipline. The highest-weight *engineering* category (15%; 13.5% when the Frontend module is active) because architecture determines whether a system can be modernized incrementally at all — by humans *or* by AI tooling — or must be treated as a rewrite candidate.
 
 ---
 
 ## Standard indicators
 
 ### ARCH-01 — Cognitive Complexity & God Classes
+**Engine tier:** A · **Default status:** measured · **Scope/overlaps:** pure size/complexity of units; duplication that inflates size is scored under ARCH-08, only the shape is counted here.
 - **Definition:** Methods, classes, and modules exceed sane complexity budgets — deeply nested branches, methods doing many things, "God Classes" absorbing unrelated responsibilities, files that are thousands of lines long.
 - **Why it signals obsolescence:** Complexity is the root tax on every other activity: tests are harder to write, bugs harder to reason about, refactors riskier, onboarding slower. High complexity correlates strongly with defect density and is the classic signature of code that accreted without design pressure.
 - **Where it manifests:** Large files, methods with many `if`/`else`/`for`/`while`/`catch` levels, classes with many fields/methods (God Classes), `God object` smells, deeply nested conditionals, methods with 10+ branches.
@@ -22,10 +23,11 @@
 - **Blast radius:** Defect density, review speed, test feasibility, onboarding, refactor risk, staff turnover around "the scary file."
 - **Remediation playbook:** Quick win: carve the top 5 offenders by automated extract-method (IDE-assisted, with tests), add a complexity budget to CI (`eslint max-complexity`, SonarQube gate). Structural fix: a structured decomposition of God Classes by responsibility; strangle complexity behind facades; pair the two riskiest files on a refactor sprint.
 - **Gold standard / target state:** Complexity budget enforced in CI; max method complexity < 15; no file > 1,000 LOC; the top-decile complexity list is shrinking and tracked.
-- **Scoring guidance:** 3 = within budgets; 2 = offenders in non-core modules; 1 = God Class in an isolated core path; 0 = core domain logic is unmodifiable God Classes.
+- **Scoring criteria (0–3, per global core-path taxonomy):** 3 = within budgets; 2 = offenders in non-core modules; 1 = God Class in an isolated core path; 0 = core domain logic is unmodifiable God Classes.
 - **Verify effort:** 🔶 ~2–4 h — analyzer run + review of top offenders.
 
 ### ARCH-02 — Coupling & Cohesion
+**Engine tier:** A · **Default status:** measured · **Scope/overlaps:** intra-module coupling and cohesion; inter-service/DB coupling belongs to DATA-02 and API-03, not here.
 - **Definition:** Modules are highly interdependent (coupling) and/or each module bundles many unrelated responsibilities (low cohesion). The system behaves like a plate of tangled spaghetti rather than a set of deep, single-purpose modules.
 - **Why it signals obsolescence:** Low cohesion/high coupling is the anti-thesis of maintainability: changes ripple, nothing is replaceable in isolation, and modernization becomes all-or-nothing. It's the architectural fingerprint of a codebase that grew by addition.
 - **Where it manifests:** Modules importing from many unrelated modules, services reaching into other services' internals, a "utils" module everyone depends on, god modules, shared DTOs across everything, hidden dependencies via globals.
@@ -37,10 +39,11 @@
 - **Blast radius:** Change ripple, test isolation, independent deployability, team autonomy (Conway's law inverts — teams can't split), modernization feasibility.
 - **Remediation playbook:** Quick win: draw the DSM, pick the 3 highest-fan-in hubs, wrap them behind interfaces and shrink their API. Structural fix: define bounded contexts and enforce them with ArchUnit-style rules in CI; extract the shared hub into a stable, narrow contract; invert dependencies toward stable abstractions.
 - **Gold standard / target state:** Acyclic dependency graph at the module boundary; every module has narrow, explicit dependencies; teams can change their module without coordination (tested via a chaos week).
-- **Scoring guidance:** 3 = clean, enforced boundaries; 2 = cycles in peripheral modules; 1 = cycles across core modules; 0 = DB-coupled services / omnipresent hub.
+- **Scoring criteria (0–3, per global core-path taxonomy):** 3 = clean, enforced boundaries; 2 = cycles in peripheral modules; 1 = cycles across core modules; 0 = DB-coupled services / omnipresent hub.
 - **Verify effort:** 🔶 ~2–4 h — dependency graph tooling + manual DSM read.
 
 ### ARCH-03 — Layer & Boundary Violations
+**Engine tier:** A · **Default status:** measured · **Scope/overlaps:** direction of layer boundaries only; wire-protocol/stored-procedure legaciness lands in API-06 and DATA-02.
 - **Definition:** Architectural layers (presentation → application → domain → infrastructure, or bounded contexts) are routinely crossed in the wrong direction: UI code touching the DB, domain logic in controllers, services importing each other's internals, business rules in views or stored procedures.
 - **Why it signals obsolescence:** Eroded boundaries mean the architecture exists only in theory. Once rules don't live where they should, nothing can be reasoned about, tested in isolation, or swapped — the system reverts to "everything depends on everything" and every boundary enforcement is gone.
 - **Where it manifests:** Controllers with business logic, domain objects with persistence concerns, UI layer with SQL, services reaching into other services' DBs, stored procedures containing business rules, `#pragma`/`module` hacks, layered module that doesn't exist on disk.
@@ -52,10 +55,11 @@
 - **Blast radius:** Testability, security (SQL in views), refactor safety, domain logic duplication, compliance traceability.
 - **Remediation playbook:** Quick win: add an arch test (ArchUnit/import-linter) and fix the top violations; enforce at PR time. Structural fix: rebuild the lost layers — extract domain into its own module, move persistence behind repositories, keep UI thin; do it one vertical slice at a time.
 - **Gold standard / target state:** Architecture rules enforced in CI; a 30-minute vertical-slice tour confirms correct directions; business rules live in the domain layer only.
-- **Scoring guidance:** 3 = boundaries enforced; 2 = occasional violations, no guard yet; 1 = violations in core slices; 0 = systemic erosion, architecture nominal.
+- **Scoring criteria (0–3, per global core-path taxonomy):** 3 = boundaries enforced; 2 = occasional violations, no guard yet; 1 = violations in core slices; 0 = systemic erosion, architecture nominal.
 - **Verify effort:** 🔶 ~2–4 h — rule setup + vertical slice tour.
 
 ### ARCH-04 — Dead & Orphaned Code
+**Engine tier:** A · **Default status:** measured · **Scope/overlaps:** unreferenced code and flags only; live-but-zero-traffic exposure cross-references API traffic, it does not duplicate it.
 - **Definition:** Unreferenced functions, classes, endpoints, feature flags that are permanently on (or permanently off), unreachable branches, duplicate implementations where only one is used, and modules that nothing imports.
 - **Why it signals obsolescence:** Dead code is fossilized intent. It costs readers time (is this used?), auditors time, and test-maintenance time, and it accumulates whenever the codebase is touched without pruning — a hallmark of unowned code. It also hides which live paths are actually in production.
 - **Where it manifests:** Unused exports/imports, feature flags stuck true/false with no plan, endpoints with zero traffic, utility functions with no callers, commented-out blocks, dead branches (`if (false)`), shadowed duplicates.
@@ -67,10 +71,11 @@
 - **Blast radius:** Reader confusion, attack surface, test maintenance, coverage metrics lying to you, refactor accidents.
 - **Remediation playbook:** Quick win: run knip/vulture, delete safely (git history preserves), remove orphaned endpoints and the routes that point to them. Structural fix: a "no dead code" PR gate (knip in CI, fail on new unreferenced exports), flag retirement policy (flags > 6 months get removed or justified), quarterly pruning ritual.
 - **Gold standard / target state:** Dead-code scan clean in CI; every feature flag has an owner and a retirement date; all prod endpoints are in an API inventory with traffic.
-- **Scoring guidance:** 3 = scan clean; 2 = 10–20% dead code in peripheral areas; 1 = > 20% or orphaned endpoints in isolated services; 0 = orphaned endpoints live on core/auth paths.
+- **Scoring criteria (0–3, per global core-path taxonomy):** 3 = scan clean; 2 = 10–20% dead code in peripheral areas; 1 = > 20% or orphaned endpoints in isolated services; 0 = orphaned endpoints live on core/auth paths.
 - **Verify effort:** ⚡ ≤ 30 min — one tool run + report read.
 
 ### ARCH-05 — Code Churn vs. Defect Hot Spots
+**Engine tier:** A · **Default status:** measured · **Scope/overlaps:** churn∩defect *concentration per file*; who owns the code is VEL-06 (authorship), not this row.
 - **Definition:** A small fraction of files absorbs a disproportionate share of commits (churn), and those same files produce a disproportionate share of defects and incident fixes. Change is fractal: the same code is reworked over and over.
 - **Why it signals obsolescence:** High-churn/high-defect "hot spots" are where the codebase is actively fighting its own shape. They signal that a module's design is wrong for its workload — and the fix isn't more commits, it's a redesign. DORA and CodeScene research tie this pattern directly to delivery slowdown and engineer churn.
 - **Where it manifests:** Git history (files with the most commits and most bug-fix commits), bug tracker (which modules get the most defect tickets), incident data (which files are implicated in production fixes), files that are touched on every feature.
@@ -82,10 +87,11 @@
 - **Blast radius:** Delivery throughput, incident rate, engineer retention (people burn out on the hot file), review load.
 - **Remediation playbook:** Quick win: put the top hot spot behind a designated owner, add targeted tests, freeze feature scope on it for one sprint. Structural fix: redesign the hot spot — decompose by responsibility, rewrite the risky core with tests first, rotate engineers to avoid bus-factor in the fix. Track the metric quarterly to prove improvement.
 - **Gold standard / target state:** Churn evenly distributed relative to responsibility; no file in the top churn∩defect intersection for two quarters; hot-spot list tracked in the refactoring backlog.
-- **Scoring guidance:** 3 = no overlap; 2 = churn concentrated, defects mild; 1 = hot spot in an isolated path; 0 = hot spot in core logic driving incidents.
+- **Scoring criteria (0–3, per global core-path taxonomy):** 3 = no overlap; 2 = churn concentrated, defects mild; 1 = hot spot in an isolated path; 0 = hot spot in core logic driving incidents.
 - **Verify effort:** 🔶 ~2–4 h — git mining + defect tracker correlation.
 
 ### ARCH-06 — Architectural Era / Framework Generation
+**Engine tier:** A · **Default status:** estimated · **Scope/overlaps:** the *style/seams* generation gap; the framework's vendor support status is ECOS-08 and its runtime EOL is ECOS-01.
 - **Definition:** The codebase's architectural style is one or more generations behind the ecosystem norm — e.g., a non-modular monolith with no dependency injection where modules are expected, global singleton state where DI is expected, or an architecture style (e.g., action-command giant controllers, RPC-style god endpoints) that modern practice has replaced.
 - **Why it signals obsolescence:** Architectural style is a proxy for how much of the system's mechanics are "solved" by structure vs. reinvented by hand. Old eras lack the seams that make change, testing, and tooling cheap. A codebase that predates modularity has to build those seams manually — a huge modernization drag.
 - **Where it manifests:** No DI container (manual wiring in a central bootstrap), no package/module boundaries on disk, static service locators, giant controller/service classes, everything depending on everything, build system that doesn't support modules, tests that need a live stack because nothing is swappable.
@@ -97,10 +103,11 @@
 - **Blast radius:** Testability, tooling support, hiring, incremental-refactor feasibility, speed of every future change.
 - **Remediation playbook:** Quick win: introduce interface seams around the 3 worst-coupled cores, add a couple of tests to prove the seams work. Structural fix: adopt the modern architecture incrementally — introduce a DI container, extract modules with enforced boundaries, wrap legacy access behind ports, migrate vertical slices one at a time.
 - **Gold standard / target state:** Core logic testable without live infrastructure; DI and module boundaries standard; new features land in the modern style while legacy shrinks.
-- **Scoring guidance:** 3 = current generation; 2 = one generation behind, seams exist; 1 = two generations behind in isolated services; 0 = whole system two+ generations behind with no seams.
+- **Scoring criteria (0–3, per global core-path taxonomy):** 3 = current generation; 2 = one generation behind, seams exist; 1 = two generations behind in isolated services; 0 = whole system two+ generations behind with no seams.
 - **Verify effort:** 🔶 ~2–4 h — architecture tour + a "unit-test-without-stack" experiment.
 
 ### ARCH-07 — Global Mutable State & Hidden Dependencies
+**Engine tier:** A · **Default status:** estimated · **Scope/overlaps:** shared *state* in product code; the test suite's reaction to it is TEST-07 — this row scores the code, TEST-07 scores the suite, no double count.
 - **Definition:** The system relies on global mutable state — singletons, module-level variables, static mutable fields, ambient configuration, shared caches — and hides dependencies (time, randomness, network, the DB) inside functions rather than injecting them.
 - **Why it signals obsolescence:** Hidden dependencies and globals make correctness a function of execution order and history rather than of inputs. Tests become order-dependent, concurrency becomes a minefield, and the code can't be reasoned about in isolation. Modern practice (pure functions, explicit dependencies, DI) exists precisely to eliminate this class of bug.
 - **Where it manifests:** Singleton service locators, static mutable fields, module-level `config`/`state` objects, functions calling `time.now()`/`Math.random()`/the DB directly (not injected), hidden global caches, order-dependent initialization, "set state at import time" patterns.
@@ -112,10 +119,11 @@
 - **Blast radius:** Concurrency bugs, test reliability, race conditions in prod, hard-to-reproduce defects, refactor risk.
 - **Remediation playbook:** Quick win: inject the clock/random/IO at the seams you can reach; make the top 5 singletons instances with explicit wiring. Structural fix: eliminate globals by constructor injection; make state explicit and owned; introduce a proper initialization/DI lifecycle; enforce "no static mutable" with a lint.
 - **Gold standard / target state:** All dependencies explicit and injected; time/random/IO behind interfaces; test suite passes under random/parallel execution; zero mutable statics in core.
-- **Scoring guidance:** 3 = explicit dependencies everywhere; 2 = globals in peripheral code; 1 = globals/hidden deps in core, tests serial-only; 0 = core correctness is order/concurrency-dependent.
+- **Scoring criteria (0–3, per global core-path taxonomy):** 3 = explicit dependencies everywhere; 2 = globals in peripheral code; 1 = globals/hidden deps in core, tests serial-only; 0 = core correctness is order/concurrency-dependent.
 - **Verify effort:** 🔶 ~2–4 h — grep sweep + parallel-test experiment.
 
 ### ARCH-08 — Duplication Debt
+**Engine tier:** A · **Default status:** measured · **Scope/overlaps:** clone ratio within and across modules; duplicated *data access* that drives coupling is DATA-02/API-03.
 - **Definition:** The same logic, algorithms, or structures are copy-pasted across the codebase and/or across services, with variations drifting over time — "the same bug in 5 places."
 - **Why it signals obsolescence:** Duplication is the most visible sign that code wasn't given a home to live in. Every duplicated instance multiplies fix cost, allows drift (one copy gets the fix, others don't), and inflates the surface area of every change. It's the persistence of "temporary" code that became permanent.
 - **Where it manifests:** Similar functions/classes across modules, copy-pasted validation/date/price logic, identical DTOs, duplicated middleware/error handling, near-identical test fixtures, similar blocks in different languages.
@@ -127,14 +135,47 @@
 - **Blast radius:** Fix multiplication, drift bugs, test bloat, inconsistency in business rules, security (auth duplicated, one copy weak).
 - **Remediation playbook:** Quick win: run jscpd, consolidate the top clusters behind a shared library (start with the business-critical ones). Structural fix: establish a shared internal library with a review process; kill duplicates at PR time (clone scan in CI); migrate duplicated logic incrementally with tests preserving behavior.
 - **Gold standard / target state:** Duplication < 10%; core business rules exist exactly once, in one owned library; clone scan in CI fails new duplication.
-- **Scoring guidance:** 3 = < 10% dup, single source of truth; 2 = 10–20% peripheral dup; 1 = dup in core logic within one service; 0 = core rules duplicated across services with drift.
+- **Scoring criteria (0–3, per global core-path taxonomy):** 3 = < 10% dup, single source of truth; 2 = 10–20% peripheral dup; 1 = dup in core logic within one service; 0 = core rules duplicated across services with drift.
 - **Verify effort:** 🔶 ~2–4 h — clone detector + cross-service grep.
+
+### ARCH-09 — Agentic Operability (AI/LLM Codebase-Readiness)
+**Engine tier:** A · **Default status:** estimated · **Scope/overlaps:** the *compound* operability of the repo for AI/LLM coding agents; inherits (but does not re-measure) the seams of ARCH-02/06, the test proximity of TEST-06, the docs freshness of DOCS-02, and the harness of VEL-02/09. Score the composition once.
+- **Definition:** How well an AI/LLM coding agent (Copilot-class, CLI agents, automated refactoring) can find context, run a targeted test, and make a change safely from a fresh clone. Modernization is increasingly executed by agents; a codebase that resists them resists the accelerant.
+- **Why it signals obsolescence:** Agentic operability is the 2020s modernization axis: navigable, seam-rich, tested, documented code is cheap to change *by machine*; legacy discs are not. It is also the practical test of whether the modernization *itself* can be AI-assisted. A repo without navigation aids, testable seams, and a single-command harness forces every change — human or machine — into archaeology.
+- **Where it manifests:** No repo-map / LLM context / navigation index that matches disk, tests not co-located with the code they cover, core logic not constructible in a unit test without live infra, no single command that builds+tests from a fresh clone, docs that contradict code (borrowed signal from DOCS-02).
+- **Detection method:** Navigation-aid inventory (repo-map files, code-navigation config, top-level index vs. disk layout); test-to-code proximity heuristic (% of source files with a co-located or directly-referenced test); core-module seam index (already computed for ARCH-02/06 — reuse); fresh-clone harness check (does a documented command complete a green build+test?); sampled docs-vs-code contradictions. Compose the four signals into one score.
+- **Objective metric:** `navigation aids present (count, matches disk?)`; `test-to-code proximity %`; `core seam index`; `fresh-clone single-command success (y/n, time)`; `docs-vs-code contradiction count (sampled)`.
+- **Yellow flag (warning):** Partial navigation aids, < 60% test-to-code proximity in core, seams exist but inner loop slow — an agent can act but slowly and with drift risk. *(Rationale: operable with friction — fix the cheap aids before agents multiply the cost.)*
+- **Red flag (critical):** No navigation aids, core logic not constructible in a test without live infrastructure, no single-command harness — an agent cannot complete a scoped task reliably from a fresh clone. *(Rationale: the fastest modernization lever is foreclosed; every change stays archaeology.)*
+- **Example symptom:** "The team wants Copilot-class agents to help migrate the billing module. The agent can't find the entry point (no repo map), can't run one test (none co-located, core needs the live Oracle), and the only 'build' is a 9-step wiki. The pilot is quietly postponed forever."
+- **Blast radius:** AI tooling ROI, modernization leverage, agent-driven refactor feasibility, onboarding (human and machine alike), review automation.
+- **Remediation playbook:** Quick win: ship a repo-map/context file, co-locate tests for the top core modules, define a task runner of record with a fresh-clone CI proof. Structural fix: seam extraction on core (ports), docs-as-code freshness (DOCS-09), a recurring "agent completes task X from fresh clone" acceptance test as a quality gate.
+- **Gold standard / target state:** From a fresh clone, an agent (or new hire) can locate the module, run its tests, and land a scoped change within one session; navigation aids match disk; core is testable without live infra.
+- **Scoring criteria (0–3, per global core-path taxonomy):** 3 = navigation aids + co-located tests + seam-rich core + single-command success; 2 = aids partial, proximity ~60%, harness slow; 1 = aids absent, core seams missing, harness manual; 0 = no navigation, no seams, no harness — machine and human alike cannot operate.
+- **Verify effort:** 🔶 ~2–4 h — inventory + fresh-clone timed run.
+
+### ARCH-10 — Feature-Flag & Configuration Debt
+**Engine tier:** A · **Default status:** estimated · **Scope/overlaps:** configuration/flag *mechanics* only; secrets in config are SEC-02, env drift is VEL-07/DATA-10, dead stuck-on flags are ARCH-04.
+- **Definition:** Configuration and feature toggles are hardcoded in source, live in per-env hand-edited files, or exist as long-lived flags with no owner or retirement — so "safe incremental release" is achieved, if at all, by editing code.
+- **Why it signals obsolescence:** Progressive delivery — flags, externalized config, rollback-by-toggle — is the mechanism that makes modernization *safe*. A codebase that hardcodes toggles and buries config in code predates 12-factor discipline: every release is a big-bang, every rollback is a code change, and every environment is a fabrication by hand.
+- **Where it manifests:** Hardcoded booleans/strings as toggles (`USE_NEW_FLOW = true` in source), flag values stuck on for months/years with no ticket, prod config values committed to the repo, per-env config files maintained separately by hand, feature branches used as flags (ties to VEL-10), no config management/injection.
+- **Detection method:** Grep sweep for toggle/flag/env strings; config-declaration inventory (env templates vs. baked values in source); flag age + ownership via git history; prod-value-in-repo check; env config drift comparison. Count flags, classify by core path.
+- **Objective metric:** `# of hardcoded toggles/flags`; `# of flags on > 6 months with no owner`; `% of env config declared (templated/injected) vs. hand-edited`; `prod config values in repo? (bool)`; `rollback = code change? (bool)`.
+- **Yellow flag (warning):** Flags/config hardcoded in non-core modules; some long-lived flags without owners; env config partially hand-edited. *(Rationale: friction and drift risk, modernizable in place.)*
+- **Red flag (critical):** Core logic driven by hardcoded toggles/baked config; prod config stored in the repo; flags used as emergency switches with no retirement path. *(Rationale: safe incremental modernization — and safe rollback — is impossible without the flag/config levers.)*
+- **Example symptom:** "The new checkout path is behind `const checkoutV2 = true` in `config.ts`, committed 14 months ago 'for the rollout' — the rollout never finished, so the old path is dead code (ARCH-04) and the toggle has no owner. A config fix requires a deploy; a rollback requires another deploy."
+- **Blast radius:** Incremental delivery safety, rollback speed, config security, environment drift (VEL-07/DATA-10), release risk (VEL-03).
+- **Remediation playbook:** Quick win: move the top flags to an externalized flag source with owners + retirement dates, externalize prod config into a per-env injected pipeline. Structural fix: config-as-code injected per environment, a flag lifecycle policy (owner, TTL, removal ceremony), a rule that prod values never live in the repo.
+- **Gold standard / target state:** Zero hardcoded toggles in core; every flag owned with a retirement date; config injected per env from one source; rollback = flag flip, not code change.
+- **Scoring criteria (0–3, per global core-path taxonomy):** 3 = all toggles externalized + owned, config injected per env; 2 = toggles in non-core, some uneowned flags; 1 = toggles in core with no ownership, config hand-edited; 0 = core on hardcoded config/flags with no retirement — safe modernization blocked.
+- **Verify effort:** ⚡ ≤ 30 min — grep sweep + flag inventory.
 
 ---
 
 ## Deep-dive indicators
 
-### ARCH-09 — Nullable/Untyped Code & Runtime Error Density
+### ARCH-11 — Nullable/Untyped Code & Runtime Error Density
+**Engine tier:** A · **Default status:** estimated · **Scope/overlaps:** server-side type safety; client-side untyped state is FE-05, repeated null-defence boilerplate is ARCH-12.
 - **Definition:** The codebase is weakly typed or relies on implicit nullability where modern practice expects static typing and explicit null safety — dynamic dispatch, `any`/`Object` as a type, unchecked casts, defensive null checks scattered everywhere, stringly-typed arguments — and runtime errors (NPEs, `undefined` access) are a visible fraction of incidents.
 - **Why it signals obsolescence:** Type safety is a modernization "tax" that's often the whole point of upgrading: it converts a class of runtime bugs into compile-time errors. A codebase that predates or rejects it carries a permanently higher runtime-error rate and makes large refactors (renames, signature changes) dangerous and slow.
 - **Where it manifests:** TypeScript `any` everywhere, Python without type hints in hot paths, Java/C# with pervasive null checks and unchecked casts, dynamic languages doing introspection, `Optional.get()` chains, crash logs dominated by null/undefined exceptions.
@@ -146,10 +187,11 @@
 - **Blast radius:** Incident rate, refactor safety, onboarding, IDE/tooling value, AI-assisted refactoring quality (types are the interface for tooling).
 - **Remediation playbook:** Quick win: enable `strict`/`strictNullChecks` on the smallest core module, fix the fallout, expand module by module; add `mypy --strict` to CI incrementally with a ban-list. Structural fix: adopt explicit null-safety (Option/Result types), eliminate `any` with real types at boundaries, add type coverage gate (e.g., `typescript coverage > X%`).
 - **Gold standard / target state:** Strict mode on across the system; typed coverage > 90%; null/type errors < 2% of incidents; boundary types (API, DB, events) fully defined.
-- **Scoring guidance:** (deep-dive — no rubric row) 3 = strict + typed; 2 = partially typed; 1 = core untyped, strict off; 0 = null errors a top incident class.
+- **Scoring criteria (0–3, per global core-path taxonomy):** (deep-dive — folds into the category when run) 3 = strict + typed; 2 = partially typed; 1 = core untyped, strict off; 0 = null errors a top incident class.
 - **Verify effort:** 🔷 ~1–2 days — lint report + incident mining.
 
-### ARCH-10 — Duplicated Cross-Cutting Concerns (auth, logging, error handling, transactions)
+### ARCH-12 — Duplicated Cross-Cutting Concerns (auth, logging, error handling, transactions)
+**Engine tier:** A · **Default status:** estimated · **Scope/overlaps:** shared infrastructure duplication; auth-*coverage* gaps are SEC-04, error-*semantics* are API-07.
 - **Definition:** Cross-cutting concerns — authentication, authorization, logging, error mapping, transaction boundaries, validation — are implemented ad hoc in every call site instead of as shared, testable infrastructure (middleware/interceptors/decorators).
 - **Why it signals obsolescence:** Cross-cutting concerns are where security and compliance bugs live, and ad-hoc implementation means: inconsistent coverage (one route forgets auth), duplicated and drifted logic, and no single place to add a security control or a trace. Modern frameworks provide interceptors/middleware precisely to centralize these.
 - **Where it manifests:** Auth checked manually at the top of N controllers (and missed in a few), logging calls sprinkled with inconsistent context, try/catch duplication, transaction management inside every service method, validation hand-rolled per endpoint.
@@ -161,5 +203,5 @@
 - **Blast radius:** Security coverage, compliance, error-handling consistency, observability quality, developer discipline.
 - **Remediation playbook:** Quick win: audit for missing shared middleware and missed auth sites; move the top repeated concern (auth) to framework middleware. Structural fix: centralize each concern (authN/authZ, logging, error mapping, validation, transactions) into one owned infrastructure layer with tests; wire via framework interceptors; add security tests that assert every endpoint enforces auth.
 - **Gold standard / target state:** Every cross-cutting concern implemented once, in infrastructure, enforced by framework; a security test walks all routes asserting auth coverage; zero manual auth in controllers.
-- **Scoring guidance:** (deep-dive — no rubric row) 3 = centralized + enforced; 2 = mostly centralized, gaps; 1 = manual checks in core; 0 = missed coverage in security-sensitive paths.
+- **Scoring criteria (0–3, per global core-path taxonomy):** (deep-dive — folds into the category when run) 3 = centralized + enforced; 2 = mostly centralized, gaps; 1 = manual checks in core; 0 = missed coverage in security-sensitive paths.
 - **Verify effort:** 🔷 ~1–2 days — grep analysis + route-coverage test.

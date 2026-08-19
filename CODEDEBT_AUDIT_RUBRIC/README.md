@@ -1,45 +1,50 @@
 # Codebase Modernization Audit Rubric — Master Catalog
 
-An exhaustive, layered catalog of indicators that signal a codebase is obsolete, maintainability-deficient, or due for modernization. Built to be run against **any** arbitrary codebase — from a portfolio screen (1 day) to a full modernization deep dive (2 weeks).
+An exhaustive, layered catalog of indicators that signal a codebase is obsolete, maintainability-deficient, or due for modernization. Built to be run against **any** arbitrary codebase — from a portfolio screen (1 day) to a full modernization deep dive (2 weeks). Serves **both** human auditors (printable sheets) **and** the LeapScore engine (operationalized criteria it can execute).
 
-## Layered structure (two layers, one catalog)
+## Layered structure (two layers + config, one catalog)
 
 | Layer | File | Purpose |
 |-------|------|---------|
-| **Executive Rubric** | `00_EXECUTIVE_RUBRIC.md` | The reusable scoring template. Gating kill-switches, a 72-row scoring sheet, category weights, and rollup math. Print it, score it, compare codebases. |
-| **Encyclopedia** | `01_…`–`10_…` | The full catalog. Every indicator expanded to 14 fields: definition, why it matters, detection method, objective metric, thresholds, blast radius, remediation, gold standard, scoring guidance, and verify effort. |
+| **Config (canonical)** | `11_WEIGHTS_THRESHOLDS_CONFIG.md` | The single place that defines category weights (base + FE-active), scoring formula, tier thresholds, gate override, and the calibration schedule/log. |
+| **Executive Rubric** | `00_EXECUTIVE_RUBRIC.md` | The **derived** scoring template. Gating kill-switches (G1–G8), the scoring sheet, and rollup math. Print it, score it, compare codebases. |
+| **Encyclopedia (canonical)** | `01_…`–`10_…` | The full catalog. Every indicator expanded to 14+ fields: definition, why it matters, detection, metric, thresholds, blast radius, remediation, gold standard, **4-level scoring criteria (0–3)**, **core-path bound**, **engine tier / default status**, **scope/overlaps**, and verify effort. |
 
 Each scoring sheet row links to its encyclopedia entry by ID (e.g., `SEC-03`).
 
-## File index
+> **Single source of truth:** the encyclopedia (`01_…`–`10_…`) + the config (`11`) are canonical. The executive rubric and both templates are **derived views** — regenerate them from the canonical files; never edit a number in a sheet that belongs in the encyclopedia or config. A consistency check (IDs, names, thresholds, weights, verify-effort tags) runs across the catalog to flag drift.
 
-| File | Category | Standard | Deep-Dive | Weight |
-|------|----------|----------|-----------|--------|
-| `01_DEPENDENCY_ECOSYSTEM.md` | Dependency & Ecosystem Health | ECOS-01…08 | ECOS-09, 10 | 10% |
-| `02_ARCHITECTURE_CODE.md` | Architecture & Code Quality | ARCH-01…08 | ARCH-09, 10 | 15% |
-| `03_TESTING_QUALITY.md` | Testing & Quality Engineering | TEST-01…08 | TEST-09, 10 | 10% |
-| `04_SECURITY_COMPLIANCE.md` | Security, Compliance & Vulnerability | SEC-01…08 | SEC-09, 10 | 20% |
-| `05_DATA_SCHEMA.md` | Data & Schema Evolution | DATA-01…08 | DATA-09, 10 | 10% |
-| `06_API_INTEGRATION.md` | API & Integration Surface | API-01…08 | API-09, 10 | 10% |
-| `07_VELOCITY_OPERATIONAL.md` | Developer Velocity & Operational Drag | VEL-01…08 | VEL-09, 10 | 10% |
-| `08_PERFORMANCE_CLOUD.md` | Performance & Cloud/Infrastructure Fit | PERF-01…08 | PERF-09, 10 | 10% |
-| `09_DOCS_KNOWLEDGE.md` | Documentation & Knowledge Continuity | DOCS-01…08 | DOCS-09, 10 | 5% |
-| `10_FRONTEND_CLIENT.md` | Frontend & Client Health *(conditional)* | FE-01…06 | FE-07 | — |
+## Indicator counts (v2)
 
-**Totals:** 72 standard + 18 deep-dive = **90 core indicators** + 7 conditional (Frontend) = **97 encyclopedia entries**.
+| File / Category | Standard | Deep-Dive | Base weight | FE-active weight |
+|------|----------|-----------|-------------|------------------|
+| `01_DEPENDENCY_ECOSYSTEM.md` | ECOS-01…08 | ECOS-09, 10 | 10% | 9% |
+| `02_ARCHITECTURE_CODE.md` | ARCH-01…10 | ARCH-11, 12 | 15% | 13.5% |
+| `03_TESTING_QUALITY.md` | TEST-01…08 | TEST-09, 10 | 10% | 9% |
+| `04_SECURITY_COMPLIANCE.md` | SEC-01…08 | SEC-09, 10 | 20% | 18% |
+| `05_DATA_SCHEMA.md` | DATA-01…08 | DATA-09, 10 | 10% | 9% |
+| `06_API_INTEGRATION.md` | API-01…08 | API-09, 10 | 10% | 9% |
+| `07_VELOCITY_OPERATIONAL.md` | VEL-01…10 | VEL-11, 12 | 10% | 9% |
+| `08_PERFORMANCE_CLOUD.md` | PERF-01…08 | PERF-09, 10 | 10% | 9% |
+| `09_DOCS_KNOWLEDGE.md` | DOCS-01…08 | DOCS-09, 10 | 5% | 4.5% |
+| `10_FRONTEND_CLIENT.md` *(conditional)* | FE-01…07 | FE-08 | — | 10% |
+
+**Totals:** 76 standard + 18 deep-dive = **94 core indicators** + 8 conditional Frontend (7 standard + 1 deep) = **102 encyclopedia entries**.
 
 ## How to run an audit
 
-1. **Screen (1 day, portfolio-level).** Run only the *standard* indicators that are cheap to verify (marked ⚡ in the rubric). Skip deep-dive entries. Score 0–3 per row. Compute the weighted total. Compare across the portfolio.
-2. **Standard audit (2–3 days, one system).** Score all 72 standard rows per service, roll up per-service sheets by business criticality, compute the system total, check the gates.
-3. **Deep dive (1–2 weeks, one system).** Add the 18 deep-dive indicators. These cover the expensive-to-verify debt (mutation testing, fuzzing readiness, DR drills, FinOps) that a standard audit can only guess at.
+1. **Screen (1 day, portfolio-level).** Run only the standard indicators cheap to verify (marked ⚡). Skip deep-dive entries. Score 0–3 per row (or mark N/A with reason). Compute the weighted total. Compare across the portfolio.
+2. **Standard audit (2–3 days, one system).** Score all standard rows per service, roll up per-service sheets by business criticality, compute the system total, check the gates.
+3. **Deep dive (1–2 weeks, one system).** Add the deep-dive indicators — which **fold into the category scores** and produce a more trustworthy total than the standard audit. These cover the expensive-to-verify debt (mutation testing, DR drills, FinOps, fuzzing) that a standard audit can only guess at.
 
 ## Score model summary
 
-- Each indicator: **0–3** (3 = healthy, 0 = critical failure) — see the scoring guide in `00_EXECUTIVE_RUBRIC.md`.
-- Category score = average of standard indicator scores, expressed as a percentage of max.
-- System score = Σ (category % × category weight).
-- **Gating kill-switches** cap the verdict regardless of total (a single Red Flag gate = verdict never higher than "High Risk / Obsolete").
+- Each indicator: **0–3** (3 = healthy, 0 = critical) per its **explicit 4-level scoring criteria** (see `11` §2 and each encyclopedia entry). The historically fuzzy "core vs non-core" axis is settled by the **global core-path taxonomy** — core = files reachable from public entry points that touch money / auth / PII / compliance-sensitive behavior. The engine computes core-path membership once and every indicator inherits it.
+- Each row is scored, **N/A'd** (excluded from both numerator and denominator), or left blank for deep-dive rows not run.
+- **Category score** = Σ(applicable row scores) ÷ (applicable count × 3), expressed as a percentage.
+- **System score** = Σ (category % × category weight). Category weights come from `11_WEIGHTS_THRESHOLDS_CONFIG.md` — the base set normally, the **FE-active set** (FE 10%, others ×0.9) when the repo has a user-facing client.
+- **Gating kill-switches (G1–G8)** cap the verdict regardless of total (any Red Flag gate = verdict never higher than "High Risk / Obsolete").
+- **Deep-dive rows count.** In a deep audit, executed deep-dive rows join their category's applicable set, changing the category % honestly. The deep-audit number is not the standard-audit number with extra rows bolted on.
 
 ## Tiers
 
@@ -50,7 +55,9 @@ Each scoring sheet row links to its encyclopedia entry by ID (e.g., `SEC-03`).
 | High Risk / Obsolete | 27–52% | Modernization initiative required; isolate core domain behind a facade before rewriting |
 | Critical Risk / Legacy Failure | < 27% | Immediate modernization mandatory; system impedes business continuity |
 
-> **Gate override:** if any gating kill-switch is Red Flag, the verdict is capped at "High Risk / Obsolete" even if the numeric score says otherwise.
+> **Gate override:** if any gating kill-switch (G1–G8) is Red Flag, the verdict is capped at "High Risk / Obsolete" even if the numeric score says otherwise.
+
+Weights and thresholds are **asserted defaults subject to calibration** — see `11` §4 (calibration schedule) and §5 (calibration log).
 
 ## Templates
 
@@ -62,9 +69,10 @@ Each scoring sheet row links to its encyclopedia entry by ID (e.g., `SEC-03`).
 | Score | Meaning |
 |-------|---------|
 | **3 — Healthy** | Complies with modern standards; no flags |
-| **2 — Minor Debt** | Manageable debt; meets Yellow Flag criteria in non-critical paths |
+| **2 — Minor Debt** | Manageable debt; meets Yellow Flag criteria in non-core paths |
 | **1 — Severe Debt** | Yellow Flag in core logic, or Red Flag in isolated paths |
 | **0 — Critical** | Red Flag in core logic, or across multiple paths |
+| **N/A** | Indicator not applicable to this system (excluded from scoring, reason recorded) |
 
 ## Verification-effort legend (used in every entry)
 
@@ -73,3 +81,17 @@ Each scoring sheet row links to its encyclopedia entry by ID (e.g., `SEC-03`).
 | ⚡ ≤ 30 min | Cheap to verify — a lead or tool can confirm quickly |
 | 🔶 ~2–4 h | Moderate — requires some setup, log/CI inspection |
 | 🔷 ~1–2 days | Expensive — requires instrumentation, load tests, or interviews |
+
+## Engine fields (used by LeapScore)
+
+Every encyclopedia entry also carries the automation taxonomy absorbed from the old engineerability matrix:
+
+| Field | Meaning |
+|-------|---------|
+| **Engine tier** | A = automatable from repo + GitHub API + local tools · B = needs deeper perms / sandbox execution · C = needs a live environment · D = needs humans/org data |
+| **Default status** | `measured` / `estimated` / `unknown` when the engine first computes the row (no blank rows, no scored guesses on C/D rows — unknown rows emit "what it takes to measure" text) |
+| **Scope/overlaps** | How this indicator's evidence is bounded so it never double-counts a sibling indicator's evidence |
+
+## Consistency check
+
+The catalog is single-sourced: encyclopedia + config canonical, executive rubric + sheets derived. A small markdown checker verifies on every change that: all IDs exist across files, names match, thresholds in the executive rubric match the encyclopedia, weights in the sheets match the config, and verify-effort tags are consistent.

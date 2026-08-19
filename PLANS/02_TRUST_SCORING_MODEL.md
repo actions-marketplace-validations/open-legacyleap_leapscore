@@ -7,10 +7,10 @@
 
 ## 1. The problem this solves
 
-~35 of 97 indicators (Tiers C/D) are **provably unmeasurable from a repository URL**:
+~35 of 102 indicators (Tiers C/D) are **provably unmeasurable from a repository URL**:
 
-- Need a live/deployed environment: SEC-03 (reachable OWASP), DATA-05 (lock contention), PERF-01/03/04/05/08, FE-02/03/07…
-- Need humans/org data/interviews: SEC-08 (compliance), VEL-05 (onboarding), VEL-10 (MTTR), PERF-09/10, DOCS-05/10…
+- Need a live/deployed environment: SEC-03 (reachable OWASP), DATA-05 (lock contention), PERF-01/03/04/05/08, FE-02/03/08…
+- Need humans/org data/interviews: SEC-08 (compliance), VEL-05 (onboarding), VEL-12 (MTTR), PERF-09/10, DOCS-05/10…
 
 Two wrong responses:
 1. **Score them anyway** → hallucinated numbers poison the whole product. M&A buyers will verify and find the lie.

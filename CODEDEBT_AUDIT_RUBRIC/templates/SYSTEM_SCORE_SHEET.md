@@ -2,7 +2,7 @@
 
 **System:** ______ · **Auditor:** ______ · **Date:** ______ · **Audit type:** ☐ Screen (1 day) ☐ Standard (2–3 days) ☐ Deep (1–2 weeks)
 
-**Scoring legend:** 3 = Healthy · 2 = Minor debt · 1 = Severe debt · 0 = Critical. Category % = (row sum ÷ 24) × 100. Deep-dive rows are optional.
+**Scoring legend:** 3 = Healthy · 2 = Minor debt · 1 = Severe debt · 0 = Critical · N/A = not applicable (excluded, reason in notes). Category % = (Σ applicable scores ÷ applicable count × 3) × 100. Deep-dive rows are recorded on the service sheets and fold into category % when executed. Weights come from `11_WEIGHTS_THRESHOLDS_CONFIG.md` — use the **FE-active** column if the system has a client.
 
 **Instructions:** Fill one `SERVICE_SCORE_SHEET.md` per service. Enter each service's weighted score and criticality below, then compute the system rollup.
 
@@ -18,6 +18,8 @@
 | G4 | OWASP Top-10 reachable (SEC-03/04) | ☐ Y ☐ N | |
 | G5 | Core domain untested (TEST-06) | ☐ Y ☐ N | |
 | G6 | CFR > 30% + manual deploys (VEL-03/08) | ☐ Y ☐ N | |
+| G7 | Data-rescue risk, restore never proven (DATA-06) | ☐ Y ☐ N | |
+| G8 | Copyleft in closed-source distribution (ECOS-05) | ☐ Y ☐ N | |
 
 > Any ☐ Y → verdict capped at **High Risk / Obsolete** (unless the numeric score is already below 27%, then Critical).
 
@@ -43,24 +45,23 @@
 
 ## Part C — System rollup
 
-**Option 1 — category-level rollup (preferred when services were scored per category):**
+**Weights:** from `11_WEIGHTS_THRESHOLDS_CONFIG.md`. Mark which set applies: ☐ Base (no client) ☐ FE-active (client present → FE 10%, others ×0.9).
 
 | Category | System category % | Weight | Weighted |
 |----------|:-----------------:|:------:|:--------:|
-| Dependency & Ecosystem | __% | 10% | __% |
-| Architecture & Code Quality | __% | 15% | __% |
-| Testing & Quality | __% | 10% | __% |
-| Security, Compliance & Vulnerability | __% | 20% | __% |
-| Data & Schema | __% | 10% | __% |
-| API & Integration | __% | 10% | __% |
-| Developer Velocity & Operational | __% | 10% | __% |
-| Performance & Cloud/Infrastructure | __% | 10% | __% |
-| Documentation & Knowledge | __% | 5% | __% |
+| Dependency & Ecosystem | __% | __% | __% |
+| Architecture & Code Quality | __% | __% | __% |
+| Testing & Quality | __% | __% | __% |
+| Security, Compliance & Vulnerability | __% | __% | __% |
+| Data & Schema | __% | __% | __% |
+| API & Integration | __% | __% | __% |
+| Developer Velocity & Operational | __% | __% | __% |
+| Performance & Cloud/Infrastructure | __% | __% | __% |
+| Documentation & Knowledge | __% | __% | __% |
+| Frontend & Client *(FE-active only)* | __% | __% | __% |
 | **SYSTEM SCORE** | | | **____%** |
 
-**Option 2 — service-level rollup (quick):** System score = Σ weighted ÷ Σ criticality weights (from Part B) = **____%**
-
-**Frontend annex (separate, not in total):** ☐ N/A ☐ FE module score = **__%** (from `10_FRONTEND_CLIENT.md`)
+**Option 2 — service-level rollup (quick):** System score = Σ weighted ÷ Σ criticality weights (from Part B) = **____%** *(approximation; ignores FE renormalization)*.
 
 ---
 
@@ -72,7 +73,7 @@
 | Moderate Technical Debt | 53–79% | ☐ |
 | High Risk / Obsolete | 27–52% | ☐ |
 | Critical Risk / Legacy Failure | < 27% | ☐ |
-| **Gate override** (any G1–G6 Red Flag → cap at High Risk) | | ☐ Applied ☐ Not applicable |
+| **Gate override** (any G1–G8 Red Flag → cap at High Risk) | | ☐ Applied ☐ Not applicable |
 
 **FINAL VERDICT:** ______
 
@@ -91,3 +92,5 @@
 3. ______
 
 **Required before next audit (verification):** ______
+
+**Calibration feedback:** ☐ Any threshold here misclassified reality? If so, record it in `11_WEIGHTS_THRESHOLDS_CONFIG.md` §5.

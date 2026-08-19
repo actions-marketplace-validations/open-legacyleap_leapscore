@@ -1,6 +1,6 @@
 # 09 — Documentation & Knowledge Continuity
 
-> **Weight:** 5% · **Standard:** DOCS-01…08 · **Deep-dive:** DOCS-09, 10
+> **Weight:** 5% base · 4.5% FE-active · **Standard:** DOCS-01…08 · **Deep-dive:** DOCS-09, 10
 >
 > **One-line thesis:** Documentation is the difference between a codebase that *is* and a codebase that *can be learned*. In an obsolete system, every question is answered by one person, one memory, or one archaeology session.
 
@@ -11,6 +11,7 @@
 ## Standard indicators
 
 ### DOCS-01 — Missing Architectural Decision Records (ADRs)
+**Engine tier:** A · **Default status:** measured · **Scope/overlaps:** decision-record inventory; oral-only decisions are DOCS-05.
 - **Definition:** There's no record of *why* the system is the way it is — no ADRs, no design docs, no decision history. Ask "why did we choose X?" and the answer is a memory, a Slack thread, or a shrug.
 - **Why it signals obsolescence:** Undocumented decisions are how obsolete architecture persists: nobody can change a decision they can't see, so every "why is this like this?" defaults to "always has been" and stays frozen. ADRs turn frozen architecture into revisitable choices, and their absence makes the codebase a museum no one can curate.
 - **Where it manifests:** No `docs/adr/`, no design doc history, decisions argued in Slack/meetings with no record, "why is this here" questions with no citation, PRs that make major architecture choices with no written rationale.
@@ -22,10 +23,11 @@
 - **Blast radius:** Modernization feasibility, decision reversibility, onboarding, recurring re-litigations ("why is this here?" fights), institutional memory.
 - **Remediation playbook:** Quick win: write ADRs for the top 10 load-bearing decisions (interview the oldest engineers, mine git/past docs), establish a template + PR requirement for consequential choices. Structural fix: ADR convention in the repo (ADR-NNN, status, decision, context, alternatives considered), decisions now documented at review time, an "explain every load-bearing choice" refactoring task.
 - **Gold standard / target state:** Every consequential decision has an ADR with alternatives; new decisions document as standard practice; teams can revisit a decision on evidence, not memory.
-- **Scoring guidance:** 3 = ADR-covered; 2 = partial docs; 1 = sparse/undocumented core; 0 = no decision trail exists.
+- **Scoring criteria (0–3, per global core-path taxonomy):** 3 = ADR-covered; 2 = partial docs; 1 = sparse/undocumented core; 0 = no decision trail exists.
 - **Verify effort:** 🔶 ~2–4 h — decision inventory + doc audit.
 
 ### DOCS-02 — Stale / Drifted Documentation
+**Engine tier:** B · **Default status:** estimated · **Scope/overlaps:** doc staleness vs. code; runbook currency is DOCS-03, docs-CI fix is DOCS-09.
 - **Definition:** Documentation exists but is outdated — it contradicts code, describes removed features, references old commands, and the team has learned not to trust it ("the wiki is lies").
 - **Why it signals obsolescence:** Stale docs are worse than none: they actively mislead, waste time, and train people to skip docs entirely — which then *creates* the tribal-knowledge problem (DOCS-05). Drift is the natural state of unowned docs, and its prevalence is a sign the team stopped investing in knowledge as code changed.
 - **Where it manifests:** README describing commands that don't work, docs referencing `v1` endpoints, arch diagrams from a dead era, code comments contradicting behavior, docs/wiki with "update TBD" for months, misleading runbooks/troubleshooting.
@@ -37,12 +39,13 @@
 - **Blast radius:** Onboarding time, debugging detours, runbook trust, tribal knowledge growth, modern planning (docs as a source of truth).
 - **Remediation playbook:** Quick win: a doc-rot sweep (delete/rewrite the worst 10), add "last verified" dates, a github-issues link on every doc page so inaccuracies are reportable with one click. Structural fix: docs-as-code with CI verification (commands in docs execute in a test fixture — DOCS-09), ownership per doc, "docs touched in the same PR as code" rule.
 - **Gold standard / target state:** Docs match code; commands in docs are CI-verified; a doc is as trustworthy as code, and updated with it.
-- **Scoring guidance:** 3 = docs verified current; 2 = partial staleness; 1 = widely stale, partly trustworthy; 0 = docs are lies, trust is dead.
+- **Scoring criteria (0–3, per global core-path taxonomy):** 3 = docs verified current; 2 = partial staleness; 1 = widely stale, partly trustworthy; 0 = docs are lies, trust is dead.
 - **Verify effort:** ⚡ ≤ 30 min to sample-verify.
 
 ### DOCS-03 — Missing Runbooks & Operational Docs
+**Engine tier:** B · **Default status:** unknown · **Scope/overlaps:** operational procedures; MTTR outcomes are VEL-12, docs pipeline is DOCS-09.
 - **Definition:** There are no runbooks — no documented incident response, no restore/rollback procedures, no "what to do when X breaks" — so every operational event is improvised live, at 3am, by the bravest person.
-- **Why it signals obsolescence:** Runbooks are what turn an incident from a fire into a procedure. Their absence is the operational twin of no tests: you only find out you don't have one while you're on fire. It compounds VEL-10 (MTTR), converts every outage into heroics, and burns out everyone on-call.
+- **Why it signals obsolescence:** Runbooks are what turn an incident from a fire into a procedure. Their absence is the operational twin of no tests: you only find out you don't have one while you're on fire. It compounds VEL-12 (MTTR), converts every outage into heroics, and burns out everyone on-call.
 - **Where it manifests:** No `docs/runbooks/` or ops wiki, on-call without procedures ("just figure it out"), restored-from-memory steps, "the person who knows" must be woken up, no post-incident doc updates.
 - **Detection method:** Runbook inventory — list the top 10 outage/incident classes (from incident history) and check each has: detection (dashboard/alert), diagnosis (where to look), mitigation (restore steps), escalation (who/when). Test: hand a junior on-call the runbook for the top incident and observe whether they can execute it.
 - **Objective metric:** `runbook coverage % of incident classes`; `runbook currency (last update vs. infra change)`; `time-to-mitigate with vs. without runbook (postmortem comparison)`; `on-call confidence survey`.
@@ -52,10 +55,11 @@
 - **Blast radius:** MTTR, on-call burnout, incident recurrence, escalation chaos ("who owns this?"), compliance (evidence of response).
 - **Remediation playbook:** Quick win: write runbooks for the top 5 incident classes today (postmortem-driven), make them linkable from alert dashboards, add "runme at the first sign" steps. Structural fix: runbook-as-product (owned, tested, games rehearsed), alert→runbook binding, postmortem = runbook update, drill the top runbook quarterly.
 - **Gold standard / target state:** Every incident class has a current, tested runbook; on-call executes procedures not improv; incident time is dominated by execution, not discovery.
-- **Scoring guidance:** 3 = complete + drilled; 2 = partial coverage; 1 = sparse / drifting; 0 = no runbooks, heroics-only.
+- **Scoring criteria (0–3, per global core-path taxonomy):** 3 = complete + drilled; 2 = partial coverage; 1 = sparse / drifting; 0 = no runbooks, heroics-only.
 - **Verify effort:** 🔶 ~2–4 h — incident-class inventory + runbook check.
 
 ### DOCS-04 — No Onboarding Guide / Developer Setup Docs
+**Engine tier:** B · **Default status:** estimated · **Scope/overlaps:** setup/golden-path guide; time-to-first-PR is VEL-05, fresh-clone harness is ARCH-09.
 - **Definition:** There's no effective developer-onboarding documentation — no golden path for setting up, running, and contributing; new engineers learn by being told, in person, repeatedly.
 - **Why it signals obsolescence:** A codebase with no written setup path is one where knowledge is not transferable at scale (teams can't grow, turnover is expensive). It's also the *first* documentation every candidate/mentor checks — its absence colors the entire repository's reputation. (Connects directly to VEL-02/VEL-05.)
 - **Where it manifests:** No CONTRIBUTING/onboarding guide, setup only in a personal doc, "ask on day 1" lists, README that skips setup ("just ask"), no local-env golden path, no "first PR" guide.
@@ -67,10 +71,11 @@
 - **Blast radius:** Onboarding cost, team scaling, VEL-05 (first-PR time), knowledge concentration (DOCS-05), candidate/mentor perception.
 - **Remediation playbook:** Quick win: write the golden path (clone → setup → run → test → first PR) and verify every command executes, add CONTRIBUTING.md. Structural fix: golden path CI-verified (fresh container proves it — DOCS-09), onboarding checklist wired into the ticket system, "setup docs break" = blame-the-repo not the human.
 - **Gold standard / target state:** A new hire takes < 2 hours to a working local env entirely from docs; the setup guide is CI-tested and always current.
-- **Scoring guidance:** 3 = golden path verified; 2 = drafted, partially stale; 1 = skeletal/oral-reliant; 0 = no guide, setup is word-of-mouth.
+- **Scoring criteria (0–3, per global core-path taxonomy):** 3 = golden path verified; 2 = drafted, partially stale; 1 = skeletal/oral-reliant; 0 = no guide, setup is word-of-mouth.
 - **Verify effort:** ⚡ ≤ 30 min — doc existence + dry-run.
 
 ### DOCS-05 — Tribal Knowledge & Oral Tradition
+**Engine tier:** D · **Default status:** unknown · **Scope/overlaps:** knowledge held in heads; written decisions are DOCS-01, exit/ownership is DOCS-10.
 - **Definition:** A significant fraction of "how this system actually works" exists only in people's heads — operational quirks, historical constraints, failure lore, "why" explanations — with no written representation, and the most senior people are walking liabilities (and/or mobbed with questions).
 - **Why it signals obsolescence:** When knowledge exists only in heads, the codebase's REAL behavior is not inspectable — it's interpersonal. This is the human form of undocumented architecture (DOCS-01) and it's near-universal in legacy systems: every "ask Dave" IS a missing document. It also blocks delegation, review, and modernization scoping (you can't cross-reference what's not recorded).
 - **Where it manifests:** "Let me ask X" for routing decisions, the "runbook of knowledge" person, meeting notes as the only record, wiki search returns nothing, a new feature requires a listening tour, critical "maybe it does X" (uncertain) behaviors.
@@ -82,10 +87,11 @@
 - **Blast radius:** Bus factor (VEL-06), onboarding, modernization scoping, review, delegation, incident diagnosis ("person knowledge" needed), retention risk.
 - **Remediation playbook:** Quick win: run the departure drill on the top module — write the unrecorded facts as docs/ADRs/runbooks, pair-document with the oral experts. Structural fix: "write it down or it doesn't exist" culture (every knowledge answer → doc link), knowledge-review on critical modules, retiring the phrase "ask X" in favor of "read the doc," interview-capture sessions for missionaries.
 - **Gold standard / target state:** 90%+ of functional questions answerable from written sources; no module depends on a person's memory; the departure drill yields a weekend, not a collapse.
-- **Scoring guidance:** 3 = written-answerable; 2 = a few oral modules; 1 = core mostly oral; 0 = entire system runs as social memory.
+- **Scoring criteria (0–3, per global core-path taxonomy):** 3 = written-answerable; 2 = a few oral modules; 1 = core mostly oral; 0 = entire system runs as social memory.
 - **Verify effort:** 🔶 ~2–4 h — Q&A audit + departure drill.
 
 ### DOCS-06 — Comment Debt & Self-Documenting Code Imbalance
+**Engine tier:** A · **Default status:** estimated · **Scope/overlaps:** comments and naming; code shape is ARCH-01, API surface docs are DOCS-07.
 - **Definition:** Code comments are misleading, obsolete, or restate the obvious ("increment i"), while intent, invariants, and "why not X" are undocumented — OR the code is so cryptic that comments exist as apology. Either way, the code's *intent* is not readable from the code itself.
 - **Why it signals obsolescence:** Comment debt is the texture of maintenance neglect: comments that lie are worse than none (they train readers to skip them), and code that can't explain itself passes its meaning down as folklore. Modern practice is self-documenting code (clear names, small functions, explicit intent) + honest "why" comments only where needed. (This is the micro-level of the whole knowledge problem.)
 - **Where it manifests:** Comments saying `// TODO: fix this` 5 years old, comments that contradict the next line, copy-pasted comments, naming like `x2`, `doStuff`, magic numbers with no explanation, dead comment blocks, no "why" comments near non-obvious invariants.
@@ -97,10 +103,11 @@
 - **Blast radius:** Fix risk (misreading), onboarding, review quality, refactor safety, tribal knowledge (DOCS-05) — comments are the first sudo-documentation people trust.
 - **Remediation playbook:** Quick win: kill the top 20 misleading/obsolete comments (fix or delete), resolve/add justification for the oldest TODOs, rename the worst identifiers. Structural fix: self-documenting-code standards in review (naming, small functions), "why" comments for invariants, comment lint (TODO age alarm), and a "readability" gate on the module most touched on-call.
 - **Gold standard / target state:** Code reads like prose (names carry intent), comments exist only for true "why", TODO-rot is gone, and a reader can trust line 1 to mean line 1.
-- **Scoring guidance:** 3 = self-documenting, honest comments; 2 = TODOs + paraphrase rot; 1 = cryptic + misleading mix; 0 = comments are the only decoder and/or they lie.
+- **Scoring criteria (0–3, per global core-path taxonomy):** 3 = self-documenting, honest comments; 2 = TODOs + paraphrase rot; 1 = cryptic + misleading mix; 0 = comments are the only decoder and/or they lie.
 - **Verify effort:** 🔶 ~2–4 h — sample review + grep/TODO-age.
 
 ### DOCS-07 — Missing API Documentation
+**Engine tier:** A · **Default status:** estimated · **Scope/overlaps:** consumer-facing API docs; the contract itself is API-01, generation is DOCS-09.
 - **Definition:** The API has no consumer-facing documentation — no OpenAPI/spec (from API-01), no reference docs, no examples, no guides — so consumers (internal or external) learn by reading code or probing endpoints.
 - **Why it signals obsolescence:** Undocumented APIs are un-sellable, un-boardable, and un-debuggable. For any multi-team or external surface, docs are the interface; their absence forces every consumer to reverse-engineer, producing integration bugs and support load. (Related to but distinct from API-01's *contract*: docs of a contract is what consumers actually read.)
 - **Where it manifests:** No developer portal/docs page, no usage examples, no auth/endpoint reference, "check the code, the naming's obvious," docs that only exist in a colleague's head, support tickets answering "how do I use X endpoint."
@@ -112,10 +119,11 @@
 - **Blast radius:** Integration velocity, external ecosystem, support load, sales/partner friction, debugging, onboarding.
 - **Remediation playbook:** Quick win: publish the OpenAPI/spec with a generated reference (Swagger UI/Redoc), add examples for the top 10 endpoints, write an auth quickstart. Structural fix: docs generated from contract in CI (spec is source, docs are output — DOCS-09), consumer guides for the top use cases, updated with each contract change, "docs in same PR" rule.
 - **Gold standard / target state:** Every endpoint has a current, generated reference with examples; a stranger self-serves; docs update with the contract in the same change.
-- **Scoring guidance:** 3 = current generated docs; 2 = partial; 1 = sparse/misleading; 0 = no docs; consumers reverse-engineer.
+- **Scoring criteria (0–3, per global core-path taxonomy):** 3 = current generated docs; 2 = partial; 1 = sparse/misleading; 0 = no docs; consumers reverse-engineer.
 - **Verify effort:** 🔶 ~2–4 h — docs inventory + stranger-integration test.
 
 ### DOCS-08 — No Release Communication / Changelog
+**Engine tier:** B · **Default status:** measured · **Scope/overlaps:** release/changelog communication; versioning contract is API-02, consumer blindness is API-08.
 - **Definition:** There's no changelog, no release notes, no migration guides, no announcement channel for API/behavior changes — consumers and users discover breaking changes by finding them the hard way.
 - **Why it signals obsolescence:** Release communication is the social layer of an API: even perfect versioning (API-02) is useless if nobody learns about it. In a legacy system, this absence is typical of "release day = nobody's informed" — and it's the mechanism by which every breaking change becomes a support incident. (Companion to API-08's consumer blindness.)
 - **Where it manifests:** No CHANGELOG.md, no release notes, repos without semantic-release, breaking changes announced "via the grapevine," migration guides written after the damage, rebrands/deprecations silent.
@@ -127,7 +135,7 @@
 - **Blast radius:** Consumer trust, incident volume, ecosystem velocity, support load, versioning value (API-02) — you can't get the benefit without the communication.
 - **Remediation playbook:** Quick win: adopt a CHANGELOG process (Keep-a-Changelog, auto-generated from commits/PRs), publish release notes for the top consumers, write migration guides for open breaking changes (backfill). Structural fix: semantic-release automation (version + changelog + notes automated), a release-communication channel (port status page + email), "breaking = migration guide in same MR" rule.
 - **Gold standard / target state:** Every release has automated notes; every breaking change has a migration guide published with the change; consumers hear first, break never (silently).
-- **Scoring guidance:** 3 = automated notes + guides; 2 = changelog manual/irregular; 1 = notes absent, changes announced late; 0 = no communication, change-by-surprise.
+- **Scoring criteria (0–3, per global core-path taxonomy):** 3 = automated notes + guides; 2 = changelog manual/irregular; 1 = notes absent, changes announced late; 0 = no communication, change-by-surprise.
 - **Verify effort:** 🔶 ~2–4 h — release-history + consumer-survey audit.
 
 ---
@@ -135,6 +143,7 @@
 ## Deep-dive indicators
 
 ### DOCS-09 — Docs-as-Code & Automation
+**Engine tier:** A · **Default status:** estimated · **Scope/overlaps:** docs-as-code automation; staleness it prevents is DOCS-02, API spec source is API-01.
 - **Definition:** Documentation is not treated as code — no docs CI, no generated-from-contract docs, no docs freshness checks, no "docs in CI" — so every doc rots (DOCS-02) and the only guarantee is entropy wins.
 - **Why it signals obsolescence:** Docs-as-code is the engineering answer to doc rot: generate what can be generated (API specs → reference), verify what can be verified (commands in docs run in CI), fail on fresh rot (staleness checks). Its absence means the knowledge layer depends on human discipline forever — and that's how it died in the first place.
 - **Where it manifests:** Docs stored without CI/test, `~/docs` or personal folders, OpenAPI spec unused for generation, no linting of docs, no doc-freshness verification, "regenerate docs" not part of release, docs repo excluded from quality gates.
@@ -146,10 +155,11 @@
 - **Blast radius:** Doc rot recurrence, DOCS-02/07 (API reference drifts), onboarding trust, maintenance cost of the knowledge layer.
 - **Remediation playbook:** Quick win: wire docs generation into CI (spec → reference), add links/lint checks for markdown, CI-verify the top setup commands (fresh container). Structural fix: full docs-as-code — generate what's generatable, verify what's actionable, staleness gates (docs touch-required on code change), docs failures block merge like code failures.
 - **Gold standard / target state:** Docs build like code, generate from truth, verify their own commands, and fail CI on rot — the knowledge layer is as maintained as the code.
-- **Scoring guidance:** (deep-dive — no rubric row) 3 = docs CI + generation; 2 = partial generation, no pipeline; 1 = hand-maintained, verified sporadically; 0 = unreinforced hand-maintenance.
+- **Scoring criteria (0–3, per global core-path taxonomy):** (deep-dive — folds into the category when run) 3 = docs CI + generation; 2 = partial generation, no pipeline; 1 = hand-maintained, verified sporadically; 0 = unreinforced hand-maintenance.
 - **Verify effort:** 🔷 ~1–2 days — docs-pipeline audit + fresh-container run.
 
 ### DOCS-10 — Knowledge Exit & Documentation Ownership
+**Engine tier:** D · **Default status:** unknown · **Scope/overlaps:** ownership and offboarding capture; oral knowledge is DOCS-05, unowned rot is DOCS-02.
 - **Definition:** Documentation has no owner and no process for the "knowledge exit" (when people leave, what they knew leaves with them) — no docs champion, no offboarding knowledge capture, no doc ownership map, and institutional memory leaves in the same car as the departing engineer.
 - **Why it signals obsolescence:** Knowledge continuity is how a system survives turnover; its absence is why "that person left and now we're stuck" is the most common legacy story. Documentation without ownership rots (root of DOCS-02); knowledge without an offboarding ritual is lost at clock-out pace. This is the *management* of the whole category.
 - **Where it manifests:** No docs owner/maintainer role, no offboarding checklist capturing knowledge, "X left and took the runbook in his head," unowned wiki sprawl, no documentation-review cadence, docs written by whoever had PTO guilt.
@@ -161,5 +171,5 @@
 - **Blast radius:** Turnover resilience, VEL-06 bus factor, onboarding ramp, tribal-knowledge growth, modernization continuity (the survey keeps restarting).
 - **Remediation playbook:** Quick win: name an owner/champion for the docs, run an offboarding knowledge-capture ritual for the top knowledge holders (scripted walkthroughs into docs/ADRs), capture the last 3 departures' gaps retroactively. Structural fix: ownership map (every doc/module has a maintainer), offboarding checklist enforced by HR tools, doc health reviews (growth vs. decay) quarterly, documentation as a funded line item not a PTO activity.
 - **Gold standard / target state:** Every knowledge area has an owner; offboarding reliably captures knowledge; departures are 1-day disruptions; the doc library grows while decaying nothing.
-- **Scoring guidance:** (deep-dive — no rubric row) 3 = owned + capture ritual; 2 = partial ownership/capture; 1 = sparse ownership, capture ad hoc; 0 = unowned, knowledge exits with each departure.
+- **Scoring criteria (0–3, per global core-path taxonomy):** (deep-dive — folds into the category when run) 3 = owned + capture ritual; 2 = partial ownership/capture; 1 = sparse ownership, capture ad hoc; 0 = unowned, knowledge exits with each departure.
 - **Verify effort:** 🔷 ~1–2 days — ownership map + offboarding-process audit.

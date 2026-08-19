@@ -1,16 +1,17 @@
 # 10 — Frontend & Client Health *(conditional module)*
 
-> **Weight:** annex only (never in the system total) · **Standard:** FE-01…06 · **Deep-dive:** FE-07
+> **Weight:** annex only · **FE-active weight:** 10% of a separate FE total · **Standard:** FE-01…07 · **Deep-dive:** FE-08
 >
 > **One-line thesis:** The frontend is the product's face — and a client that predates its era shows the same decay class as the backend, plus its own: bundles the size of satellites, accessibility scored in single digits, and a framework the ecosystem left behind.
 
-**Category summary:** This module is scored **only if the system has a user-facing client** (web app, mobile, desktop, or embedded UI). If none exists, skip entirely — it is an annex score recorded separately, not weighted into the system total. Covers the UI's framework health, performance, accessibility, platform currency, client architecture, design consistency, and run-time adaptation.
+**Category summary:** This module is scored **only if the system has a user-facing client** (web app, mobile, desktop, or embedded UI). If none exists, skip entirely — it is an annex score recorded separately. When a client exists, its ten-indicator score (FE-01…07 × FE-08 deep-dive) carries a separate 10% in the FE-active system rollup while the other nine categories scale ×0.9 (see `11_WEIGHTS_THRESHOLDS_CONFIG.md`). Covers the UI's framework health, performance, accessibility, platform currency, client architecture, design consistency, run-time adaptation, and internationalization.
 
 ---
 
 ## Standard indicators
 
 ### FE-01 — UI Framework / Stack EOL & Deprecation
+**Engine tier:** A · **Default status:** estimated · **Scope/overlaps:** client framework lifecycle; backend library lifecycle is ECOS-01, server-side coverage is ECOS-08.
 - **Definition:** The client is built on a framework or toolchain that is EOL, in maintenance mode, or legacy-generational (AngularJS, jQuery-era SPA, Flash/Flex, React 15, Vue 2 pre-EOL) — with no documented migration path and shrinking community/tooling support.
 - **Why it signals obsolescence:** The frontend is the user's daily experience; a dead framework means security patches stop (XSS classes stay open), hiring collapses, the ecosystem's gear (component libs, tooling, AI assistance) stops fitting, and every new feature is built in an abandoned era. (This is ECOS-01/08, aimed at the client.)
 - **Where it manifests:** `package.json` framework version, EOL trackers (endoflife for Angular/Vue/React), framework support pages, bundle of legacy polyfills, "don't upgrade" tickets, no component lib compatible with the stack, job postings for the stack drying up.
@@ -22,10 +23,11 @@
 - **Blast radius:** Client security, user experience growth, hiring, feature velocity, ecosystem fit (design systems, monitoring, a11y tooling).
 - **Remediation playbook:** Quick win: a written migration brief (target framework, timeline, budget), framework-but-the-patterns upgrade where feasible, freeze risky features. Structural fix: incremental migration (module-shell pattern, route-by-route strangler), contract with the backend (API-01) kept stable during migration, the client on a support-meeting framework within two quarters.
 - **Gold standard / target state:** Framework is current-to-recent, security-supported, ecosystems integrable; migration is an ordinary roadmap item if ever needed.
-- **Scoring guidance:** (annex) 3 = supported/current; 2 = maintenance mode with plan; 1 = EOL in isolated surface; 0 = EOL with no path.
+- **Scoring criteria (0–3):**** (annex) 3 = supported/current; 2 = maintenance mode with plan; 1 = EOL in isolated surface; 0 = EOL with no path.
 - **Verify effort:** ⚡ ≤ 30 min — version + EOL check.
 
 ### FE-02 — Bundle Size & Load Performance
+**Engine tier:** A · **Default status:** measured · **Scope/overlaps:** client load/network perf; server-side response time is PERF-01, infra heavy-asset serving is PERF-05.
 - **Definition:** The client ships fat bundles — megabytes of JS/CSS, no code splitting, render-blocking churn, heavy images — so load/LCP/interaction metrics are slow, mobile suffers, and the "page load" is a growing tax on conversion.
 - **Why it signals obsolescence:** Client performance is a user-decision metric (half the abandonments on load-time). Legacy clients universally carry unforked bundles (everything loaded on every route), absence of code-splitting, no measurement, and an app that "works fine on the office MacBook." It's also the cheapest modernization win available.
 - **Where it manifests:** Bundle analysis (webpack-bundle-analyzer/rollup), Lighthouse scores (< 50 perf), no code-splitting (one giant chunk), no caching strategy, no CDN, images unoptimized, page loads every asset on first paint, no Core Web Vitals tracking.
@@ -37,10 +39,11 @@
 - **Blast radius:** Conversion/revenue, mobile reach, user retention, infra (bandwidth), SEO/rankings, support ("slow app" tickets).
 - **Remediation playbook:** Quick win: code-split the routes, defer non-critical vendors, compress/optimize images, set a bundle budget in CI (regression gate), measure with Lighthouse in CI. Structural fix: a performance budget (bytes + core vitals) enforced, RUM for field data, on-demand vs. bundled loading for heavy features, service-worker caching.
 - **Gold standard / target state:** Initial JS < 300 KB, LCP < 2.5s on mobile field-data, code-split by route, budget-enforced in CI, vitals tracked on a dashboard.
-- **Scoring guidance:** (annex) 3 = budgets + fast; 2 = over budget, splitting partial; 1 = > 1 MB, no split; 0 = massively overweight, uncounted, users suffering.
+- **Scoring criteria (0–3):**** (annex) 3 = budgets + fast; 2 = over budget, splitting partial; 1 = > 1 MB, no split; 0 = massively overweight, uncounted, users suffering.
 - **Verify effort:** 🔶 ~2–4 h — Lighthouse + bundle analytics.
 
 ### FE-03 — Accessibility Deficits
+**Engine tier:** B · **Default status:** measured · **Scope/overlaps:** WCAG compliance of the client; server-rendered HTML (SSR) a11y still belongs here, not in DOCS or API.
 - **Definition:** The client fails accessibility basics — no semantic markup, missing ARIA/labels, keyboard-unusable controls, contrast failures, no focus management, no a11y testing — and there's no accessibility standard or enforcement.
 - **Why it signals obsolescence:** Accessibility is both a legal liability (ADA/WCAG/EN 301 549 — suits are real) and a *product reach* issue (roughly a fifth of users). Its absence marks a client built before accessibility became a baseline, and it's a rare case where the "modernization" is strictly additive — a cheap, high-return fix. Also a regulatory gate: WCAG 2.1 AA is legally required in many markets.
 - **Where it manifests:** Lighthouse a11y < 70, div-spam instead of semantic elements, unlabeled inputs, modals without focus traps/dismiss, color-only status indicators, no keyboard order, no a11y lint or automated checks, screen-reader users unreachable.
@@ -52,10 +55,11 @@
 - **Blast radius:** Legal action (accessibility suits), market reach, public-sector procurement eligibility, brand, UX quality (a11y fixes help everyone).
 - **Remediation playbook:** Quick win: run axe, fix the top serious/critical violations (labels, semantics, focus, contrast), add a11y lint to CI. Structural fix: a11y standards + automated gate (axe in CI failing new violations), keyboard/contrast reviews, component-library a11y defaults, screen-reader smoke tests on core journeys.
 - **Gold standard / target state:** a11y score ≥ 95, zero critical/serious violations, keyboard + screen-reader flows pass in review, a11y gate enforced in CI.
-- **Scoring guidance:** (annex) 3 = ≥ 95, enforced; 2 = 70–90, some violations; 1 = < 70 on part of app; 0 = unusable-by-keyboard, no checks, legal exposure.
+- **Scoring criteria (0–3):**** (annex) 3 = ≥ 95, enforced; 2 = 70–90, some violations; 1 = < 70 on part of app; 0 = unusable-by-keyboard, no checks, legal exposure.
 - **Verify effort:** 🔶 ~2–4 h — axe run + keyboard walkthrough.
 
 ### FE-04 — Browser / Platform Support Drift
+**Engine tier:** B · **Default status:** measured · **Scope/overlaps:** which user environments the client runs on; the runtime-adaptation response to them is FE-08, API version drift is API-02.
 - **Definition:** The client targets a stale or wrong platform matrix — still promising IE11/old browsers, or alternatively, no declared support matrix at all, breaking on current browsers, no responsive layouts, no desktop/mobile parity, and platform support is a rumor.
 - **Why it signals obsolescence:** The platform matrix is the client's forward-compatibility contract. Supporting dead browsers forces stagnation (no modern CSS/JS); supporting nothing means users break in the real world. Modern practice: a known, current matrix (browserlist) + responsive across breakpoints + feature detection. Its absence marks a client frozen at the era it was built.
 - **Where it manifests:** Hardcoded IE11/legacy promises in docs, polyfill sprawl for long-dead browsers, no browserlist file, fixed-width layouts (desktop-only), no responsive breakpoints, "works on Chrome only" acceptance, no device testing, transdyn failures on exports.
@@ -67,10 +71,11 @@
 - **Blast radius:** Reach, mobile revenue, user trust, QA coverage, support load, brand.
 - **Remediation playbook:** Quick win: declare the matrix + enforce browserlist, add a responsive bootstrap for the top user journey, test mobile on the core path. Structural fix: responsive-first design standards, device/browser QA in the pipeline, analytics-informed matrix reviews twice a year, cut the obsolete matrix (drop IE11 promises, shed polyfills).
 - **Gold standard / target state:** Declared + enforced current matrix, responsive across breakpoints, browser/device tested in QA, matrix reviewed against real usage.
-- **Scoring guidance:** (annex) 3 = current + responsive; 2 = stale or partial responsive; 1 = broken on current/mobile for some flows; 0 = desktop-only museum or no matrix with real breakage.
+- **Scoring criteria (0–3):**** (annex) 3 = current + responsive; 2 = stale or partial responsive; 1 = broken on current/mobile for some flows; 0 = desktop-only museum or no matrix with real breakage.
 - **Verify effort:** 🔶 ~2–4 h — browserlist + device test session.
 
 ### FE-05 — Client-Side Architecture Debt
+**Engine tier:** B · **Default status:** estimated · **Scope/overlaps:** client structure (state, components); equivalent backend coupling is ARCH-02, untyped client state is ARCH-11.
 - **Definition:** The client's internal structure is legacy-modal — global state sprawl (a dozen stores, mutable globals), prop-drilling and god-components, anemic architecture where UI logic invents the domain, no component model/testable seams, and every feature is a new global.
 - **Why it signals obsolescence:** Client architecture debt is ARCH on the frontend: the app grows by global mutation, state is untestable, components are untestable, and refactoring the client (a natural prelude to any modernization) is met with "too risky to touch." It's the reason FE-01/02 migrations stall.
 - **Where it manifests:** Global state object/store sprawl, giant god-components (1000+ line components), prop drilling through 6 layers, logic-in-render (`render` computing things), no separation of data/view/state, hundreds of `useEffect`/effects, state-that-can't-be-test, no component architecture.
@@ -80,12 +85,13 @@
 - **Red flag (critical):** 5+ unmanaged globals, 2,000-line components as normal, no component tests, unmappable data flow — "the frontend can't be reasoned about." *(Rationale: the client has no architecture worth modernizing incrementally — it's one shot glass of god-components.)*
 - **Example symptom:** "The checkout is one 3,500-line component reading 4 global stores, mutating them directly, fluffing 12 styles of prop drilling. A developer adds a field — and two unrelated pages change. 'We feared touching it' is the standing review note."
 - **Blast radius:** Client velocity, bug density, test feasibility, migration risk, UX bugs (state races), onboarding.
-- **Remediation playbook:** Quick win: mark the top 3 god-components, extract their clearest slice with a test, introduce a singular state pattern with actions. Structural fix: a deliberately small client architecture (one store, typed, actions-only), component decomposition by responsibility, testable seams with a component test budget, codegen for new screens (VEL-09-style).
+- **Remediation playbook:** Quick win: mark the top 3 god-components, extract their clearest slice with a test, introduce a singular state pattern with actions. Structural fix: a deliberately small client architecture (one store, typed, actions-only), component decomposition by responsibility, testable seams with a component test budget, codegen for new screens (VEL-11-style).
 - **Gold standard / target state:** God-components ≤ modern norms, single main state path, components testable in isolation with coverage, "touch one page breaks another" is a historical anecdote.
-- **Scoring guidance:** (annex) 3 = clean architecture + tests; 2 = some globals/god-components; 1 = a few unmanageables; 0 = unroutable god component sprawl.
+- **Scoring criteria (0–3):**** (annex) 3 = clean architecture + tests; 2 = some globals/god-components; 1 = a few unmanageables; 0 = unroutable god component sprawl.
 - **Verify effort:** 🔶 ~2–4 h — component/LOC + state inventory.
 
 ### FE-06 — Design System / UI Consistency Drift
+**Engine tier:** C · **Default status:** unknown · **Scope/overlaps:** shared UI vocabulary; component duplication in a *shared* library is seen by ARCH-02, a11y consistency is FE-03.
 - **Definition:** The client has no (effective) design system — every screen hand-styles controls, colors/typography/spacing vary by feature, duplicated component implementations, no shared tokens — so "just another screen" always implies custom styling and visual drift.
 - **Why it signals obsolescence:** A design system is the client's shared language; without it, the UI is a "many separate clients story," accessible-ish by accident, and each feature pays a full styling tax. Its absence signals a client that grew by addition before design-systems discipline — a marker of the same era as FE-01's framework.
 - **Where it manifests:** Duplicated button/input/modal implementations, hardcoded color hexes scattered, no design tokens, no component library (or an abandoned one), docs/wireframes vs. shipped UI mismatch, "which button should we use? build one."
@@ -97,14 +103,31 @@
 - **Blast radius:** Feature velocity (every screen restyled), UX quality, a11y (inconsistent controls), brand integrity, QA load, FE-01 migration (DS is the anchor).
 - **Remediation playbook:** Quick win: build a token layer (design tokens → styled primitives), consolidate the top 2 duplicate controls, adopt one primitive set for new work. Structural fix: a small living component library (owned, versioned), tokens adopted across screens, "no new hand-rolled primitive" rule, design ↔ engineering parity checks.
 - **Gold standard / target state:** One primitive set, tokens everywhere, new screens composed not styled, visual parity across the app by construction.
-- **Scoring guidance:** (annex) 3 = system + tokens; 2 = partial library; 1 = duplicates common; 0 = no shared foundation, reinvented per screen.
+- **Scoring criteria (0–3):**** (annex) 3 = system + tokens; 2 = partial library; 1 = duplicates common; 0 = no shared foundation, reinvented per screen.
 - **Verify effort:** 🔶 ~2–4 h — duplication audit + consistency sample.
+
+### FE-07 — Internationalization / Localization Debt
+**Engine tier:** A · **Default status:** unknown · **Scope/overlaps:** user-facing language adaptation; date/number/sort-conditional behavior *in the data layer* is DATA-08, timezone semantics in APIs is API-04.
+- **Definition:** The client either hardcodes one language with no i18n framework, or has i18n but a truncated practical reality — tokens only for headers, plurals/grammar wrong, right-to-left unhandled, dates/numbers sorted in English, timezone assumptions — so the product can't actually address the markets its distribution claims.
+- **Why it signals obsolescence:** i18n is an era marker as much as a feature: modern clients are locale-aware from the first screen. A hardcoded, English-assuming client was built when "one market, one language" was the product's horizon — a horizon that no longer matches a globalizing distribution. It also compounds every other FE debt (a full a11y pass on one locale has to be repeated for each).
+- **Where it manifests:** String literals in components, no i18n library / no extraction pipeline, no locale switch, RTL layouts broken or text truncated, hardcoded date/currency formats, English-first sort/case logic, "It works in English" as the QA bar, translations owned by nobody in the repo.
+- **Detection method:** Source audit — hardcoded-string density in UI components, i18n framework/lib + extraction pipeline present?, locale switching works + RTL check, plural/keyword (ICU) correctness sample, date/number/timezone handling test, translation-file completeness per supported market.
+- **Objective metric:** `hardcoded UI string count`; `i18n lib + extraction present?`; `supported locales`; `full-string translation coverage %`; `RTL-capable?`; `locale-aware date/number formatting?`.
+- **Yellow flag (warning):** i18n framework exists, some locales work, but plurals/RTL/formatting are shims and token coverage is partial. *(Rationale: the rails exist; the train is half-stocked — expanding = broken UX in the half that's fake.)*
+- **Red flag (critical):** No i18n at all (or English-only hardcode) and the market reality is multilingual; or claimed markets ship with broken RTL/plural/formatting. *(Rationale: distribution and product reality have separated — the client is a single-locale artifact in a multi-market world.)*
+- **Example symptom:** "The app technically ships to three markets, but the German UI is a Google-translated token dump, Arabic users get a left-to-right nightmare, and dates are 'mm/dd/yyyy' everywhere. 'We'll do i18n properly after the rewrite' — four rewrites later."
+- **Blast radius:** Market reach, revenue in non-EN markets, accessibility duplication cost, RTL usability, regulatory/language requirements, every future FE-migration's scope.
+- **Remediation playbook:** Quick win: adopt an i18n framework + extraction automation, move strings to tokens, ship locale toggling, fix the top market's dates/plurals. Structural fix: locale as a first-class runtime concept (RTL, pluralization via ICU, locale-aware formatting/sorting), full-fidelity QA per shipped locale, prune markets served with fake translations until real ones are ready.
+- **Gold standard / target state:** All UI strings extracted, ICU-correct plurals per locale, RTL fully supported, dates/numbers locale-aware, per-locale QA completeness, new code requires tokens (lint-enforced).
+- **Scoring criteria (0–3, per global core-path taxonomy):** 3 = full i18n, per-locale fidelity, RTL ok; 2 = framework + partial locales, shims remain; 1 = English-only core journeys, one tokenized surface; 0 = hardcoded single-locale, markets claiming it are fiction.
+- **Verify effort:** 🔷 ~1–2 days — hardcoded-string scan + RTL/plural/format tests.
 
 ---
 
 ## Deep-dive indicator
 
-### FE-07 — Mobile / Responsive Adaptation & Offline Support
+### FE-08 — Mobile / Responsive Adaptation & Offline Support
+**Engine tier:** C · **Default status:** unknown · **Scope/overlaps:** mobile/offline *context* fit; the context analytics feeding it are FE-04, mobile perf budget is FE-02.
 - **Definition:** The client doesn't adapt to the contexts real users are in — no meaningful offline/progressive capability for a product that needs it, heavy always-online dependence, no mobile-specific performance, no low-bandwidth consideration, and state-loss on navigation — while user data (from FE-04/analytics) shows a mobile-first world.
 - **Why it signals obsolescence:** "Responsive + offline-aware + mobile-perf" is the modern client baseline; a client that expects a desktop, wired, Chrome-18 machine is building for an audience that has moved. Offline/PWA support matters where connectivity is real (mobile users, tunnels, travel) — and its absence occasionally turns perfectly-normal usage into data loss.
 - **Where it manifests:** No service worker/PWA, forms lose unsaved data on refresh, hard dependency on network for static shell, no mobile perf budget (heavy assets on phones), no manifest/installability, desktop-first flows that collapse on mobile UX, connectivity-agnostic code.
@@ -116,5 +139,5 @@
 - **Blast radius:** Field/mobile productivity, data loss, user trust, engagement, app-store rating territory, growth.
 - **Remediation playbook:** Quick win: add a service worker + shell caching (static shell offline), persist draft state, cut mobile payload for the core path, cache-first for static assets. Structural fix: PWA/progressive economics by design (offline-first where core), mobile perf budget (Lighthouse gate), reconnect/resume semantics (idempotent submit ties into API-09), context-tiered asset serving.
 - **Gold standard / target state:** Core flows work offline (or degrade meaningfully well), draft data survives navigation, mobile perf within budget, progressive capability measured and tracked.
-- **Scoring guidance:** (deep-dive — no rubric row) 3 = offline-capable, mobile-fit; 2 = partial progression; 1 = no offline, mobile over budget; 0 = connectivity-dependent data loss in user-facing flows.
+- **Scoring criteria (0–3):**** (deep-dive — folds into the category when run) 3 = offline-capable, mobile-fit; 2 = partial progression; 1 = no offline, mobile over budget; 0 = connectivity-dependent data loss in user-facing flows.
 - **Verify effort:** 🔷 ~1–2 days — offline experiments + mobile audit.

@@ -1,6 +1,6 @@
 # 01 — Dependency & Ecosystem Health
 
-> **Weight:** 10% · **Standard:** ECOS-01…08 · **Deep-dive:** ECOS-09, 10
+> **Weight:** 10% base · 9% FE-active · **Standard:** ECOS-01…08 · **Deep-dive:** ECOS-09, 10
 >
 > **One-line thesis:** A codebase's dependencies are its circulatory system. When the ecosystem around the code moves faster than the code, every fix, audit, and hire gets harder — and eventually impossible.
 
@@ -11,6 +11,7 @@
 ## Standard indicators
 
 ### ECOS-01 — Runtime/Language EOL
+**Engine tier:** A · **Default status:** estimated · **Scope/overlaps:** runtime EOL dates only; framework lifecycle/status is ECOS-08
 - **Definition:** The language runtime or interpreter the system runs on (e.g., Python 3.6, Node 14, Ruby 2.7, .NET Framework, PHP 7.x) is at or past its official end-of-life date.
 - **Why it signals obsolescence:** An EOL runtime receives no security patches. Any vulnerability found after EOL is permanent, and the security team has no fix to apply. It also blocks hiring (engineers won't fight an old toolchain), blocks library upgrades (new libraries drop EOL runtimes), and violates almost every compliance framework's "supported software" control.
 - **Where it manifests:** CI container images (`FROM python:3.6`), `.nvmrc`/`.ruby-version`/`.tool-versions` files, `Dockerfile` base images, runtime configs in `package.json engines`, `pyproject.toml requires-python`, deployment manifests, EOL tickers (`endoflife.date`, `python.org/dev/peps/pep-0537`).
@@ -22,10 +23,11 @@
 - **Blast radius:** Security posture, compliance audits, hiring/retention, ability to install any current dependency, CI infrastructure compatibility, third-party SaaS deprecations.
 - **Remediation playbook:** Quick win: document the gap, create the upgrade ticket with a date. Structural fix: parallel runtime upgrade plan — run new runtime in CI behind a feature gate, migrate one service at a time, dual-run in prod. For truly stuck runtimes, isolate behind a facade and treat like a rewrite candidate.
 - **Gold standard / target state:** Every production runtime within its vendor-supported window; CI builds a canary job on the current runtime; a deprecation calendar exists and is reviewed quarterly.
-- **Scoring guidance:** 3 = all runtimes current; 2 = EOL approaching / one runtime in extended support but upgrade planned; 1 = EOL runtime in an isolated path; 0 = EOL runtime in core logic (triggers G3).
+- **Scoring criteria (0–3, per global core-path taxonomy):** 3 = all runtimes current; 2 = EOL approaching / one runtime in extended support but upgrade planned; 1 = EOL runtime in an isolated path; 0 = EOL runtime in core logic (triggers G3).
 - **Verify effort:** ⚡ ≤ 30 min — read pins, compare to EOL calendar.
 
 ### ECOS-02 — Major Package Drift
+**Engine tier:** A · **Default status:** estimated · **Scope/overlaps:** single-repo major-version drift; per-service version skew is ECOS-09, runtime EOL is ECOS-01
 - **Definition:** A large fraction of direct dependencies sit one or more *major* versions behind current, or the core framework (Spring, Laravel, Rails, Angular, React, Django) is pinned to an old major.
 - **Why it signals obsolescence:** Major versions carry breaking changes that require migration work. Drift compounds: the further behind you are, the more migration steps you must chain, and each one gets harder because intermediate versions are forgotten. Drift also forecloses options — security fixes often land only in new majors.
 - **Where it manifests:** `package.json`, `requirements.txt`/`pyproject.toml`, `Gemfile`, `go.mod`, `Cargo.toml`, `pom.xml`/`build.gradle`, lockfiles; tool reports from `npm outdated`, `pip list --outdated`, `dependabot`/`renovate` PR history.
@@ -37,10 +39,11 @@
 - **Blast radius:** Security patches, performance wins, hiring, framework skill availability, ability to onboard AI tooling, compliance reviews, interop with new libraries.
 - **Remediation playbook:** Quick win: enable Dependabot/Renovate with major-update grouping and a monthly budget. Structural fix: "upgrade train" — pick one major hop per quarter, keep intermediate commits shippable, use the dependency graph from tools to sequence hops (don't skip majors). Establish a "never more than 1 major behind" policy for core deps.
 - **Gold standard / target state:** Core framework within 1 major of current; < 30% of direct deps behind by a major; automatic update PRs flowing weekly; majors scheduled explicitly on the roadmap.
-- **Scoring guidance:** 3 = minor drift only; 2 = 30–50% one major behind; 1 = core framework behind by 2 majors or > 50% drifting; 0 = core framework stuck ≥ 2 majors with no plan.
+- **Scoring criteria (0–3, per global core-path taxonomy):** 3 = minor drift only; 2 = 30–50% one major behind; 1 = core framework behind by 2 majors or > 50% drifting; 0 = core framework stuck ≥ 2 majors with no plan.
 - **Verify effort:** ⚡ ≤ 30 min — one outdated-scan command + PR dashboard glance.
 
 ### ECOS-03 — Abandoned / Unmaintained Libraries
+**Engine tier:** B · **Default status:** estimated · **Scope/overlaps:** abandoned-lib maintenance risk only; malware/provenance risk is ECOS-10, license posture is ECOS-05
 - **Definition:** Direct or deep transitive dependencies that are archived, revoked, or effectively unmaintained (no commits, no releases, no maintainer response) — yet still load-bearing.
 - **Why it signals obsolescence:** An unmaintained library is a permanent, unfixable risk: bugs and CVEs accumulate with no upstream to fix them. It also signals the codebase froze at a point in time — the ecosystem moved on, and this system didn't.
 - **Where it manifests:** `package.json` deps with dead GitHub repos; deprecated npm packages (`npm deprecate` flags); PyPI packages with no releases in years; archived GitHub repos (`archived: true`); Socket.dev/OpenSSF reports; libraries whose GitHub page shows "this repository has been archived by the owner."
@@ -52,10 +55,11 @@
 - **Blast radius:** Security (unpatchable CVEs), stability (bugs never fixed), legal (unclear maintenance), team morale (maintaining a stranger's library).
 - **Remediation playbook:** Quick win: audit the dependency surface for abandoned libs and create a removal/swap ticket with a date. Structural fix: replace load-bearing abandoned libs with maintained alternatives or fork-and-own with a maintenance budget; pin to the exact version and wrap it behind your own interface so it's swappable.
 - **Gold standard / target state:** Every load-bearing dependency either actively maintained or deliberately forked-and-owned; a quarterly "library health" review is on the calendar; no archived repos in the dependency surface.
-- **Scoring guidance:** 3 = all maintained; 2 = abandoned libs in peripheral code with replacement planned; 1 = abandoned lib in a non-critical service or recent; 0 = abandoned lib in core/auth/data path.
+- **Scoring criteria (0–3, per global core-path taxonomy):** 3 = all maintained; 2 = abandoned libs in peripheral code with replacement planned; 1 = abandoned lib in a non-critical service or recent; 0 = abandoned lib in core/auth/data path.
 - **Verify effort:** ⚡ ≤ 30 min — scanner output + last-release dates.
 
 ### ECOS-04 — Deprecated API Usage
+**Engine tier:** B · **Default status:** estimated · **Scope/overlaps:** deprecated API calls in code; version drift is ECOS-02, framework support status is ECOS-08
 - **Definition:** The codebase calls APIs the upstream ecosystem has formally deprecated, removed, or replaced — compiler deprecation warnings, deprecated framework methods, removed stdlib functions, or documented "do not use" surfaces.
 - **Why it signals obsolescence:** Deprecation warnings are the ecosystem telling you exactly where your code will break next. Ignoring them means every dependency upgrade becomes a surprise; the code accumulates friction and loses compatibility, and it's a leading indicator that the code has been "touched less than the world moved."
 - **Where it manifests:** Compiler/linter output (`DeprecationWarning`, `@deprecated`, `#[deprecated]`, ESLint `no-deprecated-api`), language build logs, framework upgrade guides (e.g., Django removal timelines, Rails `deprecated_columns`, Angular deprecation list), IDE warnings, docs.
@@ -67,10 +71,11 @@
 - **Blast radius:** Dependency/framework upgrade feasibility, security patches availability, code reader confusion, IDE refactoring reliability.
 - **Remediation playbook:** Quick win: turn deprecation warnings into a CI-visible report (not silent); fix the 20 highest-value warnings. Structural fix: treat deprecation debt like feature debt — a quarterly "modernize the deprecated surface" slice; keep the target version's removal list as a tracked checklist.
 - **Gold standard / target state:** Zero deprecation warnings in the core module build; a CI gate that fails (or reports) on new deprecation warnings; removal timelines tracked.
-- **Scoring guidance:** 3 = no warnings; 2 = warnings in peripheral code; 1 = warnings in core, or in modules that will break next LTS; 0 = removed APIs already in use in core logic.
+- **Scoring criteria (0–3, per global core-path taxonomy):** 3 = no warnings; 2 = warnings in peripheral code; 1 = warnings in core, or in modules that will break next LTS; 0 = removed APIs already in use in core logic.
 - **Verify effort:** ⚡ ≤ 30 min — clean build log + grep.
 
 ### ECOS-05 — License Compliance Risk
+**Engine tier:** B · **Default status:** measured · **Scope/overlaps:** license classification and SBOM content; provenance/attestation is ECOS-10
 - **Definition:** Dependency licenses are unknown, ambiguous, or incompatible with how the codebase is distributed — with special danger from copyleft licenses (GPL/AGPL) in proprietary closed-source software.
 - **Why it signals obsolescence:** Licensing problems are a *quiet* form of debt that surfaces only at acquisition, audit, or legal review — the worst possible time. An obsolete codebase often has an undisciplined dependency history, which is exactly how unknown-license and copyleft packages sneak in.
 - **Where it manifests:** `package.json`/lockfiles with no `license` field, libraries with custom/unclear licenses (WTFPL, CC-BY-NC, "BSD without notice"), GPL/AGPL-licensed packages in a closed-source product, vendored code with licenses stripped, missing `NOTICE`/`THIRD_PARTY_LICENSES` files.
@@ -82,10 +87,11 @@
 - **Blast radius:** Legal/commercial deals, ability to distribute, enterprise sales (procurement asks for license reports), compliance audits.
 - **Remediation playbook:** Quick win: generate an SBOM (`syft . > sbom.json`), wire it into CI, publish attribution files. Structural fix: add a license gate to CI (fail on GPL in closed-source), replace copyleft deps, retire unknown-license packages, review vendored code for stripped notices.
 - **Gold standard / target state:** SBOM generated and attested on every release; license policy enforced in CI; zero unknown licenses; copyleft list reviewed quarterly and signed off.
-- **Scoring guidance:** 3 = SBOM + compliant; 2 = no SBOM but licenses look clean; 1 = unknown licenses or a copyleft dep in peripheral code; 0 = copyleft/unknown in distributed closed-source product.
+- **Scoring criteria (0–3, per global core-path taxonomy):** 3 = SBOM + compliant; 2 = no SBOM but licenses look clean; 1 = unknown licenses or a copyleft dep in peripheral code; 0 = copyleft/unknown in distributed closed-source product.
 - **Verify effort:** 🔶 ~2–4 h — SBOM generation + classification, or 🔷 if the graph is deep.
 
 ### ECOS-06 — Dependency Bloat
+**Engine tier:** A · **Default status:** estimated · **Scope/overlaps:** dependency graph size/dupes; unused code in modules is ARCH-04, supply-chain exposure is ECOS-10
 - **Definition:** The dependency graph is inflated — hundreds/thousands of transitive packages, dozens of unused direct dependencies, multiple packages doing the same job, or full libraries pulled in for one function.
 - **Why it signals obsolescence:** Dependency count is a proxy for attack surface, build time, and cognitive load. Modern practice trends toward smaller, composable, tree-shaken dependency surfaces. A bloated graph is also a smell that the codebase accreted rather than was designed — a hallmark of legacy.
 - **Where it manifests:** Lockfiles with huge transitive counts (`npm ls --all`), `package.json` unused deps, `go mod why`, duplicates (`npm dedupe` output, `pipdeptree` showing the same lib 3 versions), bundle analysis (webpack/rollup reports), monorepo node_modules sprawl.
@@ -97,10 +103,11 @@
 - **Blast radius:** Security auditability, CI install time, disk/artifact size, upgrade blast radius, supply-chain surface.
 - **Remediation playbook:** Quick win: run `knip`/`depcheck`, remove unused direct deps, enable `npm dedupe`/lockfile optimization in CI. Structural fix: set a budget (e.g., "no net-new transitive deps without review"), replace kitchen-sink libs with narrow ones, dedupe semver ranges, and periodically prune.
 - **Gold standard / target state:** Transitive count within a declared budget; zero unused direct deps; single version of every critical lib; dependency review is part of code review.
-- **Scoring guidance:** 3 = lean, within budget; 2 = 100–300 transitive with some unused; 1 = > 300 or heavy duplication; 0 = un-auditable graph with orphaned security-critical duplicates.
+- **Scoring criteria (0–3, per global core-path taxonomy):** 3 = lean, within budget; 2 = 100–300 transitive with some unused; 1 = > 300 or heavy duplication; 0 = un-auditable graph with orphaned security-critical duplicates.
 - **Verify effort:** ⚡ ≤ 30 min — three commands, no setup.
 
 ### ECOS-07 — Build Reproducibility & Lockfile Integrity
+**Engine tier:** A · **Default status:** measured · **Scope/overlaps:** lockfile presence and build reproducibility; registry/provenance hardening is ECOS-10
 - **Definition:** The build is not reproducible or not pinned: no lockfile, floating/mutable version ranges, builds that differ between machines/times, or a lockfile that is ignored or unmaintained.
 - **Why it signals obsolescence:** Reproducibility is the foundation of trust — for security (you don't know what you shipped), for debugging (prod ≠ local), and for reliability (the build that worked Friday may fail Monday). Its absence is a hallmark of an era before supply-chain discipline, and it blocks almost every modernization step (safe upgrades, CI caching, SBOMs, canary rollouts).
 - **Where it manifests:** No `package-lock.json`/`yarn.lock`/`poetry.lock`/`Gemfile.lock`/`go.sum`/`Cargo.lock` committed; `requirements.txt` without pins; version ranges (`>=1.0,<2`) in manifests; CI that does fresh installs into mutable registries; Docker builds without `--immutable`/`--frozen-lockfile`; builds that pull latest (`@latest`, `latest` tags).
@@ -112,10 +119,11 @@
 - **Blast radius:** Reproducible debugging, security forensics, cache efficiency, artifact provenance, canary/bisect operations, compliance.
 - **Remediation playbook:** Quick win: commit the lockfile, switch CI to `npm ci`/`pip install --require-hashes`/`--frozen-lockfile`, add a "lockfile up-to-date" CI check. Structural fix: adopt content-hash pinning, build from clean containers, produce provenance attestations (SLSA level 1→2), verify registry integrity.
 - **Gold standard / target state:** Lockfile committed and current; CI immutable install; two clean builds produce byte-identical artifacts; SLSA provenance generated per release.
-- **Scoring guidance:** 3 = lockfile + immutable CI + reproducible; 2 = lockfile but stale or not enforced; 1 = lockfile absent in some services; 0 = no lockfile, floating ranges, mutable installs in core path.
+- **Scoring criteria (0–3, per global core-path taxonomy):** 3 = lockfile + immutable CI + reproducible; 2 = lockfile but stale or not enforced; 1 = lockfile absent in some services; 0 = no lockfile, floating ranges, mutable installs in core path.
 - **Verify effort:** ⚡ ≤ 30 min — git ls-files + CI config check; double build is 🔶.
 
 ### ECOS-08 — Framework Lock-in & Monoculture Risk
+**Engine tier:** A · **Default status:** estimated · **Scope/overlaps:** framework lifecycle and lock-in; runtime EOL is ECOS-01, code-style generation gap is ARCH-06
 - **Definition:** The system is deeply locked to a framework/ecosystem whose maintenance status is declining, whose roadmap is hostile or migrating away, or where the org's options are foreclosed (e.g., a bespoke fork, a dead vendor, or a proprietary dependency you can't exit).
 - **Why it signals obsolescence:** Lock-in itself isn't debt — *dying* lock-in is. When the framework you bet on stops evolving (or its community migrates), the codebase becomes progressively harder to staff, secure, and extend. This indicator separates "old but fine" from "obsolete."
 - **Where it manifests:** Framework status pages (AngularJS EOL, jQuery, Spring Framework lifecycle, Laravel, Django support policy), vendor announcements (SaaS/PAAS framework retirements), community exodus signals (Stack Overflow trends, job postings, contributor decline), custom forks of OSS that must be maintained in-house, license changes that foreclose use.
@@ -127,7 +135,7 @@
 - **Blast radius:** Staffing, security, feature velocity, ecosystem tooling (CI templates, IDE plugins, libraries all assume the new world).
 - **Remediation playbook:** Quick win: quantify the coupling (which modules touch framework-specific APIs directly) and freeze scope on framework-dependent features. Structural fix: extract the framework behind a facade at the boundaries (ports & adapters), migrate incrementally module-by-module on the critical path, keep the system runnable through the whole migration.
 - **Gold standard / target state:** Framework either current-and-supported, or the core logic is framework-independent behind an interface with an active migration plan.
-- **Scoring guidance:** 3 = framework current/supported; 2 = maintenance mode, exit plan exists; 1 = EOL-ish framework in isolated module; 0 = EOL/retired framework in core logic with no path (overlaps G3).
+- **Scoring criteria (0–3, per global core-path taxonomy):** 3 = framework current/supported; 2 = maintenance mode, exit plan exists; 1 = EOL-ish framework in isolated module; 0 = EOL/retired framework in core logic with no path (overlaps G3).
 - **Verify effort:** ⚡ ≤ 30 min — lifecycle page + a quick coupling grep.
 
 ---
@@ -135,6 +143,7 @@
 ## Deep-dive indicators
 
 ### ECOS-09 — Version Skew Across Services
+**Engine tier:** A · **Default status:** estimated · **Scope/overlaps:** per-service version skew only; single-repo major drift is ECOS-02
 - **Definition:** In a multi-service system, the same dependency/framework exists at many different major versions across services (e.g., service A on Python 3.9, service B on 3.12; shared libraries at 3 different majors), with no coordinated upgrade strategy.
 - **Why it signals obsolescence:** Skew means the "system" has no coherent platform — every service is a snowflake with its own dependency museum. It multiplies upgrade effort (one fix, N upgrades), blocks shared tooling, and signals that the org has no platform discipline. It's the system-level echo of ECOS-02.
 - **Where it manifests:** Cross-repo version manifests, dependency dashboards, `renovate`/`dependabot` aggregated reports, internal platform teams' inventory, container registry image tags showing runtime variety.
@@ -146,10 +155,11 @@
 - **Blast radius:** Security fix latency, shared-library breakage, onboarding, CI/tooling matrix explosion, platform standardization efforts.
 - **Remediation playbook:** Quick win: inventory the skew, pick a "platform baseline" version, and make new work use it. Structural fix: establish a platform/boilerplate team with a version cadence; migrate oldest-first on the critical path; add cross-service tests for the shared contract; sunset divergent majors with deadlines.
 - **Gold standard / target state:** One supported major of every core dependency per system; upgrade cadence managed centrally; a new service starts on the platform baseline.
-- **Scoring guidance:** (deep-dive — no rubric row) 3 = uniform; 2 = two majors in flight with a plan; 1 = three majors with no coordination; 0 = divergent snowflakes with no platform baseline.
+- **Scoring criteria (0–3, per global core-path taxonomy):** (deep-dive — folds into the category when run) 3 = uniform; 2 = two majors in flight with a plan; 1 = three majors with no coordination; 0 = divergent snowflakes with no platform baseline.
 - **Verify effort:** 🔷 ~1–2 days — repo aggregation + scripting.
 
 ### ECOS-10 — Supply-Chain: Typosquatting, Malware, & Registry Risk
+**Engine tier:** B · **Default status:** measured · **Scope/overlaps:** malware/provenance/CI-action risk; abandoned-lib risk is ECOS-03, license posture is ECOS-05
 - **Definition:** Deep exposure to malicious packages (typosquatting, dependency-confusion, hijacked/malware packages), or the org has no defense in depth (no signature verification, no registry pinning, no provenance checks, no OpenSSF hygiene) across the dependency graph.
 - **Why it signals obsolescence:** This is the *newest* axis of debt. An obsolete codebase predates supply-chain tooling entirely, so it usually has none. If you can't attest where your code comes from, you're running a modern system with 2016-era supply-chain hygiene.
 - **Where it manifests:** Lockfiles with suspiciously-named packages, private-registry name collisions, packages with `mvnrepository`-style confusion, GitHub Actions pinned to tags not SHAs, no `OpenSSF Scorecard` run, no `Socket.dev`/`OSV` scan in CI, unverified registry endpoints, ad-hoc `curl | bash` installs.
@@ -161,5 +171,5 @@
 - **Blast radius:** Secrets/exfiltration, CI infrastructure compromise, legal, public trust, downstream customers.
 - **Remediation playbook:** Quick win: run socket.dev/scorecard immediately, pin all CI actions to SHAs, enable `--lockfile` integrity and verified-publisher checks, scan for squat-named packages. Structural fix: registry pinning, SBOM + provenance attestation (SLSA), private registry mirror with scanning, incident runbook for a compromised package, least-privilege CI tokens.
 - **Gold standard / target state:** Scorecard ≥ 8, all actions SHA-pinned, provenance verified per release, malware scan wired into CI as a gate, squatted-name watchlist.
-- **Scoring guidance:** (deep-dive — no rubric row) 3 = scorecard ≥ 8 + provenance; 2 = scanning present, pins loose; 1 = no scanning, tag-pinned actions; 0 = malware/hijack suspected or confirmed.
+- **Scoring criteria (0–3, per global core-path taxonomy):** (deep-dive — folds into the category when run) 3 = scorecard ≥ 8 + provenance; 2 = scanning present, pins loose; 1 = no scanning, tag-pinned actions; 0 = malware/hijack suspected or confirmed.
 - **Verify effort:** 🔷 ~1–2 days — scanner runs + action/CI audit.

@@ -1,6 +1,6 @@
 # 03 — Testing & Quality Engineering
 
-> **Weight:** 10% · **Standard:** TEST-01…08 · **Deep-dive:** TEST-09, 10
+> **Weight:** 10% base · 9% FE-active · **Standard:** TEST-01…08 · **Deep-dive:** TEST-09, 10
 >
 > **One-line thesis:** The test suite is the codebase's immune system. When it weakens, every change becomes a gamble — and the codebase stops being safely modifiable at all.
 
@@ -11,6 +11,7 @@
 ## Standard indicators
 
 ### TEST-01 — Code Coverage Degradation
+**Engine tier:** A · **Default status:** measured · **Scope/overlaps:** coverage % and trend by module; gate enforcement is TEST-08, core-path gaps are TEST-06.
 - **Definition:** Coverage of the highest-criticality logic has fallen below a working threshold — either never measured, measured only on trivial code, or measurably dropping over time.
 - **Why it signals obsolescence:** Coverage isn't a goal in itself, but it's the cheapest proxy for "can we refactor this safely?" Below ~50% branch coverage, refactoring the core is close to gambling. A coverage trend that's *falling* is a leading indicator that the suite is being abandoned while production grows.
 - **Where it manifests:** CI coverage reports (Istanbul/JaCoCo/coverage.py reports), coverage dashboards, modules with notoriously no tests, "we skip tests to ship" patterns, coverage gate absent or set to 0.
@@ -22,10 +23,11 @@
 - **Blast radius:** Refactor safety, regression rate, incident rate, modernization feasibility, compliance evidence.
 - **Remediation playbook:** Quick win: add a real coverage gate (fail below threshold) on core modules only, and instrument the trend. Structural fix: invest in testing the highest-churn/highest-risk modules first (correlate with ARCH-05), write tests as part of every bug fix (see coverage climb), make coverage a tracked product metric.
 - **Gold standard / target state:** Branch coverage > 80% on core modules; coverage gate enforced in CI; coverage trend visible on a dashboard and rising or stable.
-- **Scoring guidance:** 3 = > 80% core coverage, gate on; 2 = 50–70% with gate; 1 = < 50% on isolated paths; 0 = core untested or gate absent with falling trend.
+- **Scoring criteria (0–3, per global core-path taxonomy):** 3 = > 80% core coverage, gate on; 2 = 50–70% with gate; 1 = < 50% on isolated paths; 0 = core untested or gate absent with falling trend.
 - **Verify effort:** ⚡ ≤ 30 min — CI coverage report read.
 
 ### TEST-02 — Flaky Test Rate
+**Engine tier:** B · **Default status:** measured · **Scope/overlaps:** intermittent-failure rate; root-cause hermeticity is TEST-07, skip-graveyard is TEST-05.
 - **Definition:** A measurable fraction of the test suite fails intermittently without any code change — tests that pass locally, fail in CI, pass on rerun, or fail only in certain orders/environments.
 - **Why it signals obsolescence:** Flaky tests are a *behavioral* tax: they train the team to distrust the suite (the "rerun it" reflex), hide real regressions, burn CI time, and erode the will to refactor. A high flake rate is a symptom of test-design debt and of a codebase too coupled to run cleanly.
 - **Where it manifests:** CI rerun logs, GitHub Actions "rerun failed jobs" click-rate, `.first`/`.random` ordering issues, sleeps/timers in tests, tests that need a shared DB, non-determinism from real time/network/parallelism.
@@ -37,10 +39,11 @@
 - **Blast radius:** Regression escape, engineer time (reruns), trust in CI, refactor willingness, release confidence.
 - **Remediation playbook:** Quick win: quarantine flaky tests (run separately, don't block but do report), fix the top 5 by root cause (sleeps → waits, shared DB → test DBs, order-dependence → isolation). Structural fix: make tests hermetic (see TEST-07), add flake detection to CI (auto-quarantine + report), hold the line: no new flaky tests.
 - **Gold standard / target state:** Flake rate < 2%; zero "rerun to pass" culture; flaky tests auto-quarantined and tracked to fix within a sprint.
-- **Scoring guidance:** 3 = < 2%; 2 = 5–10% flaky; 1 = > 10% or skipped-to-green; 0 = suite widely distrusted, real regressions escaping.
+- **Scoring criteria (0–3, per global core-path taxonomy):** 3 = < 2%; 2 = 5–10% flaky; 1 = > 10% or skipped-to-green; 0 = suite widely distrusted, real regressions escaping.
 - **Verify effort:** 🔶 ~2–4 h — CI analytics + rerun logs.
 
 ### TEST-03 — Test Pyramid Inversion
+**Engine tier:** A · **Default status:** estimated · **Scope/overlaps:** tier-shape and ratio; E2E runtime cost is TEST-04, brittleness source is TEST-07.
 - **Definition:** The distribution of tests is inverted — few unit tests, a top-heavy layer of slow end-to-end tests, or UI-tests-as-integration-tests — instead of a pyramid (many fast unit tests, fewer integration, few E2E).
 - **Why it signals obsolescence:** An inverted pyramid is expensive and slow (E2E tests are the slowest, flakiest, most brittle), gives poor failure localization (an E2E failure says nothing about where), and means most logic is tested through the UI — the least stable interface. It's the signature of a suite that grew as "just make it green" rather than by design.
 - **Where it manifests:** Test suite where E2E/UI tests dominate runtime, unit tests near-zero, coverage achieved only via slow full-stack tests, `cypress`/`playwright`/`selenium` suites that take an hour, "tests that spin up the whole app."
@@ -52,10 +55,11 @@
 - **Blast radius:** CI time, failure localization, test flakiness, coverage of edge cases, refactor safety, developer patience.
 - **Remediation playbook:** Quick win: move the top 20 E2E tests' logic down to integration/unit level (test the service, not the click). Structural fix: rebuild the pyramid over time — write unit tests for all domain logic, integration for boundaries, keep E2E for < 10 user journeys; budget E2E runtime.
 - **Gold standard / target state:** Classic pyramid (e.g., 70/20/10); E2E < 10% runtime; failures localize within seconds; E2E covers only true user journeys.
-- **Scoring guidance:** 3 = pyramid shape; 2 = overweight E2E in places; 1 = E2E-dominant in a service; 0 = no unit layer, behavior tested only through UI.
+- **Scoring criteria (0–3, per global core-path taxonomy):** 3 = pyramid shape; 2 = overweight E2E in places; 1 = E2E-dominant in a service; 0 = no unit layer, behavior tested only through UI.
 - **Verify effort:** 🔶 ~2–4 h — test categorization + runtime measurement.
 
 ### TEST-04 — Test Run Time
+**Engine tier:** B · **Default status:** measured · **Scope/overlaps:** feedback-loop timing; pyramid rebalance is TEST-03, flaky rerun overhead is TEST-02.
 - **Definition:** The full test suite takes so long that it throttles delivery — minutes of feedback on every commit, or so long that tests are skipped, split, or gamed.
 - **Why it signals obsolescence:** Feedback latency is the core of engineering speed. Long suites push people to skip tests locally, to not run the suite before merge, and to treat CI as the "slow lane." It's both a symptom of test bloat (from the pyramid inversion, dead code, over-heavy E2E) and a cause of quality decay.
 - **Where it manifests:** CI pipeline metrics (suite duration trend), `pytest --durations`, Jest timings, "tests take too long" complaints, people committing without running tests, "we split CI and hope" configurations.
@@ -67,10 +71,11 @@
 - **Blast radius:** Merge velocity, refactor willingness, CI cost, flake exposure, deploy frequency.
 - **Remediation playbook:** Quick win: parallelize across shards/workers, move slow E2E out of the merge gate (nightly), fix the slowest 10 tests. Structural fix: attack root causes — pyramid rebalance (TEST-03), hermetic fast tests, caching, and a runtime budget with a gate.
 - **Gold standard / target state:** Suite < 10 min P95; every engineer runs the suite before merge; a runtime budget enforced in CI.
-- **Scoring guidance:** 3 = < 10 min; 2 = 10–30 min; 1 = > 30 min or split-and-hope; 0 = tests not part of the merge loop.
+- **Scoring criteria (0–3, per global core-path taxonomy):** 3 = < 10 min; 2 = 10–30 min; 1 = > 30 min or split-and-hope; 0 = tests not part of the merge loop.
 - **Verify effort:** ⚡ ≤ 30 min — CI pipeline metrics.
 
 ### TEST-05 — Skipped / Disabled Tests
+**Engine tier:** A · **Default status:** measured · **Scope/overlaps:** skip count and age; coverage silently lost on core paths is TEST-06.
 - **Definition:** A growing graveyard of `@skip`/`@Ignore`/`xit`/`pytest.skip`/commented-out tests — disabled with "fix later" intent that never comes.
 - **Why it signals obsolescence:** Skipped tests are *written-down coverage* — they document that a path was important enough to test and then abandoned. Each skip is a forgotten debt. A suite with many skips has systematically withdrawn its protection, and the trend usually tracks overall maintenance abandonment.
 - **Where it manifests:** `@Ignore`/`@Disabled` (JUnit), `@skip` (pytest/Jest `xit`), `describe.skip`, commented-out test blocks, "temporarily disabled for release" commits, tests excluded in CI config.
@@ -82,10 +87,11 @@
 - **Blast radius:** Silent coverage loss, regression escape, honesty of the coverage report, team morale.
 - **Remediation playbook:** Quick win: re-enable or delete each skip deliberately (delete-with-justification or fix-with-test); no skips without a linked ticket and owner. Structural fix: CI gate that fails on new skips without a ticket; a monthly "skip inventory" review; fix the top skipped module's root cause.
 - **Gold standard / target state:** < 2% skipped, all with tickets + owners, none older than a sprint; new skips auto-blocked.
-- **Scoring guidance:** 3 = < 2%; 2 = 5–10%; 1 = > 10% or aged; 0 = skips used to force releases or coverage silently gone.
+- **Scoring criteria (0–3, per global core-path taxonomy):** 3 = < 2%; 2 = 5–10%; 1 = > 10% or aged; 0 = skips used to force releases or coverage silently gone.
 - **Verify effort:** ⚡ ≤ 30 min — grep + git log.
 
 ### TEST-06 — Core Domain Untested
+**Engine tier:** B · **Default status:** estimated · **Scope/overlaps:** coverage of critical business journeys; gross coverage is TEST-01, agent test-proximity is ARCH-09.
 - **Definition:** The highest-criticality flows — the code that makes or loses money, touches PII, or is the product's reason to exist — have no (or negligible) test coverage.
 - **Why it signals obsolescence:** Untested core logic is a *gate* (G5). It means the system's most important behavior is verified by production incidents, not by engineering. Modernizing or even touching that code becomes a bet. This indicator is the "but the tests cover the wrong things" trap — coverage can be high elsewhere while the crown jewels are naked.
 - **Where it manifests:** The billing/payments/quotes/compliance module with no tests, coverage report filtered by module shows the core at ~0%, "we never wrote tests for that," incident history clustering on the same untested path.
@@ -97,10 +103,11 @@
 - **Blast radius:** Business risk, regulatory risk, refactor feasibility, modernization strategy (untested core = rewrite candidate by default).
 - **Remediation playbook:** Quick win: characterisation-test the core (capture current behavior, lock it), then fix the top 3 divergent behaviors. Structural fix: treat the core as the highest test priority — require tests on every core change, build a test-heavy "crown jewels" suite, tie core coverage to the gate.
 - **Gold standard / target state:** All 10 core journeys have tests; core module coverage > 80%; a core change without tests cannot merge; incidents on core paths are rare and never "first discovery."
-- **Scoring guidance:** 3 = core fully tested; 2 = core partially tested (gaps); 1 = core tested only via E2E or edge cases missing; 0 = core untested (triggers G5).
+- **Scoring criteria (0–3, per global core-path taxonomy):** 3 = core fully tested; 2 = core partially tested (gaps); 1 = core tested only via E2E or edge cases missing; 0 = core untested (triggers G5).
 - **Verify effort:** 🔶 ~2–4 h — module-to-criticality map + coverage cross-reference.
 
 ### TEST-07 — Test Isolation & Hermeticity
+**Engine tier:** B · **Default status:** estimated · **Scope/overlaps:** suite isolation under order/parallel; the code's shared-state cause is ARCH-07.
 - **Definition:** Tests are not isolated — they depend on shared state: a live/shared database, shared fixtures mutated by earlier tests, execution order, wall-clock time, the network, or each other. They pass only in a particular environment or sequence.
 - **Why it signals obsolescence:** Non-hermetic tests are the root cause of flakiness, order-dependence, and the "works on my machine" suite. They also make parallelization impossible, slow everything down, and let prod-vs-test drift hide bugs. Modern test practice demands deterministic, isolated, fast tests.
 - **Where it manifests:** Tests using the shared dev DB, tests that mutate a global fixture, `sleep()` calls, tests assuming order (alphabetical luck), `--runInBand` required to pass, "must run the DB locally," tests that need external services live.
@@ -112,10 +119,11 @@
 - **Blast radius:** Flakiness, parallelization ceiling, environment drift, prod bugs that tests can't see, CI reliability.
 - **Remediation playbook:** Quick win: run randomized + parallel CI to surface the worst offenders, fix shared-fixture tests, replace sleeps with waits. Structural fix: hermetic test infrastructure — per-test DBs (Testcontainers), fixtures scoped to each test, deterministic time, no network in unit tests, parallel by default.
 - **Gold standard / target state:** Suite passes under random order and full parallelism on a fresh container; zero sleeps; tests never touch shared live infrastructure.
-- **Scoring guidance:** 3 = hermetic + parallel; 2 = some shared state, mostly passes; 1 = serial-only or shared DB in a service; 0 = environment-dependent suite, results don't transfer.
+- **Scoring criteria (0–3, per global core-path taxonomy):** 3 = hermetic + parallel; 2 = some shared state, mostly passes; 1 = serial-only or shared DB in a service; 0 = environment-dependent suite, results don't transfer.
 - **Verify effort:** 🔶 ~2–4 h — random/parallel runs + grep audit.
 
 ### TEST-08 — Quality Gates in CI
+**Engine tier:** A · **Default status:** measured · **Scope/overlaps:** CI gate presence; per-axis thresholds live with their rows (coverage TEST-01, complexity ARCH-01).
 - **Definition:** There are no automated quality gates — no static analysis (SAST/lint), no coverage threshold, no complexity budget, no security scan — blocking or reporting on the merge path. Quality relies entirely on human review.
 - **Why it signals obsolescence:** Gates are the difference between a *process* that maintains quality and a *hope* that it does. A codebase without gates is one where every quality debt is discovered by incident or by argument. It's also a signal the CI was built in an era before quality tooling, or that the team has given up on enforcement.
 - **Where it manifests:** CI that only builds and runs tests (or not even that), no lint step, no SAST (Semgrep/SonarQube/CodeQL), no coverage gate, no `knip`/complexity check, "reviewers are the gate" as the whole policy.
@@ -127,7 +135,7 @@
 - **Blast radius:** Secret leakage, dead code, security debt, coverage decay, quality disputes, refactor safety.
 - **Remediation playbook:** Quick win: add lint + SAST (Semgrep/CodeQL/SonarQube) as failing stages, add a coverage gate on core, block admin bypass (require justification audit). Structural fix: define the quality bar in code (lint rules, complexity budgets, coverage thresholds, security checks) and let CI enforce it; tie all gates to the same config the team reviews.
 - **Gold standard / target state:** CI fails on lint, SAST, coverage, complexity, and security findings; bypasses are impossible or audited; the gates' config is itself reviewed.
-- **Scoring guidance:** 3 = full gates enforced; 2 = lint-only, review as gate; 1 = gates exist but bypassable/comment-only; 0 = no gates at all.
+- **Scoring criteria (0–3, per global core-path taxonomy):** 3 = full gates enforced; 2 = lint-only, review as gate; 1 = gates exist but bypassable/comment-only; 0 = no gates at all.
 - **Verify effort:** ⚡ ≤ 30 min — CI config read.
 
 ---
@@ -135,6 +143,7 @@
 ## Deep-dive indicators
 
 ### TEST-09 — Mutation Testing Score
+**Engine tier:** B · **Default status:** estimated · **Scope/overlaps:** verification depth via mutants; plain coverage is TEST-01, weak-assertion rot is TEST-10.
 - **Definition:** Mutation testing results — the percentage of injected mutants (faults) the test suite actually kills — indicating whether the suite *verifies* behavior or merely *executes* code. A suite can have high coverage and kill almost no mutants (assertions missing or weak).
 - **Why it signals obsolescence:** Coverage measures "did we run the code," not "would we catch a bug in it." A low mutation score means the suite is theater — green CI with low real protection. For a modernization decision, it's the difference between "refactor with confidence" and "refactor into a brick wall."
 - **Where it manifests:** Mutation tool reports — Stryker (JS/TS/Java/C#), MutPy (Python), PIT (Java), go-mutesting; a suite with high line coverage but weak assertions, tests that only call functions without asserting outcomes, snapshot-heavy tests that auto-update.
@@ -146,10 +155,11 @@
 - **Blast radius:** True regression protection, refactor confidence, false sense of security in coverage KPIs, audit credibility.
 - **Remediation playbook:** Quick win: run mutation on the top-criticality module, fix the highest-value survivors (add assertions, kill branches). Structural fix: run mutation on core modules in CI (time-boxed), use surviving-mutant count as a tracked quality metric, strengthen weak assertions.
 - **Gold standard / target state:** Core module mutation score ≥ 85%; mutation runs in CI on the core; survivors are reviewed and justified.
-- **Scoring guidance:** (deep-dive — no rubric row) 3 = ≥ 85% core; 2 = 60–80%; 1 = < 60% core or key-logic survivors; 0 = suite executes but verifies almost nothing.
+- **Scoring criteria (0–3, per global core-path taxonomy):** (deep-dive — folds into the category when run) 3 = ≥ 85% core; 2 = 60–80%; 1 = < 60% core or key-logic survivors; 0 = suite executes but verifies almost nothing.
 - **Verify effort:** 🔷 ~1–2 days — mutation run + survivor triage.
 
 ### TEST-10 — Test Maintenance Burden
+**Engine tier:** B · **Default status:** estimated · **Scope/overlaps:** ongoing suite upkeep cost; symptom flakes/skips are TEST-02/TEST-05.
 - **Definition:** The ongoing cost of keeping the suite green — how often tests break from *infrastructure* rather than *behavior* changes, how much engineering time goes to fixing/debugging tests vs. writing features, snapshot churn, and the ratio of "test fix" commits to feature commits.
 - **Why it signals obsolescence:** A suite that costs more to maintain than it saves is net-negative — and teams quietly stop investing in it, which then shows up as the other TEST indicators (flakes, skips, inverted pyramid). High maintenance burden is the *cause* under the symptoms.
 - **Where it manifests:** Git log ("fix test", "update snapshot", "flaky fix" commits), snapshot churn (CI updating goldens constantly), test-debugging sessions, PRs blocked by unrelated test failures, `--update-snapshots` habitual use, "tests changed because we changed X" infra coupling.
@@ -161,5 +171,5 @@
 - **Blast radius:** Feature velocity, test abandonment risk, engineer morale, regressions that follow test disinvestment.
 - **Remediation playbook:** Quick win: break the coupling — assert behavior not internals (mock at boundaries, not implementation), stabilize flaky snapshots, stop auto-updating snapshots. Structural fix: treat the suite as a product (owner, budget, KPIs), refactor tests to test contracts not internals, track test-maintenance share as a metric with a ceiling.
 - **Gold standard / target state:** < 10% of commits are test maintenance; tests break only when behavior changes; the suite is seen as an asset, not a tax.
-- **Scoring guidance:** (deep-dive — no rubric row) 3 = < 10% maintenance; 2 = 10–20%; 1 = 20–25% or internal-coupled; 0 = > 25%, team avoiding the suite.
+- **Scoring criteria (0–3, per global core-path taxonomy):** (deep-dive — folds into the category when run) 3 = < 10% maintenance; 2 = 10–20%; 1 = 20–25% or internal-coupled; 0 = > 25%, team avoiding the suite.
 - **Verify effort:** 🔷 ~1–2 days — git archaeology + team survey.

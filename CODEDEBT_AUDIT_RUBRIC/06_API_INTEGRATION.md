@@ -1,6 +1,6 @@
 # 06 — API & Integration Surface
 
-> **Weight:** 10% · **Standard:** API-01…08 · **Deep-dive:** API-09, 10
+> **Weight:** 10% base · 9% FE-active · **Standard:** API-01…08 · **Deep-dive:** API-09, 10
 >
 > **One-line thesis:** The API is the contract your system makes with the world. When contracts are undocumented, unversioned, and ungoverned, every consumer — internal or external — is at the mercy of the codebase's mood.
 
@@ -11,6 +11,7 @@
 ## Standard indicators
 
 ### API-01 — API Contract Drift
+**Engine tier:** A · **Default status:** estimated · **Scope/overlaps:** spec accuracy/drift today; the schema-evolution *process* is API-10, consumer usage visibility is API-08.
 - **Definition:** Interfaces are not governed by a formal contract — no OpenAPI/Swagger/GraphQL schema/Protobuf for many/all endpoints, response shapes drift between deploys, fields appear/disappear silently, and consumers cope by sniffing.
 - **Why it signals obsolescence:** A contract is the API's type system — it lets consumers, tests, generators, and mock servers depend on something stable. Its absence returns the world to "read the code, guess the shape," which is the definition of a pre-standard-era integration practice. Contract drift is also a direct cause of "it worked yesterday" integration bugs.
 - **Where it manifests:** Endpoints with no schema/spec, response shapes assembled by hand (`res.json({...})` ad hoc), breaking field renames shipped in minor versions, no contract test, consumers parsing `docs/README_old.txt`, Swagger file that predates half the endpoints.
@@ -22,10 +23,11 @@
 - **Blast radius:** Consumer breakage, integration bugs, protocol interoperability (third-party consumers), API documentation trust, mock/test quality.
 - **Remediation playbook:** Quick win: generate accurate specs from code (OpenAPI annotations/`apischema`, `drf-spectacular`, NestJS Swagger), validate specs vs. responses in CI. Structural fix: contract-first or contract-enforced development (spec is source of truth, generators produce clients/mocks/tests), a lint gate on spec changes.
 - **Gold standard / target state:** Every endpoint covered by a current, accurate contract; clients and tests generated from it; spec drift impossible (CI enforces).
-- **Scoring guidance:** 3 = contracts current + enforced; 2 = partial/stale coverage; 1 = mostly undocumented; 0 = no contracts, free drift.
+- **Scoring criteria (0–3, per global core-path taxonomy):** 3 = contracts current + enforced; 2 = partial/stale coverage; 1 = mostly undocumented; 0 = no contracts, free drift.
 - **Verify effort:** 🔶 ~2–4 h — contract inventory + diff.
 
 ### API-02 — Versioning & Breaking-Change Discipline
+**Engine tier:** A · **Default status:** estimated · **Scope/overlaps:** versioning/announcement policy; compatibility *checking* tooling is API-10, contract accuracy is API-01.
 - **Definition:** API changes are not versioned or announced — breaking changes ship in patch/minor releases, old versions die without notice, and consumers discover changes at runtime.
 - **Why it signals obsolescence:** Versioning is the social contract of an API: it says "we will not break you silently." Its absence is a trust failure that forces every consumer to freeze-and-fear updates, blocks external integrations, and argues against ever exposing the API publicly. Modern practice is explicit versioning (path/header/negotiated) + deprecation policy + release cycle.
 - **Where it manifests:** No `v1`/`v2` in paths or media types, breaking field removals in minor releases, no deprecation headers/announcements, old versions deleted immediately, consumers pinned to ancient versions with no migration path.
@@ -37,10 +39,11 @@
 - **Blast radius:** Consumer trust, external integration viability, partner velocity, API monetization, ecosystem growth.
 - **Remediation playbook:** Quick win: introduce versioning at the least cost (path `v2` for the contract-breaking surface; keep `v1` alive with a retirement date). Structural fix: versioning policy (what counts as breaking), deprecation headers + documented schedule, sunset coach with migration guides, semver discipline wired into release automation.
 - **Gold standard / target state:** Explicit versioning everywhere; breaking changes only in majors with deprecation windows; a deprecation calendar; zero silent consumer breakage for two years.
-- **Scoring guidance:** 3 = versioned + disciplined; 2 = versioned with leaks; 1 = versioned partially / reactive; 0 = no versioning, silent breakage.
+- **Scoring criteria (0–3, per global core-path taxonomy):** 3 = versioned + disciplined; 2 = versioned with leaks; 1 = versioned partially / reactive; 0 = no versioning, silent breakage.
 - **Verify effort:** ⚡ ≤ 30 min — release history + versioning audit.
 
 ### API-03 — Integration Point Bloat
+**Engine tier:** B · **Default status:** estimated · **Scope/overlaps:** topology sprawl/governance; cross-service shared-DB coupling is DATA-02, sync-chain resilience is API-04.
 - **Definition:** The system has a sprawling, unmanaged mesh of point-to-point integrations — direct service-to-service calls, services reading each other's DBs (see DATA-02), N-way connections that only the longest-serving engineers understand, no gateway/registry, and integration sprawl that grows with every feature.
 - **Why it signals obsolescence:** Each integration point is a hidden dependency: a deployment, a security surface, an outage path. When the mesh grows without governance, changes ripple invisibly and the "system" is unknowable — a defining property of organic, pre-platform-era architectures.
 - **Where it manifests:** A hand-drawn "integration spaghetti" diagram, services calling 5+ other services directly, shared DBs between services, no service registry/API gateway, a network diagram nobody can update, "if X changes we have to check these 11 things."
@@ -52,10 +55,11 @@
 - **Blast radius:** Outage chains, security surface, deployment coordination, team autonomy, on-call archaeology, modernization sequencing.
 - **Remediation playbook:** Quick win: build the topology map (automated), as the source of truth, and start routing traffic through a gateway for the top 5 hubs. Structural fix: platform governance — service registry, gateway/boundary routing, event-based decoupling for the densest paths, rules against direct cross-service DB access.
 - **Gold standard / target state:** Known topology (auto-mapped, current), integration governance (registry/gateway/events), a change to one service locally verifiable, density trending down.
-- **Scoring guidance:** 3 = governed mesh; 2 = dense but documented; 1 = dense, no registry; 0 = unknowable graph / DB-as-integration-bus.
+- **Scoring criteria (0–3, per global core-path taxonomy):** 3 = governed mesh; 2 = dense but documented; 1 = dense, no registry; 0 = unknowable graph / DB-as-integration-bus.
 - **Verify effort:** 🔶 ~2–4 h — config-based topology mapping.
 
 ### API-04 — Synchronous Coupling & Chatty Interfaces
+**Engine tier:** B · **Default status:** estimated · **Scope/overlaps:** sync fan-out/resilience mechanics; the mesh *topology* is API-03, latency impact of the chain is PERF-01.
 - **Definition:** Core flows string many synchronous calls end-to-end — one request fans out into a chain of blocking HTTP calls where any slow/failing dependency is paid by the user, with no async boundaries, no bulkheads, no circuit breakers, no timeouts/SLOs per hop.
 - **Why it signals obsolescence:** Synchronous fan-out turns every downstream dependency into your p99 and your outage — "the slowest link owns your product." Modern architecture truncates these chains with async/eventing, bulkheads, and resilience patterns. It's also why legacy systems are so hard to modernize: the failure mode is coupled to latency, not correctness.
 - **Where it manifests:** A checkout/onboarding flow instrumented as 8 sequential HTTP calls, no message queue anywhere, no circuit breaker/timeout config, a service that blocks on an ETL's endpoint, "the third-party is slow today so the app is slow."
@@ -67,10 +71,11 @@
 - **Blast radius:** p95 latency, cascade outages, third-party dependency risk, mobile/web parts, incident chains, modernization sequencing.
 - **Remediation playbook:** Quick win: add timeouts + circuit breakers on the fragile hops, cache the slow reads. Structural fix: slice the sync chain with events/async (compute off-path, return fast), bulkhead partitions by dependency, SLO-per-hop, degrade gracefully.
 - **Gold standard / target state:** Core flows touch the minimum live dependencies; slow work is async; circuit-broken fallbacks in place; the weakest link cannot sink the product.
-- **Scoring guidance:** 3 = minimal live deps, resilient; 2 = sync chains outside core; 1 = fragile chains in core with no fallback; 0 = primary flow hostage to one dependency.
+- **Scoring criteria (0–3, per global core-path taxonomy):** 3 = minimal live deps, resilient; 2 = sync chains outside core; 1 = fragile chains in core with no fallback; 0 = primary flow hostage to one dependency.
 - **Verify effort:** 🔶 ~2–4 h — tracing waterfall + resilience audit.
 
 ### API-05 — Third-Party & Vendor API Dependency Risk
+**Engine tier:** B · **Default status:** unknown · **Scope/overlaps:** external-vendor exposure specifically; *internal* service coupling is API-03/04, vendor runtime EOL is ECOS-08.
 - **Definition:** Core functionality depends on external APIs/SaaS/vendors that are unmanaged as risks — no fallback, no circuit breaker, no documentation, no SLA awareness, vendors on deprecated APIs, API keys held by one person, no contract/license review.
 - **Why it signals obsolescence:** External dependencies are bets: the vendor can change, deprecate, rate-limit, or vanish. Unmanaged, those bets become surprises. A modern integration surface manages external risk like insurance — fallbacks, abstraction, monitoring, license review, replacement paths. This is often where "the system was built on a promise" class of debt lives.
 - **Where it manifests:** Core flows calling a vendor endpoint directly, vendor API deprecated (per their changelog) and still used, no abstraction layer (swap = rewrite), API keys in code/one person's laptop, no vendor SLA/monitoring, single-vendor dependency with no alternative.
@@ -82,10 +87,11 @@
 - **Blast radius:** Revenue continuity, roadmap sovereignty, outage chains, compliance (vendor data handling), pricing changes.
 - **Remediation playbook:** Quick win: wrap the top 3 vendor calls behind ports (adapters), add fallback paths where feasible, assign a vendor-risk owner + deprecation watch. Structural fix: integration abstraction for critical vendors, SLA monitoring + circuit breakers, contract/license review, documented replacement paths, vendor deprecation calendar.
 - **Gold standard / target state:** External dependencies abstracted, fallbacked, monitored, and reviewed; vendor deprecations tracked and migrations planned; no revenue path is call-vendor-and-pray.
-- **Scoring guidance:** 3 = abstracted + monitored + fallbacked; 2 = some unabstracted non-core; 1 = core calls unabstracted, deprecations watched informally; 0 = revenue on a deprecated vendor API with no path.
+- **Scoring criteria (0–3, per global core-path taxonomy):** 3 = abstracted + monitored + fallbacked; 2 = some unabstracted non-core; 1 = core calls unabstracted, deprecations watched informally; 0 = revenue on a deprecated vendor API with no path.
 - **Verify effort:** 🔶 ~2–4 h — external-call inventory + vendor changelog check.
 
 ### API-06 — Protocol & Data-Format Legaciness
+**Engine tier:** A · **Default status:** estimated · **Scope/overlaps:** the wire format itself; the architecture generational gap is ARCH-06, stored-procedure legaciness is DATA-02.
 - **Definition:** The system still speaks legacy/modern-hostile protocols and formats on its load-bearing interfaces — SOAP, XML-RPC, REST-less RPC, proprietary binary serialization, XML everywhere, CORBA-era patterns, or hand-rolled wire formats — where modern equivalents (REST/OpenAPI, gRPC, message queues, JSON/Protobuf, AS2/EDIFACT-era interop) are expected.
 - **Why it signals obsolescence:** Protocol choice is the era stamp of an integration layer. Legacy protocols carry high operational overhead (web services stacks, ceremony, XML pain), lock out modern tooling (typed clients, gateways, observability), and are where staffing, security, and interop friction concentrate. Pairs with ARCH-06 at the interface level.
 - **Where it manifests:** WSDL files, SOAP envelopes, XML namespace ceremony, custom binary formats with hand-maintained mappers, an integration layer gated on a 2005-era middleware, mainframe/interconnect stubs, no JSON/REST/typed-schema path for new integrations.
@@ -97,10 +103,11 @@
 - **Blast radius:** Interop friction, staffing, gateway/observability compatibility, security (XML parsing attacks), feature velocity on the integration plane.
 - **Remediation playbook:** Quick win: stand up modern endpoints (REST/JSON or gRPC) alongside the legacy ones for new traffic, put a gateway in front to let consumers choose. Structural fix: migrate integrations off legacy protocols where feasible (strangler at the protocol layer), retire the EOL middleware, offer modern contracts for every legacy consumer.
 - **Gold standard / target state:** Core traffic on modern protocols, legacy formats behind adapters/bridges and shrinking, no EOL middleware, new integrations never require the museum stack.
-- **Scoring guidance:** 3 = modern protocols; 2 = legacy in non-core corners; 1 = core on legacy protocols with a plan; 0 = core binds on EOL middleware/protocols.
+- **Scoring criteria (0–3, per global core-path taxonomy):** 3 = modern protocols; 2 = legacy in non-core corners; 1 = core on legacy protocols with a plan; 0 = core binds on EOL middleware/protocols.
 - **Verify effort:** 🔶 ~2–4 h — protocol inventory + traffic-share estimate.
 
 ### API-07 — Error Handling & API Observability Semantics
+**Engine tier:** A · **Default status:** estimated · **Scope/overlaps:** error-contract semantics; duplicated error-handling infrastructure is ARCH-12, security/audit event logging is SEC-05.
 - **Definition:** The API surface has poor error semantics — generic 500s swallowing root causes, unstructured error bodies, no standard error contract, no request IDs/correlation, clients can't distinguish retriable/permanent/validation errors, and errors are invisible in logs.
 - **Why it signals obsolescence:** Error contracts are the API's exception handling contract: they tell clients *what to do*. Absent them, every failure is a mystery, debugging is archaeology (no request ID to trace), and consumer code is a basket of string greps. Modern APIs define errors structurally (RFC 7807-style, typed codes, correlation IDs).
 - **Where it manifests:** Bare 500s with HTML error pages, `{"error": "something went wrong"}`, no `requestId`/trace id in responses, no error-code taxonomy, validation errors that differ per endpoint, logs of errors without the request context, monitoring that can't tell retriable from fatal.
@@ -112,10 +119,11 @@
 - **Blast radius:** Debugging MTTR, consumer behavior correctness (retry/duplicate risk), integration bugs, monitoring quality, GDPR/PII in error surfaces.
 - **Remediation playbook:** Quick win: standardize an error contract (RFC 7807 or a JSON schema: code, message, correlationId, retriable flag), add request IDs everywhere, fix the worst misclassifications. Structural fix: framework-level error middleware (single source of truth), typed error taxonomy, API-monitoring that segments by error class, error payloads free of PII.
 - **Gold standard / target state:** Every endpoint returns structured, typed, correlated errors; 4xx/5xx semantics correct; a failing request is traceable in seconds; clients can act on errors programmatically.
-- **Scoring guidance:** 3 = structured + correlated; 2 = partial/inconsistent; 1 = mostly generic, no correlation; 0 = 500s + HTML + zero correlation.
+- **Scoring criteria (0–3, per global core-path taxonomy):** 3 = structured + correlated; 2 = partial/inconsistent; 1 = mostly generic, no correlation; 0 = 500s + HTML + zero correlation.
 - **Verify effort:** 🔶 ~2–4 h — response sampling + error-log audit.
 
 ### API-08 — Consumer Blindness & Backward Compatibility
+**Engine tier:** B · **Default status:** estimated · **Scope/overlaps:** consumer visibility/catalog only; spec accuracy is API-01, versioning/deprecation policy is API-02.
 - **Definition:** The team doesn't know its API consumers — no consumer registry, no usage telemetry on endpoints/fields, no deprecation communication channel, and breaking changes are discovered via angry emails rather than design.
 - **Why it signals obsolescence:** An API you can't see is an API you can't manage. Modern API platforms know their consumers (who calls what, which fields, which versions), so changes are rational. Legacy APIs are usually blind — grief-driven, reactive, and hostile to change, which freezes the whole platform.
 - **Where it manifests:** No consumer registry, no endpoint analytics, "who uses this?" → "some client from 2017 maybe," no changelog/deprecation announcements, consumer teams discovered when they break, no rate-limit/usage data per client.
@@ -127,7 +135,7 @@
 - **Blast radius:** Consumer trust, integration reliability, change confidence, API growth, partner/sales exposure.
 - **Remediation playbook:** Quick win: add per-consumer API keys + endpoint analytics (who, what, how often), start a consumer registry doc. Structural fix: full usage telemetry (endpoint + field level), a deprecation communication channel (changelog + consumer mailer + status page), consumer onboarding/registration as standard, usage dashboards for product decisions.
 - **Gold standard / target state:** Every consumer known + registered, endpoint/field usage visible, deprecations announced with migration guides, zero surprise consumer breakage.
-- **Scoring guidance:** 3 = full visibility + registry; 2 = partial analytics; 1 = analytics silo'd, no registry; 0 = blind changes, repeated breakage.
+- **Scoring criteria (0–3, per global core-path taxonomy):** 3 = full visibility + registry; 2 = partial analytics; 1 = analytics silo'd, no registry; 0 = blind changes, repeated breakage.
 - **Verify effort:** 🔶 ~2–4 h — telemetry audit + consumer interview.
 
 ---
@@ -135,6 +143,7 @@
 ## Deep-dive indicators
 
 ### API-09 — Idempotency & Retry Semantics
+**Engine tier:** B · **Default status:** unknown · **Scope/overlaps:** state-changing retry/duplicate guarantee; retriable/permanent error semantics are API-07, consumer breakage tracking is API-08.
 - **Definition:** The API has no idempotency guarantees or retry contract — clients cannot retry safely; duplicate submissions double-charge/duplicate records, and there's no `Idempotency-Key`/`idempotency` mechanism or documented retry policy.
 - **Why it signals obsolescence:** In a network world, retries are inevitable — a retryable-without-idempotency API converts network blips into business-correctness bugs (double payments, duplicate orders). Modern API design treats idempotency as a first-class guarantee for state-changing operations. Its absence is a correctness-era artifact.
 - **Where it manifests:** Payment/order/import endpoints without idempotency keys, no deduplication keys, timeouts without conflict-surfacing, docs silent on retry behavior, "we had a double-charge issue last month" incidents.
@@ -146,10 +155,11 @@
 - **Blast radius:** Double-charge/double-record risk, customer trust, reconciliation load, partner integrations (they *will* retry), audit correctness.
 - **Remediation playbook:** Quick win: add an idempotency key + response-replay on the top money flows, add a unique constraint (order/client_ref) as a backstop. Structural fix: idempotency as a platform primitive (framework middleware, key storage, replay store), document retry semantics, idempotency tests in CI for all mutation endpoints.
 - **Gold standard / target state:** All state-changing endpoints idempotent + tested, retry policy documented, duplicate side effects impossible.
-- **Scoring guidance:** (deep-dive — no rubric row) 3 = all state-changing enlistments idempotent; 2 = most, gaps in peripheral; 1 = money/mutation flows lack it; 0 = duplicates have already occurred.
+- **Scoring criteria (0–3, per global core-path taxonomy):** (deep-dive — folds into the category when run) 3 = all state-changing enlistments idempotent; 2 = most, gaps in peripheral; 1 = money/mutation flows lack it; 0 = duplicates have already occurred.
 - **Verify effort:** 🔷 ~1–2 days — design audit + replay tests.
 
 ### API-10 — Contract Schema Evolution Process
+**Engine tier:** A · **Default status:** measured · **Scope/overlaps:** the compat-gate/registry *process*; day-to-day spec accuracy is API-01, breaking-change versioning policy is API-02.
 - **Definition:** There is no process for evolving API contracts safely — no schema registry, no compatibility checking (additive-only change policy, protobuf/OpenAPI backward-compat rules), no versioned schema lifecycle, so "just change the field" is the default even when it breaks consumers.
 - **Why it signals obsolescence:** Schema evolution is the discipline behind versioning (API-02): a defined set of moves that are safe (add field, add optional, widen) vs. breaking. Without it, contract changes are decided by mood, and consumers break by accident. Modern platforms centralize this (schema registry + compat checks in CI).
 - **Where it manifests:** No schema registry, no `openapi-diff`/`buf breaking` in CI, breaking field removals pass review, event schemas changed with no consumer migration, "we thought it was private" surprises, no additive-value policy.
@@ -161,5 +171,5 @@
 - **Blast radius:** Consumer breakage, data-plane corruption (misparsed events), integration trust, platform growth.
 - **Remediation playbook:** Quick win: add an OpenAPI/buf compatibility check to CI (fail on breaking changes), document the additive-change policy. Structural fix: schema registry + versioned schemas (event + API), compat gate enforced, consumer-migration process for breaking changes (deprecate → migrate → remove), telemetry of consumers (API-08).
 - **Gold standard / target state:** Compat gates in CI, schema registry current, breaking changes rare and migration-led, event schemas versioned with consumers tracked.
-- **Scoring guidance:** (deep-dive — no rubric row) 3 = registry + gate; 2 = additive culture, no tooling; 1 = occasional breaking merges; 0 = regular silent schema breakage.
+- **Scoring criteria (0–3, per global core-path taxonomy):** (deep-dive — folds into the category when run) 3 = registry + gate; 2 = additive culture, no tooling; 1 = occasional breaking merges; 0 = regular silent schema breakage.
 - **Verify effort:** 🔷 ~1–2 days — process audit + breaking-change archaeology.
