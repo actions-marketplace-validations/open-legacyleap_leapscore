@@ -21,6 +21,7 @@
 | 08 | [`08_SECURITY_ACCESS_MODEL.md`](08_SECURITY_ACCESS_MODEL.md) | GitHub App scopes, private-repo M&A flow, sandbox security model |
 | 09 | [`09_MONETIZATION_TIERS.md`](09_MONETIZATION_TIERS.md) | Freemium-to-paid ladder and the M&A offering |
 | 10 | [`10_ROADMAP.md`](10_ROADMAP.md) | Phased delivery plan + open decisions |
+| 11 | [`11_WEBSITE_SPEC.md`](11_WEBSITE_SPEC.md) | Marketing/demo website (B→A): routes, anatomy, copy, demo data governance |
 
 **Order of dependency:** you cannot read 04 (v1 scope) without 03 (what's measurable); you cannot read 05 without 04; 06–09 all depend on 04/05. 10 is a summary of the rest.
 
@@ -67,6 +68,37 @@ Format: `#` · Decision · Rationale · Status
 
 ---
 
+## Decisions Log — website (grill W1–W12)
+
+Format: `#` · Decision · Rationale · Status · Source (grill Q)
+
+| # | Decision | Rationale | Status |
+|---|----------|-----------|--------|
+| W1 | Website is a marketing/demo site first, architected so the freemium product front door can grow into it: landing page + hand-crafted sample report; live scanning swapped in later | The "beautiful report" trailer is the marketing artifact; B→A means the seam (URL param → report shell) is product-shaped from day 1 | **AGREED** (Q1) |
+| W2 | Primary persona: engineering lead scoring their own repo; single conversion action = paste URL → watch report → share the evidence | The report is the marketing; CTO/portfolio angle is a secondary section; M&A stays off this site | **AGREED** (Q2) |
+| W3 | Sample report scores a real, famous repo in the Moderate band with full honesty UI (coverage bar, gates, expandable rows) + prominent "illustrative sample" label | Recognition punch + believable debt; honesty branding demands the numbers stay derivable and labelled | **AGREED** (Q3, Q7) |
+| W4 | Stack: Next.js (App Router) + TypeScript + Tailwind + shadcn/ui; demo data behind a `ReportProvider` interface mirroring `06_DATA_MODEL_API.md` | Product-shaped SSR/SEO + auth path; the seam makes B→A a provider swap, not a rewrite | **AGREED** (Q4) |
+| W5 | Aesthetic: dark "instrument panel"; tier colors (≥80/53–79/27–52/<27) are the only color language; Inter for UI, mono for evidence | Native to the IDE-dwelling persona; equal-form-is-equal-meaning without decoration | **AGREED** (Q5) |
+| W6 | Three routes: `/` (hero + URL box + proof strip + tier tease), `/report/sample` (full report), `/method` (scoring model). Report gets its own route = the future `/r/[owner]/[repo]` | The report is the product and must not be scroll-squeezed; `/method` does the honesty trust-work | **AGREED** (Q6) |
+| W7 | Hero URL box is a *working* component: submit → `/report/sample?repo=X`, header echoes X, persistent sample-disclaimer banner above the report | The box is the wiring test for A (same param feeds a live scan later); a dismissible disclaimer on fabricated data is the one move the brand forbids | **AGREED** (Q8) |
+| W8 | Keep **LeapScore** name (not LegacyScore); logo = dial/gauge mark (one arc, one needle, tier-colored), domain `leapscore.dev` | Name stability > momentary descriptiveness; the mark reads as an instrument, matching W5 | **AGREED** (Q9) |
+| W9 | Website lives in this repo under `site/`; session deliverable = this spec (`11_WEBSITE_SPEC.md`) + decision log; code is a later session | Rubric is the canonical source the mock data references; no code until catalog agreed applies to the engine, not to marketing artifacts | **AGREED** (Q10) |
+| W10 | Report anatomy: header dial → coverage strip → gate table (cockpit board) → category table w/ 1 expanded row + "inspect all 102" toggle → bottom URL-box CTA | Density kills beauty; default view gorgeous, full depth one click away; renders the real `06` schema with seeded values | **AGREED** (Q11) |
+| W11 | Tone = "audit-grade, not advertising-grade": terse declaratives, second person, one honest number per claim; never claim a capability the live site lacks | Same voice as the docs; hides-nothing is the differentiator and must extend to the site's own claims | **AGREED** (Q12) |
+| W12 | Demo data governable by rubric: `django/django` ≈58/100 (Moderate, top of band), coverage 65/25/10 measured/estimated/unknown, one heavy near-miss gate, no fired gate | Numbers must survive an engineer recomputing from the rubric; the demo is a render of the real schema, not free-form decoration | **AGREED** (Q7) |
+| W13 | Homepage grows to six blocks (hero fold, report teaser, proof strip, who-it's-for band, credibility band, waitlist CTA) and a new `/product` route carries the full product story; header/footer nav extended with Product + Rubric links; M&A stays off-site | "All of it" product content, hybrid placement: compact bands on the funnel, depth routed — W5 density preserved; the credibility band makes the public rubric checkable from the front door | **AGREED** (grill) |
+| W14 | Product copy uses an artifact-present register: present tense only for renderable artifacts (report, rubric, method); the live engine and Deep Scan stay future-gated ("coming" + waitlist) | W11 applied forward: no claim the live site lacks; the honesty model is the pitch, so present tense is reserved for what is demonstrably rendered | **AGREED** (grill) |
+
+---
+
+## Open website decisions (deferred to the code session)
+
+- W-OPEN-1: Waitlist mechanics (email capture → where it lands; newsletter tool).
+- W-OPEN-2: Exact seeded indicator rows for the Django sample (top blockers + remediation text pulled from rubric encyclopedias).
+- W-OPEN-3: `site/` bootstrap — repo-local page/component tree, lint/format setup to match repo conventions (none exist yet; site establishes them).
+
+---
+
 ## Principles (the non-negotiables that survive any future change)
 
 1. **No silent guesses.** Every number in a report is traceable to evidence (`measured`), an explicitly-labeled inference (`estimated`), or nothing (`unknown`). No exception.
@@ -84,3 +116,4 @@ Format: `#` · Decision · Rationale · Status
 - OQ3: Report delivery form — web app, API, PDF, HTML packet? (Blocked on product spec review.)
 - OQ4: Cost-per-scan budget target for the freemium tier (affects which indicators stay in the free path). (Fee link to 04/09.)
 - OQ5: ~~Where `frontend annex` (FE-01…07) lands~~ **RESOLVED** in rubric redesign (C1): when a client exists, FE-01…07 + FE-08 deep-dive get a separate 10% and the other nine categories scale ×0.9; when no client exists, FE is skipped entirely.
+- OQ6: Coverage-display rounding. W12 fixes the canonical counts 49 measured / 19 estimated / 8 unknown over 76 rows; exact-to-nearest display is 64/25/11, but W12 text says "65/25/10". Counts are canonical and asserted in `site/lib/score.consistency.test.ts`; the site displays the computed rounded values (64/25/11). Decide whether to adopt the computed rounding or legislate a display convention so text and render can't diverge again.

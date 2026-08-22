@@ -1,0 +1,91 @@
+@import "tailwindcss";
+
+/*
+ * leapscore.dev — dark instrument panel.
+ * Sole color language = tier bands (>=80 healthy / 53–79 moderate /
+ * 27–52 high / <27 critical); everything else is neutral.
+ */
+:root {
+  --background: #090b0d;
+  --foreground: #e7e9ec;
+  --panel: #0e1114;
+  --panel-raised: #13171b;
+  --hairline: #232833;
+  --muted: #8a9099;
+  --faint: #4d525a;
+  --ink: #c9cdd4;
+
+  /* tier bands — measured once, used everywhere */
+  --tier-healthy: #22c55e;
+  --tier-moderate: #e0a00a;
+  --tier-high: #ef4444;
+  --tier-critical: #9f1d2c;
+}
+
+@theme inline {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", monospace;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-panel: var(--panel);
+  --color-panel-raised: var(--panel-raised);
+  --color-hairline: var(--hairline);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-ink: var(--ink);
+
+  --color-tier-healthy: var(--tier-healthy);
+  --color-tier-moderate: var(--tier-moderate);
+  --color-tier-high: var(--tier-high);
+  --color-tier-critical: var(--tier-critical);
+
+  /* shadcn/base-nova primitive tokens -> neutral instrument palette */
+  --color-primary: var(--foreground);
+  --color-primary-foreground: var(--background);
+  --color-secondary: #1a1f25;
+  --color-secondary-foreground: var(--foreground);
+  --color-muted-foreground: var(--muted);
+  --color-ring: #3d444d;
+  --color-border: var(--hairline);
+  --color-input: #1c2127;
+  --color-destructive: var(--tier-high);
+  --color-destructive-foreground: #fff;
+  --color-card: var(--panel);
+  --color-card-foreground: var(--foreground);
+  --color-popover: var(--panel-raised);
+  --color-popover-foreground: var(--foreground);
+
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  text-rendering: optimizeLegibility;
+}
+
+/* hairline borders on cards */
+.instrument-panel {
+  border: 1px solid var(--hairline);
+  background: var(--panel);
+}
+
+/* dot-grid texture for the hero */
+.dot-grid {
+  background-image: radial-gradient(var(--hairline) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+/* font-mono tabular numeric alignment for scores and file paths */
+.font-mono {
+  font-variant-numeric: tabular-nums;
+}
