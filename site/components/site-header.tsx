@@ -5,6 +5,7 @@ import { BrandMark } from "@/components/brand-mark";
 const NAV = [
   { href: "/product", label: "Product" },
   { href: "/method", label: "Method" },
+  { href: "/rubric", label: "Rubric" },
   { href: "/report/sample", label: "Sample report" },
 ];
 

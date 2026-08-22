@@ -35,8 +35,9 @@ Hero copy: *"Code is a balance sheet. LeapScore reads it."* Subhead: *"Paste any
 |---|---|
 | `/` | Hero (promise line → URL box → dial teaser → proof strip → who-it's-for band → credibility band → waitlist CTA). See §3.1 |
 | `/product` | The product story: deliverable triad, the 10 categories, who it's for, the trust model, what it is not, honest roadmap, CTA. Depth destination for the homepage's credibility band (W13) |
-| `/report/sample` | The full report; future live shell is `/r/[owner]/[repo]` (W6) |
 | `/method` | The scoring model explained: taxonomy, coverage, gates, N/A rule, formula — "you have nothing to hide" is the differentiator |
+| `/rubric` | Interactive catalog: browse/search the 102 indicators by category, confirming transparency |
+| `/report/sample` | The full report; future live shell is `/r/[owner]/[repo]` (W6) |
 
 Footer links the actual rubric (`../CODEDEBT_AUDIT_RUBRIC/README.md`) so "built on a real 102-indicator rubric you can read" is checkable.
 
@@ -62,6 +63,13 @@ Six blocks, compact — the homepage stays a funnel, the depth routes carry the 
 - Working component, not a fake. Submit → `/report/sample?repo=<input>`; header echoes the typed repo ("Score for `org/repo`").
 - **Persistent, non-dismissible sample-disclaimer banner** sits above the report: *"Illustrative sample — built on the real rubric. Live scoring is coming; join the waitlist."*
 - The `?repo` param is the wiring test for A: the same param later feeds a live scan.
+
+### 3.4 The Rubric browser (`/rubric`)
+
+- **Interactive index:** a list of all 10 categories, expandable into the 102 indicators.
+- **Search:** live filter by name, ID, or keyword.
+- **Deep-dive indicators:** clearly labeled as such, indicating they fold into category totals in a full audit.
+- **Purpose:** establishes transparency; demonstrates the exhaustive rubric rather than abstract marketing claims.
 
 ---
 
