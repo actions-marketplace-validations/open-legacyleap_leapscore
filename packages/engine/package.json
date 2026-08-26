@@ -1,0 +1,15 @@
+{
+  "name": "@leapscore/engine",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./rubric.json",
+  "scripts": {
+    "test": "vitest run",
+    "lint": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5",
+    "vitest": "^4.1.11"
+  }
+}

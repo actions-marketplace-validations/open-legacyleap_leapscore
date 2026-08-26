@@ -1,0 +1,11 @@
+{
+  "_comment": "COMPILED from docs/rubric/01_*.md...10_*.md + 11_WEIGHTS_THRESHOLDS_CONFIG.md — do not hand-edit. Run npm run compile:rubric.",
+  "rubricVersion": "stub-sha",
+  "weights": {
+    "base": { "SEC": 20, "ARCH": 15, "ECOS": 10, "TEST": 10, "DATA": 10, "API": 10, "VEL": 10, "PERF": 10, "DOCS": 5 },
+    "feActive": { "SEC": 18, "ARCH": 13.5, "ECOS": 9, "TEST": 9, "DATA": 9, "API": 9, "VEL": 9, "PERF": 9, "DOCS": 4.5, "FE": 10 }
+  },
+  "tiers": { "healthy": 80, "moderate": [53, 79], "highRisk": [27, 52], "critical": 27 },
+  "gates": ["G1","G2","G3","G4","G5","G6","G7","G8"],
+  "indicators": []
+}

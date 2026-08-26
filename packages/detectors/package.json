@@ -1,0 +1,6 @@
+{
+  "name": "@leapscore/detectors",
+  "version": "0.1.0",
+  "private": true,
+  "description": "102 per-indicator detectors — each folder is one indicator (manifest.json + schema.json + detector.ts when implemented). Discovered by @leapscore/engine registry."
+}

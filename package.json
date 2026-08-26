@@ -1,0 +1,21 @@
+{
+  "private": true,
+  "name": "leapscore",
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspaces",
+    "build": "npm run build --workspaces",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "check:rubric-consistency": "tsx tooling/scripts/compile-rubric.ts --check",
+    "compile:rubric": "tsx tooling/scripts/compile-rubric.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5"
+  }
+}

@@ -1,19 +1,34 @@
 # AGENTS.md
 
-Planning-only repository for **LeapScore** — a scoring engine that turns a GitHub URL into a legacy/maintainability score. There is **no code, build, or test tooling**. Bring your own markdown editor.
+**LeapScore** — monorepo. Scoring engine turns a GitHub URL into a legacy/maintainability score. Planning docs + implementation now co-exist.
+
+## Layout (monorepo)
+
+```
+docs/rubric/         rubric (canonical) — 102 indicators + 11_WEIGHTS… (was CODEDEBT_AUDIT_RUBRIC)
+docs/specs/          per-indicator impl specs (F1) — 102 files + README (was SPECS)
+docs/plans/          product/engine specs (00 indexes, 01→10 + 13 MVP slice; was PLANS)
+apps/site/           Next.js site (was /site)
+packages/engine/     scorer, orchestrator, registry, budget, store, rubric.json (was /engine)
+packages/detectors/  102 detector folders — manifest.json + schema.json (was /detectors)
+tooling/checks/      rubric-consistency, detector-isolation, schemas (was /checks)
+tooling/scripts/     compile-rubric (was /scripts)
+```
+
+Root `package.json` workspaces: `apps/*`, `packages/*`. Run `npm run compile:rubric` / `check:rubric-consistency` from root.
 
 ## Three doc trees, different rules
 
-- `CODEDEBT_AUDIT_RUBRIC/` — the rubric: 102 indicators across 10 categories + config. **This is the product.**
-- `PLANS/` — product/engine specs. Read order matters: `00` indexes everything and logs decisions; 01→10 have a hard dependency chain (`00_MASTER_INDEX.md` line 25). Navigation start: `PLANS/00_MASTER_INDEX.md` + `CODEDEBT_AUDIT_RUBRIC/README.md`.
-- `SPECS/` — per-indicator **implementation specifications** (decision F1): one file per indicator under `<NN_CATEGORY>/<ID>_<slug>.md`, plus a normative `README.md`. All 102 exist.
+- `docs/rubric/` — the rubric: 102 indicators across 10 categories + config. **This is the product.**
+- `docs/plans/` — product/engine specs. Read order matters: `00` indexes everything and logs decisions; 01→10 have a hard dependency chain (`00_MASTER_INDEX.md` line 25). Navigation start: `docs/plans/00_MASTER_INDEX.md` + `docs/rubric/README.md`.
+- `docs/specs/` — per-indicator **implementation specifications** (decision F1): one file per indicator under `<NN_CATEGORY>/<ID>_<slug>.md`, plus a normative `README.md`. All 102 exist.
 
 ## The cardinal rule: canonical vs. derived views
 
 The catalog is single-sourced (decisions D1/D3/F1):
 - **Canonical — semantics/thresholds** (edit here): encyclopedia files `01_…`–`10_…` (per-indicator truth) and `11_WEIGHTS_THRESHOLDS_CONFIG.md` (weights, scoring formula, tier thresholds, gates).
-- **Canonical — implementation** (edit here): `SPECS/<NN_CATEGORY>/<ID>_*.md` — inputs, detection recipes, fact schemas, statusing predicates, score-mapping predicates, gate hooks, failure/budget semantics. Specs **reference** encyclopedia thresholds by ID; they never restate numbers.
-- **Derived** (never hand-edit a number; match to canonical instead): `00_EXECUTIVE_RUBRIC.md`, `templates/*` score sheets, the category-weight tables in each encyclopedia `01`-`10` header, and `PLANS/03_ENGINEERABILITY_MATRIX.md`.
+- **Canonical — implementation** (edit here): `docs/specs/<NN_CATEGORY>/<ID>_*.md` — inputs, detection recipes, fact schemas, statusing predicates, score-mapping predicates, gate hooks, failure/budget semantics. Specs **reference** encyclopedia thresholds by ID; they never restate numbers.
+- **Derived** (never hand-edit a number; match to canonical instead): `00_EXECUTIVE_RUBRIC.md`, `templates/*` score sheets, the category-weight tables in each encyclopedia `01`-`10` header, and `docs/plans/03_ENGINEERABILITY_MATRIX.md`.
 
 Consequences: changing an indicator's thresholds/status → edit the encyclopedia row *and* the matching row in `00_EXECUTIVE_RUBRIC.md` Part 2 *and* the spec's §0/§4/§5 if detectability or predicates change. Changing weights/FE-active logic → edit only `11` §1 and propagate. The "consistency check" (a **lint to keep every derived view in sync**) is described in the README but does **not exist as a script** — grep `git ls-files` will confirm; sync it by hand.
 
@@ -25,11 +40,11 @@ Consequences: changing an indicator's thresholds/status → edit the encyclopedi
 - **Verify effort symbols:** ⚡ ≤30 min · 🔶 ~2–4 h · 🔷 ~1–2 days.
 - **Gates:** G1–G8 are the absolute kill-switches (Red Flag → verdict capped at "High Risk / Obsolete"). Read `00_EXECUTIVE_RUBRIC.md` Part 0 before touching anything score-model related.
 
-## Conventions for editing SPECS/
+## Conventions for editing docs/specs/
 
-- **Skeleton is mandatory:** the 10 sections (§0 Identity … §9 Scope/overlaps echo) defined in `SPECS/README.md` §1. Tier C/D rows ship a reduced form (Identity + Emission text + Scope echo) — their output is `unknown` + "what it takes to measure".
-- **Normative preamble:** `SPECS/README.md` §2 fixes statuses/clamp/confidence, the strict N/A rule (structural gate or exhaustive-surface absence only), budget classes, tool pinning, fact naming, evidence grammar. Specs cite it; they don't restate it.
-- **Drift protocol (F1):** when an entry's Definition/Detection text contradicts its own header tags or `PLANS/03`, specs arbitrate and log every correction in `SPECS/README.md` §4. The pending reconciliation commit applies those corrections back to encyclopedia header lines and regenerates `03` — **65 corrections are currently logged and unapplied**; until then, spec values win over both sources.
+- **Skeleton is mandatory:** the 10 sections (§0 Identity … §9 Scope/overlaps echo) defined in `docs/specs/README.md` §1. Tier C/D rows ship a reduced form (Identity + Emission text + Scope echo) — their output is `unknown` + "what it takes to measure".
+- **Normative preamble:** `docs/specs/README.md` §2 fixes statuses/clamp/confidence, the strict N/A rule (structural gate or exhaustive-surface absence only), budget classes, tool pinning, fact naming, evidence grammar. Specs cite it; they don't restate it.
+- **Drift protocol (F1):** when an entry's Definition/Detection text contradicts its own header tags or `docs/plans/03`, specs arbitrate and log every correction in `docs/specs/README.md` §4. The pending reconciliation commit applies those corrections back to encyclopedia header lines and regenerates `03` — **65 corrections are currently logged and unapplied**; until then, spec values win over both sources.
 
 ## Weights & scoring model (quick recap)
 
@@ -39,9 +54,9 @@ Consequences: changing an indicator's thresholds/status → edit the encyclopedi
 
 ## Decisions & governance
 
-- `PLANS/00_MASTER_INDEX.md` holds the Decisions Log (D1–D8 for the product, A1–E1 for the rubric redesign, F1 for the implementation specs) and Open Questions. New decisions get appended there with `# · Decision · Rationale · Status`; agreed ones become the format `**AGREED**`.
+- `docs/plans/00_MASTER_INDEX.md` holds the Decisions Log (D1–D8 for the product, A1–E1 for the rubric redesign, F1 for the implementation specs) and Open Questions. New decisions get appended there with `# · Decision · Rationale · Status`; agreed ones become the format `**AGREED**`.
 - Threshold/weight adjustments are logged in `11` §5 (calibration log) with date, ID, field, old/new, evidence. Don't silently tweak a number.
-- Product status: **planning only — no implementation until the catalog is agreed** (`PLANS/00` line 5). Don't start writing the engine code; if asked, the blueprint is `PLANS/05_DETECTION_ENGINE_BLUEPRINT.md`.
+- Product status: **planning only — no implementation until the catalog is agreed** (`docs/plans/00` line 5). Don't start writing the engine code; if asked, the blueprint is `docs/plans/05_DETECTION_ENGINE_BLUEPRINT.md`.
 
 ## Style
 
