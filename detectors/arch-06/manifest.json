@@ -1,0 +1,11 @@
+{
+  "id": "ARCH-06",
+  "tier": "A",
+  "budget": "fast",
+  "planes": [
+    "static-src",
+    "ecosystem"
+  ],
+  "ecosystems": "all",
+  "schemaVersion": "1.0.0"
+}

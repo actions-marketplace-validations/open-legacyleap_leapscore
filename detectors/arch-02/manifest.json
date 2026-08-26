@@ -1,0 +1,14 @@
+{
+  "id": "ARCH-02",
+  "tier": "A",
+  "budget": "slow-dissolvable",
+  "planes": [
+    "static-src",
+    "ecosystem"
+  ],
+  "ecosystems": [
+    "js",
+    "py"
+  ],
+  "schemaVersion": "1.0.0"
+}

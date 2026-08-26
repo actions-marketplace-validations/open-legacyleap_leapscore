@@ -1,0 +1,13 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "API-09",
+  "type": "object",
+  "properties": {
+    "placeholder": {
+      "type": "string",
+      "description": "replace with SPECS §3 facts"
+    }
+  },
+  "required": [],
+  "additionalProperties": false
+}

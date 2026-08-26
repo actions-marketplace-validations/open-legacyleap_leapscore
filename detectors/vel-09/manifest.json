@@ -1,0 +1,12 @@
+{
+  "id": "VEL-09",
+  "tier": "A",
+  "budget": "fast",
+  "planes": [
+    "git",
+    "gh-api",
+    "static-src"
+  ],
+  "ecosystems": "all",
+  "schemaVersion": "1.0.0"
+}

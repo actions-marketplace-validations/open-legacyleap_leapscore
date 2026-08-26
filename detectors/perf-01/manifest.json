@@ -1,0 +1,11 @@
+{
+  "id": "PERF-01",
+  "tier": "A",
+  "budget": "slow-dissolvable",
+  "planes": [
+    "static-src",
+    "ecosystem"
+  ],
+  "ecosystems": "all",
+  "schemaVersion": "1.0.0"
+}

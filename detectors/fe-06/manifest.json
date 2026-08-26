@@ -1,0 +1,14 @@
+{
+  "id": "FE-06",
+  "tier": "A",
+  "budget": "fast",
+  "planes": [
+    "static-src",
+    "ecosystem"
+  ],
+  "ecosystems": [
+    "js",
+    "py"
+  ],
+  "schemaVersion": "1.0.0"
+}

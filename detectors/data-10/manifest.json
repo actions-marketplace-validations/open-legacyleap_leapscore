@@ -1,0 +1,12 @@
+{
+  "id": "DATA-10",
+  "tier": "C",
+  "budget": "api-budgeted",
+  "planes": [
+    "static-src",
+    "ecosystem"
+  ],
+  "ecosystems": "all",
+  "schemaVersion": "1.0.0",
+  "stubKind": "unknown"
+}

@@ -1,0 +1,13 @@
+{
+  "id": "VEL-05",
+  "tier": "D",
+  "budget": "api-budgeted",
+  "planes": [
+    "git",
+    "gh-api",
+    "static-src"
+  ],
+  "ecosystems": "all",
+  "schemaVersion": "1.0.0",
+  "stubKind": "unknown"
+}

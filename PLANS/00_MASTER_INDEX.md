@@ -65,6 +65,7 @@ Format: `#` · Decision · Rationale · Status
 | D2 | Scope/overlap boundaries documented per entry | Disambiguates which row owns a signal; engine maps detection → one row | **AGREED** |
 | D3 | Encyclopedia is canonical; consistency check validates rows against templates | Prevents drift between catalog, templates, and engine | **AGREED** |
 | E1 | Pre-v1 A-tier threshold spot-check + calibration log | Validates green/yellow/red cutoffs on 5–10 real repos before shipping | **AGREED** |
+| F1 | `SPECS/` is canonical for implementation: per-indicator inputs, detection recipes, fact schemas, statusing predicates, gate hooks, failure/budget semantics (one file per indicator under `SPECS/<NN_CATEGORY>/`) | Encyclopedia stays canonical for semantics/thresholds (specs reference, never restate); specs arbitrate encyclopedia-vs-matrix drift via each entry's own Definition+Detection text, logging every correction in `SPECS/README.md` §4 for one reconciliation commit at completion | **AGREED** (grill Q1–Q6) |
 
 ---
 

@@ -1,0 +1,11 @@
+{
+  "id": "API-03",
+  "tier": "B",
+  "budget": "fast",
+  "planes": [
+    "static-src",
+    "ecosystem"
+  ],
+  "ecosystems": "all",
+  "schemaVersion": "1.0.0"
+}

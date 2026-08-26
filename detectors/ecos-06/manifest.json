@@ -1,0 +1,12 @@
+{
+  "id": "ECOS-06",
+  "tier": "A",
+  "budget": "fast",
+  "planes": [
+    "gh-api",
+    "static-src",
+    "git"
+  ],
+  "ecosystems": "all",
+  "schemaVersion": "1.0.0"
+}
