@@ -42,7 +42,8 @@ export function TopBlockers({ blockers }: { blockers?: TopBlocker[] }) {
   );
 }
 
-export function DeepDiveScope({ scope }: { scope: DeepDiveScopeEntry[] }) {
+export function DeepDiveScope({ scope }: { scope?: DeepDiveScopeEntry[] }) {
+  const safe = scope ?? [];
   return (
     <div className="instrument-panel rounded-lg p-4">
       <h3 className="text-sm font-medium text-ink">
@@ -52,13 +53,14 @@ export function DeepDiveScope({ scope }: { scope: DeepDiveScopeEntry[] }) {
         18 deep-dive rows fold into the category when you order one.
       </p>
       <ul className="mt-3 space-y-2">
-        {scope.map((s) => (
+        {safe.map((s) => (
           <li key={s.row} className="text-xs">
             <span className="font-mono text-faint">{s.row}</span>{" "}
             <span className="text-muted">{s.name}</span>
             <span className="block pl-6 text-faint">{s.what_it_takes}</span>
           </li>
         ))}
+        {safe.length === 0 && <li className="text-xs text-faint">No deep-dive scope — all rows measured in this phase.</li>}
       </ul>
     </div>
   );

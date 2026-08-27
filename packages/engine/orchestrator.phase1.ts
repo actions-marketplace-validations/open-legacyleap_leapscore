@@ -1,4 +1,4 @@
-import { createBudgetController } from './budget';
+import { createBudgetControllerForIndicators } from './budget';
 import { createGhClient, GhRateLimitError } from './gh';
 import { ingestRepoUrl } from './ingest';
 import type { FactRecord } from './facts';
@@ -27,10 +27,11 @@ function tierForScore(s: number): string {
   return 'Critical';
 }
 
-export async function runPhase1Scan(repoUrl: string, opts: { token?: string; fetchImpl?: typeof fetch } = {}): Promise<Phase1Report | { status: 'snapshot_refused'; reason: string; detail: string }> {
+export async function runPhase1Scan(repoUrl: string, opts: { token?: string; fetchImpl?: typeof fetch; indicatorIds?: string[] } = {}): Promise<Phase1Report | { status: 'snapshot_refused'; reason: string; detail: string }> {
   const token = opts.token ?? process.env.GH_TOKEN ?? process.env.GITHUB_TOKEN;
   const gh = createGhClient({ token, fetchImpl: opts.fetchImpl });
-  const budget = createBudgetController({ timeoutMs: 10_000 });
+  const ids = opts.indicatorIds ?? ['VEL-06','VEL-09','VEL-08','VEL-10','SEC-07','TEST-08'];
+  const budget = createBudgetControllerForIndicators(ids as string[], { withCloneBase: false });
   const signal = budget.signal;
   const scanId = `ls_phase1_${Date.now().toString(36)}`;
 

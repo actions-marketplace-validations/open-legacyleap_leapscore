@@ -24,16 +24,17 @@ function scoreTone(score: number | undefined): string {
   }
 }
 
-export function SampleFullTable({ rows }: { rows: IndicatorRow[] }) {
+export function SampleFullTable({ rows }: { rows?: IndicatorRow[] }) {
   const [open, setOpen] = useState(false);
+  const safe = rows ?? [];
 
-  const standard = rows.filter(
+  const standard = safe.filter(
     (r) => r.status !== "unknown" && !r.not_applicable,
   );
-  const deepDive = rows.filter(
+  const deepDive = safe.filter(
     (r) => r.status === "unknown" && !r.not_applicable,
   );
-  const fe = rows.filter((r) => r.not_applicable);
+  const fe = safe.filter((r) => r.not_applicable);
 
   return (
     <div className="mt-10">

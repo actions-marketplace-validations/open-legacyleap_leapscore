@@ -18,7 +18,10 @@ const STEPS: Step[] = [
   { id: "ingest", label: "Ingesting URL", status: "pending" },
   { id: "fetch", label: "Fetching repo", status: "pending" },
   { id: "checks", label: "Running 6 checks (VEL-06, VEL-09, VEL-08, VEL-10, SEC-07, TEST-08)", status: "pending" },
-  { id: "scoring", label: "Scoring", status: "pending" },
+  { id: "cloning", label: "Cloning (shallow --filter=blob:none)", status: "pending" },
+  { id: "sniffing", label: "Sniffing manifests", status: "pending" },
+  { id: "scanning", label: "Scanning 13 (ECOS 5 + SEC 3 + ARCH 3 + TEST 2)", status: "pending" },
+  { id: "scoring", label: "Scoring 19", status: "pending" },
 ];
 
 export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
@@ -67,6 +70,9 @@ export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
                   prev.map((s) => (s.id === stepId ? { ...s, status: status === "start" ? "active" : status === "done" ? "done" : s.status } : s)),
                 );
               }
+              if ((evt as { type?: string }).type === "phase1") {
+                setReport((evt as { report: Report }).report);
+              }
               if ((evt as { type?: string }).type === "report") {
                 setSteps((prev) => prev.map((p) => ({ ...p, status: "done" })));
                 setReport((evt as { report: Report }).report);
@@ -82,6 +88,7 @@ export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
         if (buf.trim()) {
           try {
             const evt = JSON.parse(buf) as Record<string, unknown>;
+            if ((evt as { type?: string }).type === "phase1") setReport((evt as { report: Report }).report);
             if ((evt as { type?: string }).type === "report") setReport((evt as { report: Report }).report);
             if ((evt as { type?: string }).type === "refused") {
               const e = evt as { reason: string; detail: string; repo: string };
