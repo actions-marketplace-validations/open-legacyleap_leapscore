@@ -1,7 +1,8 @@
 import type { DeepDiveScopeEntry, TopBlocker } from "@/lib/types";
 
-export function TopBlockers({ blockers }: { blockers: TopBlocker[] }) {
-  const maxPp = Math.max(...blockers.map((b) => parseFloat(b.weight_pp)), 0);
+export function TopBlockers({ blockers }: { blockers?: TopBlocker[] }) {
+  const safe = blockers ?? [];
+  const maxPp = Math.max(...safe.map((b) => parseFloat(b.weight_pp)), 0);
   return (
     <div className="instrument-panel rounded-lg p-4">
       <h3 className="text-sm font-medium text-ink">Top restore-levers</h3>
@@ -9,7 +10,7 @@ export function TopBlockers({ blockers }: { blockers: TopBlocker[] }) {
         Points recoverable if each row reached 3, in head-line points.
       </p>
       <ul className="mt-3 space-y-2.5">
-        {blockers.map((b) => {
+        {safe.map((b) => {
           const pp = parseFloat(b.weight_pp);
           return (
             <li key={b.row}>
@@ -31,7 +32,7 @@ export function TopBlockers({ blockers }: { blockers: TopBlocker[] }) {
             </li>
           );
         })}
-        {blockers.length === 0 && (
+        {safe.length === 0 && (
           <li className="text-xs text-faint">
             No recoverable points — top of the band.
           </li>

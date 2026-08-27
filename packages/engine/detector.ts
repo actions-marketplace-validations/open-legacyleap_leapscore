@@ -41,6 +41,37 @@ export type RawFact = {
 };
 
 export type Evidence = { file?: string; line?: number; detail?: string; commit?: string; endpoint?: string };
-export type RateLimitedGhClient = { request(path: string, params?: Record<string, string>): Promise<unknown> };
+export type RateLimitedGhClient = {
+  request(path: string, params?: Record<string, string>, opts?: { signal?: AbortSignal; headers?: Record<string, string> }): Promise<unknown>;
+  getRepo?(owner: string, repo: string, opts?: { signal?: AbortSignal }): Promise<unknown>;
+  fetchJson?(path: string, opts?: { signal?: AbortSignal }): Promise<{ data: unknown; headers: Headers }>;
+  lastState?(): { remaining?: number; reset?: number; retryAfterMs?: number };
+};
 export type FactCache = { get(key: string): unknown; set(key: string, value: unknown): void };
 export type LlmProxy = { complete(prompt: string, opts?: { maxTokens?: number }): Promise<{ text: string; promptHash: string; model: string; tokens: number }> };
+
+/** Phase-1-only context — no clone, no ecosystem fan-out. Used by runPhase1Scan. */
+export type Phase1ScanContext = {
+  owner: string;
+  repo: string;
+  gh: RateLimitedGhClient;
+  signal: AbortSignal;
+  toolVersions: Map<string, string>;
+  /** Optional commit SHA when repo meta already fetched */
+  commitSha?: string;
+};
+
+/** Helper to adapt Phase1 context to full ScanContext shape when reusing detectors */
+export function toScanContext(phase1: Phase1ScanContext, opts: Partial<ScanContext> = {}): ScanContext {
+  return {
+    clonePath: '',
+    commitSha: phase1.commitSha ?? 'unknown',
+    gh: phase1.gh,
+    manifests: [],
+    budgetLease: { timeoutMs: 10_000, byteCap: 0 },
+    cache: { get: () => undefined, set: () => {} },
+    toolVersions: phase1.toolVersions,
+    readFile: async () => null,
+    ...opts,
+  };
+}

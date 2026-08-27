@@ -12,6 +12,7 @@
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "check:rubric-consistency": "tsx tooling/scripts/compile-rubric.ts --check",
+    "check:detector-isolation": "tsx tooling/checks/detector-isolation.ts",
     "compile:rubric": "tsx tooling/scripts/compile-rubric.ts"
   },
   "devDependencies": {

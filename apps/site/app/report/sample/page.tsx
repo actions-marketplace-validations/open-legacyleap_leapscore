@@ -17,10 +17,10 @@ export const metadata: Metadata = {
 export default async function ReportPage({
   searchParams,
 }: {
-  searchParams: Promise<{ repo?: string }>;
+  searchParams: Promise<{ repo?: string; live?: string }>;
 }) {
-  const { repo } = await searchParams;
-  const provider = getReportProvider();
+  const { repo, live } = await searchParams;
+  const provider = getReportProvider({ live });
   const report = await provider.getReport({ repo });
   const tier = tierForScore(report.headline.score);
 
