@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
           if (evt.type === 'meta') {
             budgetMs = evt.budgetMs ?? 0;
             totalCost = evt.totalCost ?? 0;
-            send({ type: "meta", budgetMs: evt.budgetMs, indicatorCount: evt.indicatorCount, breakdown: evt.breakdown, totalCost });
+            send({ type: "meta", budgetMs: evt.budgetMs, indicatorCount: evt.indicatorCount, breakdown: evt.breakdown, totalCost, milestone: (evt as { milestone?: string }).milestone });
             metaSent = true;
             // heartbeat every 2s to keep proxy alive
             heartbeat = setInterval(() => {
@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
           }
           if (evt.type === 'progress') {
             lastPct = evt.pct ?? lastPct;
-            send({ type: "progress", pct: evt.pct, elapsedMs: evt.elapsedMs, remainingMs: evt.remainingMs, completedCost: evt.completedCost, totalCost: evt.totalCost, completedIds: evt.completedIds });
+            send({ type: "progress", pct: evt.pct, elapsedMs: evt.elapsedMs, remainingMs: evt.remainingMs, completedCost: evt.completedCost, totalCost: evt.totalCost, completedIds: evt.completedIds, milestone: (evt as { milestone?: string }).milestone });
             continue;
           }
           if (evt.type === 'refused') {

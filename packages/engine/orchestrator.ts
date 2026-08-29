@@ -43,7 +43,7 @@ export function getUnifiedBudget(indicatorIds: string[] = MVP_IDS) {
 }
 
 /** Unified scan: single budget covering GH + clone detectors, streaming meta/progress/done */
-export async function* runUnifiedScan(repoUrl: string, opts: { token?: string; indicatorIds?: string[] } = {}): AsyncGenerator<{ type: string; budgetMs?: number; breakdown?: Record<string, number>; indicatorCount?: number; pct?: number; elapsedMs?: number; remainingMs?: number; completedIds?: string[]; completedCost?: number; totalCost?: number; facts?: FactRecord[]; snapshot?: unknown; id?: string; error?: string; reason?: string; detail?: string }> {
+export async function* runUnifiedScan(repoUrl: string, opts: { token?: string; indicatorIds?: string[] } = {}): AsyncGenerator<{ type: string; budgetMs?: number; breakdown?: Record<string, number>; indicatorCount?: number; pct?: number; elapsedMs?: number; remainingMs?: number; completedIds?: string[]; completedCost?: number; totalCost?: number; facts?: FactRecord[]; snapshot?: unknown; id?: string; error?: string; reason?: string; detail?: string; milestone?: string }> {
   const ids = opts.indicatorIds ?? MVP_IDS;
   const { budgetMs, breakdown, indicatorCount } = getUnifiedBudget(ids);
   const totalCost = ids.reduce((a, id) => a + (BUDGET_COST[INDICATOR_BUDGET_CLASS[id] ?? 'fast'] ?? 5000), 0) + (ids.some(id => INDICATOR_BUDGET_CLASS[id] === 'slow-dissolvable') ? 30000 : 5000);
@@ -54,7 +54,7 @@ export async function* runUnifiedScan(repoUrl: string, opts: { token?: string; i
   // Ingest + GH setup
   const token = opts.token ?? process.env.GH_TOKEN ?? process.env.GITHUB_TOKEN;
   const gh = createGhClient({ token });
-  yield { type: 'meta', budgetMs, breakdown, indicatorCount, totalCost };
+  yield { type: 'meta', budgetMs, breakdown, indicatorCount, totalCost, milestone: `Budget ${Math.ceil(budgetMs/1000)}s · ${indicatorCount} indicators` };
 
   let ingest: Awaited<ReturnType<typeof ingestRepoUrl>>;
   try {
@@ -67,6 +67,11 @@ export async function* runUnifiedScan(repoUrl: string, opts: { token?: string; i
   if (!ingest.ok) { budget.cancel(); yield { type: 'refused', reason: ingest.reason, detail: ingest.detail }; return; }
   const { owner, repo, normalized } = ingest;
   const scanId = `ls_${Date.now().toString(36)}`;
+  // ingest success milestone via progress frame so timeline can append without extra round-trip
+  {
+    const elapsedMs = Date.now() - start;
+    yield { type: 'progress', pct: 2, elapsedMs, remainingMs: Math.max(0, budgetMs - elapsedMs), completedIds: [], completedCost: 0, totalCost, milestone: `Ingested ${normalized} — normalized` };
+  }
 
   // GH detectors (phase1 subset that is in requested ids)
   const ghIds = phase1Ids.filter(id => ids.includes(id));
@@ -94,7 +99,7 @@ export async function* runUnifiedScan(repoUrl: string, opts: { token?: string; i
     const timePct = Math.min(elapsedMs / budgetMs, 1);
     const costPct = totalCost ? completedCost / totalCost : 0;
     const pct = Math.min(100, Math.round((0.6 * timePct + 0.4 * costPct) * 100));
-    yield { type: 'progress', pct, elapsedMs, remainingMs: Math.max(0, budgetMs - elapsedMs), completedIds, completedCost, totalCost };
+    yield { type: 'progress', pct, elapsedMs, remainingMs: Math.max(0, budgetMs - elapsedMs), completedIds, completedCost, totalCost, milestone: `GH detectors — ${completedIds.length}/${ghIds.length} complete` };
   }
 
   if (signal.aborted) {
@@ -111,6 +116,14 @@ export async function* runUnifiedScan(repoUrl: string, opts: { token?: string; i
   const needsClone = ids.some(id => phase2Ids.includes(id));
   let cloneFacts: FactRecord[] = [];
   if (needsClone && !signal.aborted) {
+    // milestone before clone
+    {
+      const elapsedMs = Date.now() - start;
+      const timePct = Math.min(elapsedMs / budgetMs, 1);
+      const pct = Math.min(99, Math.round(timePct * 100));
+      // best-effort: yield clone-start milestone without changing pct math much
+      yield { type: 'progress', pct, elapsedMs, remainingMs: Math.max(0, budgetMs - elapsedMs), completedIds: ghFacts.filter(f => !f.error).map(f => f.detectorId), completedCost: ghFacts.filter(f => !f.error).map(f => f.detectorId).reduce((a, id) => a + (BUDGET_COST[INDICATOR_BUDGET_CLASS[id] ?? 'fast'] ?? 5000), 0), totalCost, milestone: `Clone — shallow clone starting` };
+    }
     const queue = createQueue({ concurrency: 1 });
     const job = queue.enqueue('unified-clone', async (sig) => {
       const clone = await shallowClone(repoUrl, { signal: sig, byteCap: 4*1024*1024 });
@@ -149,11 +162,27 @@ export async function* runUnifiedScan(repoUrl: string, opts: { token?: string; i
     });
     try {
       cloneFacts = await job.result;
+      // milestone after clone detectors
+      {
+        const elapsedMs = Date.now() - start;
+        const completedIds = [...ghFacts.filter(f => !f.error).map(f => f.detectorId), ...cloneFacts.filter(f => !f.error).map(f => f.detectorId)];
+        const completedCost = completedIds.reduce((a, id) => a + (BUDGET_COST[INDICATOR_BUDGET_CLASS[id] ?? 'fast'] ?? 5000), 0);
+        const timePct = Math.min(elapsedMs / budgetMs, 1);
+        const costPct = totalCost ? completedCost / totalCost : 0;
+        const pct = Math.min(99, Math.round((0.6 * timePct + 0.4 * costPct) * 100));
+        yield { type: 'progress', pct, elapsedMs, remainingMs: Math.max(0, budgetMs - elapsedMs), completedIds, completedCost, totalCost, milestone: `Clone detectors — ${cloneFacts.filter(f => !f.error).length}/${phase2Ids.filter(id => ids.includes(id)).length} complete` };
+        // scoring milestone
+        yield { type: 'progress', pct: Math.min(99, pct + 1), elapsedMs, remainingMs: Math.max(0, budgetMs - elapsedMs), completedIds, completedCost, totalCost, milestone: `Scoring — gates evaluated` };
+      }
     } catch (e) {
       // Shallow clone failed — GH facts still seal, clone rows become unknown
       const detail = e instanceof Error ? e.message : String(e);
       const remainingPhase2 = phase2Ids.filter(id => ids.includes(id));
       cloneFacts = remainingPhase2.map(id => ({ id, detectorId: id, schemaVersion: '1.0.0', facts: {}, evidencePointers: [], provenance: { tool: 'phase2', version: '1', flags: [], durationMs: 0 }, truncated: true, error: { kind: 'cap' as const, detail: detail.slice(0,300) }, root: '/', scanId } as unknown as FactRecord));
+      {
+        const elapsedMs = Date.now() - start;
+        yield { type: 'progress', pct: 95, elapsedMs, remainingMs: Math.max(0, budgetMs - elapsedMs), completedIds: ghFacts.filter(f => !f.error).map(f => f.detectorId), completedCost: 0, totalCost, milestone: `Clone failed — ${detail.slice(0, 80)}` };
+      }
     }
   }
 
