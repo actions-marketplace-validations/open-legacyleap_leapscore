@@ -15,6 +15,11 @@ import type { Report } from "@/lib/types";
 
 type TimelineEntry = { ts: number; label: string };
 
+// StrictMode double-mount guard: in dev React mounts/unmounts/mounts,
+// which would otherwise trigger two concurrent /api/scan fetches and thus
+// two distinct persisted files per logical run. Keep one in-flight per repo.
+const inflightScans = new Map<string, AbortController>();
+
 export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
   const [budgetMs, setBudgetMs] = useState<number | null>(null);
   const [indicatorCount, setIndicatorCount] = useState<number | null>(null);
@@ -46,6 +51,16 @@ export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
 
   useEffect(() => {
     let cancelled = false;
+    // StrictMode double-mount: abort the previous in-flight fetch for this repo
+    // so only the second (real) mount runs to completion and produces one file.
+    const prev = inflightScans.get(initialRepo);
+    if (prev) {
+      prev.abort();
+      inflightScans.delete(initialRepo);
+    }
+    const abortController = new AbortController();
+    inflightScans.set(initialRepo, abortController);
+
     startRef.current = Date.now();
     sealedRef.current = false;
     timelineRef.current = [];
@@ -88,7 +103,7 @@ export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
 
     async function run() {
       try {
-        const res = await fetch(`/api/scan?repo=${encodeURIComponent(initialRepo)}`, { cache: "no-store" });
+        const res = await fetch(`/api/scan?repo=${encodeURIComponent(initialRepo)}`, { cache: "no-store", signal: abortController.signal });
         if (!res.ok && !res.body) {
           const txt = await res.text();
           throw new Error(txt.slice(0, 500));
@@ -214,7 +229,10 @@ export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
           } catch {}
         }
       } catch (e) {
+        if ((e as Error).name === "AbortError") return;
         if (!cancelled) setError(e instanceof Error ? e.message.slice(0, 500) : String(e));
+      } finally {
+        inflightScans.delete(initialRepo);
       }
     }
     run();
@@ -222,6 +240,11 @@ export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
       cancelled = true;
       sealedRef.current = true;
       if (intervalRef.current) clearInterval(intervalRef.current);
+      abortController.abort();
+      // Don't delete here if StrictMode cleanup will be followed by second mount:
+      // the abort will cause the fetch to reject, then finally deletes. But if
+      // cleanup is for unmount not StrictMode, we still want to clear.
+      // Keep delete in finally too; this immediate abort handles duplicate.
     };
   }, [initialRepo]);
 

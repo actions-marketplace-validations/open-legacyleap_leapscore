@@ -126,6 +126,7 @@ export interface Report {
     scanned_at: string;
     engine_version: string;
     rubric_version: string;
+    scanned_commit?: string;
   };
   headline: {
     score: number;

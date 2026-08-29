@@ -128,7 +128,7 @@ export async function* runUnifiedScan(repoUrl: string, opts: { token?: string; i
     const unknownFacts: FactRecord[] = remainingIds.map(id => ({ id, detectorId: id, schemaVersion: '1.0.0', facts: {}, evidencePointers: [], provenance: { tool: 'budget', version: '1', flags: [], durationMs: 0 }, truncated: true, error: { kind: 'cap' as const, detail: 'budget-exceeded' }, root: '/', scanId } as unknown as FactRecord));
     const allFacts = [...ghFacts, ...unknownFacts];
     budget.cancel();
-    yield { type: 'done', facts: allFacts, snapshot: { repo: normalized, scanned_at: new Date().toISOString(), engine_version: 'unified/1.0', rubric_version: 'docs/rubric@tranche-a' }, id: scanId };
+    yield { type: 'done', facts: allFacts, snapshot: { repo: normalized, scanned_at: new Date().toISOString(), engine_version: 'unified/1.0', rubric_version: 'docs/rubric@tranche-a', scanned_commit: 'unknown' }, id: scanId };
     return;
   }
 
@@ -213,7 +213,8 @@ export async function* runUnifiedScan(repoUrl: string, opts: { token?: string; i
   for (const id of ids) if (!covered.has(id)) {
     allFacts.push({ id, detectorId: id, schemaVersion: '1.0.0', facts: {}, evidencePointers: [], provenance: { tool: 'budget', version: '1', flags: [], durationMs: 0 }, truncated: true, error: { kind: 'cap' as const, detail: 'budget-exceeded' }, root: '/', scanId } as unknown as FactRecord);
   }
-  yield { type: 'done', facts: allFacts, snapshot: { repo: normalized, scanned_at: new Date().toISOString(), engine_version: 'unified/1.0', rubric_version: 'docs/rubric@tranche-a' }, id: scanId };
+  const scanned_commit = cloneFacts.find((f) => (f as FactRecord & { commitSha?: string }).commitSha && (f as FactRecord & { commitSha?: string }).commitSha !== 'unknown') ? (cloneFacts.find((f) => (f as FactRecord & { commitSha?: string }).commitSha && (f as FactRecord & { commitSha?: string }).commitSha !== 'unknown') as FactRecord & { commitSha?: string }).commitSha! : 'unknown';
+  yield { type: 'done', facts: allFacts, snapshot: { repo: normalized, scanned_at: new Date().toISOString(), engine_version: 'unified/1.0', rubric_version: 'docs/rubric@tranche-a', scanned_commit }, id: scanId };
 }
 
 /** Back-compat: two-phase generator now delegates to unified scan but preserves legacy shape for callers that still consume phase events */

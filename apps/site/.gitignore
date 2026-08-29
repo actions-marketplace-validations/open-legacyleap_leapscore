@@ -36,6 +36,11 @@ yarn-error.log*
 # vercel
 .vercel
 
+# reports — persisted scan runs (local durability)
+# keep directory but ignore generated envelopes
+/reports/*.json
+!/reports/.gitkeep
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

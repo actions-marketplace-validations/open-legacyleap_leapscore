@@ -1,14 +1,74 @@
 import { NextRequest } from "next/server";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+// Single-flight for StrictMode double-fetch: concurrent GETs for same repo share one scan
+// and produce exactly one persisted file. Keyed by normalized repo (owner/repo lowercased).
+const inflightServerScans = new Map<string, Promise<{ report: unknown; meta: unknown; trace: import("@/lib/reports").TraceEntry[]; budgetMs: number; totalCost: number }>>();
+
+function normalizeRepoKey(raw: string): string {
+  const cleaned = raw.trim().replace(/^https?:\/\//, "").replace(/^github\.com\//i, "").replace(/\.git$/i, "");
+  const withoutQuery = cleaned.split(/[?#]/)[0];
+  const parts = withoutQuery.split("/").filter(Boolean);
+  if (parts.length < 2) return raw.toLowerCase();
+  return `${parts[0].toLowerCase()}/${parts[1].toLowerCase()}`;
+}
+
 export async function GET(req: NextRequest) {
   const repo = req.nextUrl.searchParams.get("repo");
   if (!repo) return new Response(JSON.stringify({ type: "refused", reason: "missing_repo", detail: "missing ?repo=owner/repo" }), { status: 400, headers: { "content-type": "application/json" } });
+  const key = normalizeRepoKey(repo);
+  // Single-flight: if a scan for this repo is already in progress, coalesce to it
+  if (inflightServerScans.has(key)) {
+    const cachedPromise = inflightServerScans.get(key)!;
+    const encoder2 = new TextEncoder();
+    const stream2 = new ReadableStream({
+      async start(controller2) {
+        const send2 = (o: unknown) => controller2.enqueue(encoder2.encode(JSON.stringify(o) + "\n"));
+        try {
+          const cached = await cachedPromise;
+          // Replay minimal events + final report (client will still see progress 100)
+          send2({ type: "meta", budgetMs: cached.budgetMs, indicatorCount: 31, totalCost: cached.totalCost, milestone: `Coalesced — reusing in-flight scan for ${repo}` });
+          send2({ type: "progress", pct: 100, elapsedMs: Date.now() - Date.now(), remainingMs: 0, completedCost: cached.totalCost, totalCost: cached.totalCost, completedIds: [] });
+          send2({ type: "report", report: cached.report, meta: cached.meta, trace: cached.trace });
+        } catch (e) {
+          const detail = e instanceof Error ? e.message : String(e);
+          send2({ type: "refused", reason: "crash", detail: detail.slice(0, 500), repo });
+        } finally {
+          controller2.close();
+        }
+      },
+    });
+    return new Response(stream2, { headers: { "content-type": "application/x-ndjson", "cache-control": "no-cache, no-store" } });
+  }
+
+  // Leader: create deferred that followers will await
+  let resolveLeader: (v: { report: unknown; meta: unknown; trace: import("@/lib/reports").TraceEntry[]; budgetMs: number; totalCost: number }) => void = () => {};
+  let rejectLeader: (e: unknown) => void = () => {};
+  const leaderPromise = new Promise<{ report: unknown; meta: unknown; trace: import("@/lib/reports").TraceEntry[]; budgetMs: number; totalCost: number }>((res, rej) => {
+    resolveLeader = res;
+    rejectLeader = rej;
+  });
+  inflightServerScans.set(key, leaderPromise);
+
   const encoder = new TextEncoder();
+  // Capture trace of all server events for envelope persistence
+  const trace: import("@/lib/reports").TraceEntry[] = [];
+  const tracePush = (label: string, extra: Partial<import("@/lib/reports").TraceEntry> = {}) => {
+    const elapsedMs = Date.now() - startMsRef.value;
+    trace.push({ ts: elapsedMs, elapsedMs, label, ...extra });
+  };
+  const startMsRef = { value: Date.now() };
   const stream = new ReadableStream({
     async start(controller) {
       const send = (o: unknown) => controller.enqueue(encoder.encode(JSON.stringify(o) + "\n"));
-      const startMs = Date.now();
+      const startMs = startMsRef.value;
+      // abort handling: if client disconnects, stop writing file
+      let clientAborted = false;
+      req.signal.addEventListener("abort", () => {
+        clientAborted = true;
+      });
+      trace.push({ ts: 0, elapsedMs: 0, label: `Starting scan — ${repo}`, type: "start" });
       let heartbeat: ReturnType<typeof setInterval> | null = null;
       let lastPct = 0;
       let metaSent = false;
@@ -27,6 +87,8 @@ export async function GET(req: NextRequest) {
             totalCost = evt.totalCost ?? 0;
             send({ type: "meta", budgetMs: evt.budgetMs, indicatorCount: evt.indicatorCount, breakdown: evt.breakdown, totalCost, milestone: (evt as { milestone?: string }).milestone });
             metaSent = true;
+            tracePush(`Budget ${Math.ceil(budgetMs / 1000)}s · ${evt.indicatorCount ?? 0} indicators`, { type: "meta", pct: 0 });
+            if ((evt as { milestone?: string }).milestone) tracePush((evt as { milestone: string }).milestone, { type: "milestone" });
             // heartbeat every 2s to keep proxy alive
             heartbeat = setInterval(() => {
               const elapsedMs = Date.now() - startMs;
@@ -43,11 +105,20 @@ export async function GET(req: NextRequest) {
           if (evt.type === 'progress') {
             lastPct = evt.pct ?? lastPct;
             send({ type: "progress", pct: evt.pct, elapsedMs: evt.elapsedMs, remainingMs: evt.remainingMs, completedCost: evt.completedCost, totalCost: evt.totalCost, completedIds: evt.completedIds, milestone: (evt as { milestone?: string }).milestone });
+            if ((evt as { milestone?: string }).milestone) tracePush((evt as { milestone: string }).milestone, { type: "progress", pct: evt.pct, elapsedMs: evt.elapsedMs, remainingMs: evt.remainingMs, completedIds: evt.completedIds });
+            else if (evt.completedIds && evt.completedIds.length) {
+              const ids = evt.completedIds as string[];
+              const label = ids.length <= 3 ? `Measured ${ids.join(", ")}` : `Measured ${ids.length} indicators — ${ids.slice(0, 3).join(", ")} …`;
+              tracePush(label, { type: "progress", pct: evt.pct, completedIds: ids });
+            }
             continue;
           }
           if (evt.type === 'refused') {
             if (heartbeat) clearInterval(heartbeat);
             send({ type: "refused", reason: evt.reason, detail: evt.detail, repo });
+            // Propagate to coalesced followers as rejection so they also get refused
+            rejectLeader(new Error(`${evt.reason}: ${evt.detail}`));
+            setTimeout(() => inflightServerScans.delete(key), 5000);
             controller.close(); return;
           }
           if (evt.type === 'done') {
@@ -60,14 +131,23 @@ export async function GET(req: NextRequest) {
         if (heartbeat) clearInterval(heartbeat);
         if (!finalFacts) {
           send({ type: "refused", reason: "crash", detail: "no facts", repo });
+          rejectLeader(new Error("no facts"));
+          setTimeout(() => inflightServerScans.delete(key), 5000);
           controller.close(); return;
         }
         // Single terminal scoring — no intermediate report
         const { scoreMvp } = await import("../../../../../packages/engine/scorer/mvp");
         const mvp = scoreMvp(finalFacts as never);
-        const finalReport = {
+        const rawSnapshot = (snapshot as Record<string, unknown>) ?? { repo, scanned_at: new Date().toISOString(), engine_version: 'unified/1.0', rubric_version: 'docs/rubric/@mvp' };
+        // Derive repoSha from snapshot or facts
+        const snapSha = (rawSnapshot as { scanned_commit?: string }).scanned_commit;
+        const factSha = finalFacts.find((f) => (f as unknown as { commitSha?: string }).commitSha && (f as unknown as { commitSha: string }).commitSha !== 'unknown');
+        const repoSha = (snapSha && snapSha !== 'unknown' ? snapSha : (factSha as unknown as { commitSha?: string } | undefined)?.commitSha) ?? 'unknown';
+        const normalizedRepo = String((rawSnapshot as { repo?: string }).repo ?? repo);
+        const scannedAt = String((rawSnapshot as { scanned_at?: string }).scanned_at ?? new Date().toISOString());
+        const finalReport: Record<string, unknown> & { headline: { score: number; tier: string; ci_band: string }; snapshot: Record<string, unknown> } = {
           id: scanId ?? `ls_${Date.now().toString(36)}`,
-          snapshot: snapshot ?? { repo, scanned_at: new Date().toISOString(), engine_version: 'unified/1.0', rubric_version: 'docs/rubric/@mvp' },
+          snapshot: { ...rawSnapshot, scanned_commit: repoSha, repo: normalizedRepo, scanned_at: scannedAt },
           headline: { score: Math.round(mvp.score*100)/100, tier: mvp.score >=80 ? 'Healthy' : mvp.score >=53 ? 'Moderate' : mvp.score >=27 ? 'High Risk' : 'Critical', ci_band: mvp.status === 'complete' ? 'complete' : 'degraded' },
           categories: mvp.categories,
           coverage: mvp.coverage,
@@ -80,16 +160,57 @@ export async function GET(req: NextRequest) {
           report_schema: "1",
           sample: true,
         };
+        // trace sealed entry
+        tracePush(`Scoring — gates evaluated`, { type: "scoring" });
+        const sealedLabel = `Sealed — ${mvp.status} · ${mvp.coverage.measured}/${mvp.coverage.measured + mvp.coverage.unknown + mvp.coverage.estimated} measured`;
+        tracePush(sealedLabel, { type: "sealed", pct: 100 });
+        // Persist envelope: { meta, report, trace } — single JSON per run, do not fail scan if write errors
+        // If client aborted (StrictMode double-fetch), skip writing duplicate
+        let persistedMeta: unknown = null;
+        if (!clientAborted && !req.signal.aborted) {
+          try {
+            const { repoSlugFromUrl, normalizeTs, buildRunId, buildMeta, resolveEngineSha7, writeReportEnvelope } = await import("@/lib/reports");
+            const repoSlug = repoSlugFromUrl(normalizedRepo);
+            const ranAt = scannedAt;
+            const ts = normalizeTs(ranAt);
+            const engineSha7 = resolveEngineSha7();
+            const runId = buildRunId(repoSlug, engineSha7, ts);
+            const durationMs = Date.now() - startMs;
+            const meta = buildMeta({
+              repo: normalizedRepo,
+              repoSlug,
+              engineSha7,
+              runId,
+              ranAt,
+              durationMs,
+              budgetMs,
+              repoSha: String(repoSha),
+              report: finalReport as unknown as import("@/lib/types").Report,
+            });
+            persistedMeta = meta;
+            await writeReportEnvelope({ meta, report: finalReport as unknown as import("@/lib/types").Report, trace });
+          } catch (e) {
+            console.warn("[scan] failed to persist report", (e as Error).message);
+          }
+        } else {
+          console.warn("[scan] client aborted — skipping persist to avoid duplicate file");
+        }
         // Ensure 100% progress before terminal report
         const elapsedMs = Date.now() - startMs;
         send({ type: "progress", pct: 100, elapsedMs, remainingMs: 0, completedCost: totalCost, totalCost, completedIds: [] });
-        send({ type: "report", report: finalReport });
+        send({ type: "report", report: finalReport, meta: persistedMeta, trace });
+        // Resolve single-flight promise so coalesced followers reuse the same file
+        resolveLeader({ report: finalReport, meta: persistedMeta, trace, budgetMs, totalCost });
       } catch (e) {
         if (heartbeat) clearInterval(heartbeat);
         const detail = e instanceof Error ? e.message : String(e);
         send({ type: "refused", reason: "crash", detail: detail.slice(0,500), repo });
+        rejectLeader(e);
       } finally {
         if (heartbeat) clearInterval(heartbeat);
+        // Keep single-flight window open for ~5s to coalesce StrictMode double-fetch,
+        // then clear so intentional reruns create a fresh scan.
+        setTimeout(() => inflightServerScans.delete(key), 5000);
         controller.close();
       }
     }});

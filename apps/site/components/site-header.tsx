@@ -3,6 +3,7 @@ import Link from "next/link";
 import { BrandMark } from "@/components/brand-mark";
 
 const NAV = [
+  { href: "/reports", label: "Reports" },
   { href: "/product", label: "Product" },
   { href: "/method", label: "Method" },
   { href: "/rubric", label: "Rubric" },
