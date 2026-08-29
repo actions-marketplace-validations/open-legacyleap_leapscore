@@ -17,7 +17,7 @@
 - **Tools:** protocol matchers: SOAP/WSDL (`*.wsdl`, `soap` deps, `zeep`/`suds`), XML-RPC, CORBA/IIOP refs, binary legacy formats (BSON-in-rest, custom TCP framing), EDI/X12 files; modern markers: OpenAPI/gRPC proto files, GraphQL schemas, JSON:API conventions; message formats on queues (avro/proto/json-schema registry presence)
 - **Rate-cost:** none
 - **Ecosystems:** agnostic
-- **Applicability:** `na_when: no integration surface at all` (API-01 clause-b). Else applicable.
+- **Applicability:** `na_when: no integration surface at all` (API-01 clause-b). Else applicable.; archetype+plane: `na_when archetype in {library, docs, agent-skills} && !has_data` (DATA) or `!has_deploy` (PERF) or `!has_server` (API) with exhaustive plane inventory — required rows never N/A
 
 ## 2. Detection recipe
 

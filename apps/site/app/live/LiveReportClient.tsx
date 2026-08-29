@@ -378,6 +378,9 @@ export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
         </div>
         <div className="mb-8 mt-6">
           <h1 className="mt-1 font-mono text-2xl font-semibold tracking-tight">{report.snapshot.repo}</h1>
+          {(report.snapshot as unknown as { archetype?: string; archetype_confidence?: string }).archetype ? (
+            <div className="mt-1 text-xs text-muted">Detected: {(report.snapshot as unknown as { archetype: string }).archetype} ({(report.snapshot as unknown as { archetype_confidence: string }).archetype_confidence})</div>
+          ) : null}
         </div>
 
         <div className="instrument-panel rounded-lg border border-hairline bg-panel/50 p-4">

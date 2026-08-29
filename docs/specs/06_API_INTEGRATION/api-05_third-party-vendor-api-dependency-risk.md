@@ -17,7 +17,7 @@
 - **Tools:** third-party host extraction (URL literals + env-template hosts matched against public-suffix list); vendor SDK deps in manifests; abstraction-layer detection (vendor calls confined to adapter module vs scattered); deprecation-watch hints (pinned old SDK majors via registry metadata — ECOS-02 reuse)
 - **Rate-cost:** api-budgeted
 - **Ecosystems:** agnostic
-- **Applicability:** `na_when: zero third-party API dependencies` (clause-b over manifests+configs). Else applicable.
+- **Applicability:** `na_when: zero third-party API dependencies` (clause-b over manifests+configs). Else applicable.; archetype+plane: `na_when archetype in {library, docs, agent-skills} && !has_data` (DATA) or `!has_deploy` (PERF) or `!has_server` (API) with exhaustive plane inventory — required rows never N/A
 
 ## 2. Detection recipe
 

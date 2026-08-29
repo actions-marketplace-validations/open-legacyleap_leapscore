@@ -139,8 +139,59 @@ function buildWeights() {
   };
 }
 
+function buildApplicability(): Record<string, Record<string, 'required' | 'relevant' | 'irrelevant'>> {
+  // Per-indicator tier per archetype. Default for any unlisted pair is 'relevant' (see spec: "Default for any unlisted indicator/archetype pair SHALL be relevant").
+  // 'required' = never N/A, 'relevant' = N/A iff plane absent + exhaustive proof, 'irrelevant' = always N/A for that archetype.
+  const table: Record<string, Record<string, 'required' | 'relevant' | 'irrelevant'>> = {};
+
+  const requiredIds = ['SEC-02', 'SEC-01', 'ECOS-05', 'ECOS-01'];
+  for (const id of requiredIds) {
+    table[id] = { library: 'required', service: 'required', cli: 'required', infra: 'required', docs: 'required', 'agent-skills': 'required', mixed: 'required', unknown: 'required' };
+  }
+
+  // docs: API, DATA, PERF are irrelevant (no server/data/deploy planes expected)
+  const docsIrrelevant = [
+    ...Array.from({ length: 10 }, (_, i) => `API-${String(i + 1).padStart(2, '0')}`),
+    ...Array.from({ length: 10 }, (_, i) => `DATA-${String(i + 1).padStart(2, '0')}`),
+    ...Array.from({ length: 10 }, (_, i) => `PERF-${String(i + 1).padStart(2, '0')}`),
+    'VEL-03', 'VEL-04',
+  ];
+  for (const id of docsIrrelevant) {
+    if (requiredIds.includes(id)) continue;
+    table[id] = { ...(table[id] ?? {}), docs: 'irrelevant' };
+  }
+
+  // agent-skills: same as docs plus infra-heavy PERF/DATA
+  const agentIrrelevant = [
+    ...Array.from({ length: 10 }, (_, i) => `DATA-${String(i + 1).padStart(2, '0')}`),
+    ...Array.from({ length: 10 }, (_, i) => `PERF-${String(i + 1).padStart(2, '0')}`),
+    ...Array.from({ length: 10 }, (_, i) => `API-${String(i + 1).padStart(2, '0')}`),
+    'VEL-01', 'VEL-03', 'VEL-04',
+  ];
+  for (const id of agentIrrelevant) {
+    if (requiredIds.includes(id)) continue;
+    table[id] = { ...(table[id] ?? {}), 'agent-skills': 'irrelevant' };
+  }
+
+  // infra: API is largely irrelevant (infra is not a service API), DATA mostly irrelevant
+  const infraIrrelevant = [
+    ...Array.from({ length: 8 }, (_, i) => `API-${String(i + 1).padStart(2, '0')}`),
+    'DATA-02', 'DATA-03', 'DATA-07', 'DATA-08', 'DATA-09',
+  ];
+  for (const id of infraIrrelevant) {
+    if (requiredIds.includes(id)) continue;
+    table[id] = { ...(table[id] ?? {}), infra: 'irrelevant' };
+  }
+
+  // API-01 is the explicit spec example: irrelevant for docs
+  table['API-01'] = { ...(table['API-01'] ?? {}), docs: 'irrelevant' };
+
+  return table;
+}
+
 function buildPayload(indicators: Indicator[]) {
   const weights = buildWeights();
+  const applicability = buildApplicability();
   const tiers = { healthy: 80, moderate: [53, 79], highRisk: [27, 52], critical: 27 };
   const gates = ['G1', 'G2', 'G3', 'G4', 'G5', 'G6', 'G7', 'G8'];
   const rubricVersion = createHash('sha256').update(JSON.stringify(indicators)).digest('hex').slice(0, 7);
@@ -148,6 +199,7 @@ function buildPayload(indicators: Indicator[]) {
     _comment: 'COMPILED from docs/rubric/01_*.md...10_*.md + 11_WEIGHTS_THRESHOLDS_CONFIG.md — do not hand-edit. Run npm run compile:rubric.',
     rubricVersion,
     weights,
+    applicability,
     tiers,
     gates,
     indicators,

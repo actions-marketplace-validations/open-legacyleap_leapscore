@@ -13,6 +13,8 @@
 
 ## 1. Inputs
 
+> **Archetype applicability (new):** `na_when` also fires on archetype+plane: DATA rows N/A if `!has_data && archetype in {library, docs, agent-skills, infra}`; PERF rows N/A if `!has_deploy`; API rows N/A if `!has_server`; irrelevant tiers (e.g. docs→API) fire without plane check. Required rows (SEC-01/02, ECOS-05/01) never N/A. Exhaustive plane inventory required.
+
 - **Planes:** static-src
 - **Tools:** setup-surface matchers: devcontainer (`/.devcontainer`), `docker-compose.dev`, `make dev`/task-runner targets, `.env.example`, seed scripts (`db:seed`), one-command bootstrap scripts, README setup-section parse (command count, manual-step density), setup-docs freshness (DOCS-04 reuse)
 - **Rate-cost:** none

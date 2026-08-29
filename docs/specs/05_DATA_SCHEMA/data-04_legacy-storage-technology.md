@@ -13,6 +13,8 @@
 
 ## 1. Inputs
 
+> **Archetype applicability (new):** `na_when` also fires on archetype+plane: DATA rows N/A if `!has_data && archetype in {library, docs, agent-skills, infra}`; PERF rows N/A if `!has_deploy`; API rows N/A if `!has_server`; irrelevant tiers (e.g. docs→API) fire without plane check. Required rows (SEC-01/02, ECOS-05/01) never N/A. Exhaustive plane inventory required.
+
 - **Planes:** static-src + ecosystem (endoflife.date DB slugs)
 - **Tools:** storage-system enumeration: docker-compose services, Helm/K8s manifests, Terraform resources (`aws_db_instance`, `azurerm_*`, `google_storage_bucket`), connection-string schemes (`postgres://`, `mssql://`, `db2`, `xml`/`mdb` file greps), driver deps in manifests
 - **Rate-cost:** api-budgeted (lifecycle lookups per distinct system)

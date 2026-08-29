@@ -13,6 +13,8 @@
 
 ## 1. Inputs
 
+> **Archetype applicability (new):** `na_when` also fires on archetype+plane: DATA rows N/A if `!has_data && archetype in {library, docs, agent-skills, infra}`; PERF rows N/A if `!has_deploy`; API rows N/A if `!has_server`; irrelevant tiers (e.g. docs→API) fire without plane check. Required rows (SEC-01/02, ECOS-05/01) never N/A. Exhaustive plane inventory required.
+
 - **Planes:** static-src
 - **Tools:** deployment-target inventory: `Dockerfile*`, `docker-compose*`, K8s manifests (`k8s/`, `*.yaml` with kind Deployment), Helm charts, serverless configs (`serverless.yml`, `vercel.json`, `sam-template`), ECS task defs; VM-script smells (`systemctl`, `service X restart`, `capistrano`, `fabric` deps)
 - **Rate-cost:** none

@@ -17,7 +17,7 @@
 - **Tools:** scaling-config matchers: K8s `HorizontalPodAutoscaler`, ECS service autoscaling policies, ASG blocks in Terraform/CloudFormation, serverless concurrency configs; capacity-review artifacts (load-test scripts in repo, forecasting docs)
 - **Rate-cost:** none
 - **Ecosystems:** agnostic
-- **Applicability:** `na_when: PERF-02 shows serverless-only model` (scaling inherent — reason recorded). `unknown_when: no IaC/deploy manifests in repo` (managed elsewhere). Else applicable.
+- **Applicability:** `na_when: PERF-02 shows serverless-only model` (scaling inherent — reason recorded). `unknown_when: no IaC/deploy manifests in repo` (managed elsewhere). Else applicable.; archetype+plane: `na_when archetype in {library, docs, agent-skills} && !has_data` (DATA) or `!has_deploy` (PERF) or `!has_server` (API) with exhaustive plane inventory — required rows never N/A
 
 ## 2. Detection recipe
 

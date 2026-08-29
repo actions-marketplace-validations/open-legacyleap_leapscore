@@ -17,7 +17,7 @@
 - **Tools:** connection-string/env-template enumeration (`DATABASE_URL`-class vars across service roots, docker-compose services, `settings/*.py`, `application*.yml`); cross-schema JOIN grep (`JOIN <other_schema>.`); stored-proc inventory (`CREATE PROCEDURE/FUNCTION` in migrations/sql dirs)
 - **Rate-cost:** none
 - **Ecosystems:** agnostic
-- **Applicability:** `na_when: DATA-01 clause-b fired` (no persistence layer). Else applicable.
+- **Applicability:** `na_when: DATA-01 clause-b fired` (no persistence layer). Else applicable.; archetype+plane: `na_when archetype in {library, docs, agent-skills} && !has_data` (DATA) or `!has_deploy` (PERF) or `!has_server` (API) with exhaustive plane inventory — required rows never N/A
 
 ## 2. Detection recipe
 

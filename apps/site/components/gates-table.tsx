@@ -21,6 +21,16 @@ const STATUS: Record<GateStatus, { label: string; dot: string; note: string }> =
     dot: "bg-foreground",
     note: "No red flag — gate does not cap the verdict.",
   },
+  not_applicable: {
+    label: "Not applicable",
+    dot: "bg-zinc-700",
+    note: "Gate not evaluable for this repo type — excluded.",
+  },
+  not_implemented: {
+    label: "Not implemented",
+    dot: "bg-transparent border border-dashed border-zinc-600",
+    note: "Detector not built yet in this slice — excluded.",
+  },
 };
 
 function GroupTable({ gates }: { gates: Gate[] }) {

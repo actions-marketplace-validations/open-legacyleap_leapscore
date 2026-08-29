@@ -13,6 +13,8 @@
 
 ## 1. Inputs
 
+> **Archetype applicability (new):** `na_when` also fires on archetype+plane: DATA rows N/A if `!has_data && archetype in {library, docs, agent-skills, infra}`; PERF rows N/A if `!has_deploy`; API rows N/A if `!has_server`; irrelevant tiers (e.g. docs→API) fire without plane check. Required rows (SEC-01/02, ECOS-05/01) never N/A. Exhaustive plane inventory required.
+
 - **Planes:** static-src
 - **Tools:** shared-error-schema detection (RFC7807 `problem+json`, error DTO classes, centralized exception handlers); request-ID/correlation middleware presence; status-code usage audit (static sample: bare 500s, 200-with-error-body patterns); error-tracking SDK presence (`sentry`, `bugsnag` deps — cross-ref PERF-01 instrumentation facts recomputed inline)
 - **Rate-cost:** none

@@ -36,6 +36,7 @@ report:
     measured:  47
     estimated: 15
     unknown:   10
+    not_applicable: 30      # archetype+plane: correctly excluded (not scored)
     measured_pct: "65%"
   gates: [ … ]           # see §4
   categories: [ … ]      # see §3
@@ -46,9 +47,9 @@ report:
 ```
 
 ### Headline rules (from `02` §3)
-- `score` computed over `measured`+`estimated` only with rubric weights (`00_EXECUTIVE_RUBRIC.md` Part 3).
-- Unknown rows excluded from numerator and denominator; `coverage` tells you the completeness.
-- Tier is rubric Part 2 verdict, gated by Part 0 on `proven` gates only.
+- `score` computed over `measured`+`estimated` only with rubric weights (`00_EXECUTIVE_RUBRIC.md` Part 3), renormalized over applicable categories only (`indicator-applicability`: `renormWeight = canonical/Σ applicable`). `canonical_score` over all 10 categories is also persisted for footnote comparison.
+- Unknown rows excluded from numerator and denominator; `not_applicable` rows (archetype+plane, exhaustive proof) are also excluded but shown separately. `coverage` tells you the completeness across four buckets: `measured/estimated/unknown/not_applicable`.
+- Tier is rubric Part 2 verdict, gated by Part 0 on `proven` gates only. Gates whose source rows are all `not_applicable` become `not_applicable`, not `needs-verification`.
 
 ---
 

@@ -13,6 +13,8 @@
 
 ## 1. Inputs
 
+> **Archetype applicability (new):** `na_when` also fires on archetype+plane: DATA rows N/A if `!has_data && archetype in {library, docs, agent-skills, infra}`; PERF rows N/A if `!has_deploy`; API rows N/A if `!has_server`; irrelevant tiers (e.g. docs→API) fire without plane check. Required rows (SEC-01/02, ECOS-05/01) never N/A. Exhaustive plane inventory required.
+
 - **Planes:** gh-api (releases, deployments, tags), git
 - **Tools:** `GET /repos/{o}/{r}/releases`, `/deployments` event timestamps; merge-to-tag lead time via PR merge dates (`GET /pulls?state=closed`) joined to subsequent release tags
 - **Rate-cost:** api-budgeted

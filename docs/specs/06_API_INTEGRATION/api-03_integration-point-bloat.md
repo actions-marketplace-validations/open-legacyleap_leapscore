@@ -17,7 +17,7 @@
 - **Tools:** integration-edge extractors: outbound HTTP client configs (`base_url` env refs, SDK deps), message-broker topics/queues (`kafka`, `rabbitmq`, `sqs` config), service-discovery references, webhook routes, DB/queue connection strings (shared with DATA-02 sweep)
 - **Rate-cost:** none
 - **Ecosystems:** agnostic
-- **Applicability:** `na_when: zero outbound integrations and single-service layout` (clause-b). Else applicable.
+- **Applicability:** `na_when: zero outbound integrations and single-service layout` (clause-b). Else applicable.; archetype+plane: `na_when archetype in {library, docs, agent-skills} && !has_data` (DATA) or `!has_deploy` (PERF) or `!has_server` (API) with exhaustive plane inventory — required rows never N/A
 
 ## 2. Detection recipe
 

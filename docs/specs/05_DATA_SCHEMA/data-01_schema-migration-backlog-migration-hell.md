@@ -17,7 +17,7 @@
 - **Tools:** migration-dir detectors + parsers: Alembic (`versions/`), Django migrations, Prisma, Rails `db/migrate`, Flyway/Liquibase layouts, EF/Knex/TypeORM; destructive-op grep (`DROP TABLE|COLUMN`, `RENAME`, `DELETE FROM` without WHERE) over migration bodies
 - **Rate-cost:** none
 - **Ecosystems:** agnostic (per-tool adapters)
-- **Applicability:** `na_when: exhaustive enumeration shows no persistence layer at all` — zero migration dirs ∧ zero DB drivers in parsed manifests ∧ zero schema files (clause-b). Else applicable.
+- **Applicability:** `na_when: exhaustive enumeration shows no persistence layer at all` — zero migration dirs ∧ zero DB drivers in parsed manifests ∧ zero schema files (clause-b). Else applicable.; archetype+plane: `na_when archetype in {library, docs, agent-skills} && !has_data` (DATA) or `!has_deploy` (PERF) or `!has_server` (API) with exhaustive plane inventory — required rows never N/A
 
 ## 2. Detection recipe
 

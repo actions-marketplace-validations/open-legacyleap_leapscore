@@ -26,6 +26,192 @@
       "FE": 10
     }
   },
+  "applicability": {
+    "SEC-02": {
+      "library": "required",
+      "service": "required",
+      "cli": "required",
+      "infra": "required",
+      "docs": "required",
+      "agent-skills": "required",
+      "mixed": "required",
+      "unknown": "required"
+    },
+    "SEC-01": {
+      "library": "required",
+      "service": "required",
+      "cli": "required",
+      "infra": "required",
+      "docs": "required",
+      "agent-skills": "required",
+      "mixed": "required",
+      "unknown": "required"
+    },
+    "ECOS-05": {
+      "library": "required",
+      "service": "required",
+      "cli": "required",
+      "infra": "required",
+      "docs": "required",
+      "agent-skills": "required",
+      "mixed": "required",
+      "unknown": "required"
+    },
+    "ECOS-01": {
+      "library": "required",
+      "service": "required",
+      "cli": "required",
+      "infra": "required",
+      "docs": "required",
+      "agent-skills": "required",
+      "mixed": "required",
+      "unknown": "required"
+    },
+    "API-01": {
+      "docs": "irrelevant",
+      "agent-skills": "irrelevant",
+      "infra": "irrelevant"
+    },
+    "API-02": {
+      "docs": "irrelevant",
+      "agent-skills": "irrelevant",
+      "infra": "irrelevant"
+    },
+    "API-03": {
+      "docs": "irrelevant",
+      "agent-skills": "irrelevant",
+      "infra": "irrelevant"
+    },
+    "API-04": {
+      "docs": "irrelevant",
+      "agent-skills": "irrelevant",
+      "infra": "irrelevant"
+    },
+    "API-05": {
+      "docs": "irrelevant",
+      "agent-skills": "irrelevant",
+      "infra": "irrelevant"
+    },
+    "API-06": {
+      "docs": "irrelevant",
+      "agent-skills": "irrelevant",
+      "infra": "irrelevant"
+    },
+    "API-07": {
+      "docs": "irrelevant",
+      "agent-skills": "irrelevant",
+      "infra": "irrelevant"
+    },
+    "API-08": {
+      "docs": "irrelevant",
+      "agent-skills": "irrelevant",
+      "infra": "irrelevant"
+    },
+    "API-09": {
+      "docs": "irrelevant",
+      "agent-skills": "irrelevant"
+    },
+    "API-10": {
+      "docs": "irrelevant",
+      "agent-skills": "irrelevant"
+    },
+    "DATA-01": {
+      "docs": "irrelevant",
+      "agent-skills": "irrelevant"
+    },
+    "DATA-02": {
+      "docs": "irrelevant",
+      "agent-skills": "irrelevant",
+      "infra": "irrelevant"
+    },
+    "DATA-03": {
+      "docs": "irrelevant",
+      "agent-skills": "irrelevant",
+      "infra": "irrelevant"
+    },
+    "DATA-04": {
+      "docs": "irrelevant",
+      "agent-skills": "irrelevant"
+    },
+    "DATA-05": {
+      "docs": "irrelevant",
+      "agent-skills": "irrelevant"
+    },
+    "DATA-06": {
+      "docs": "irrelevant",
+      "agent-skills": "irrelevant"
+    },
+    "DATA-07": {
+      "docs": "irrelevant",
+      "agent-skills": "irrelevant",
+      "infra": "irrelevant"
+    },
+    "DATA-08": {
+      "docs": "irrelevant",
+      "agent-skills": "irrelevant",
+      "infra": "irrelevant"
+    },
+    "DATA-09": {
+      "docs": "irrelevant",
+      "agent-skills": "irrelevant",
+      "infra": "irrelevant"
+    },
+    "DATA-10": {
+      "docs": "irrelevant",
+      "agent-skills": "irrelevant"
+    },
+    "PERF-01": {
+      "docs": "irrelevant",
+      "agent-skills": "irrelevant"
+    },
+    "PERF-02": {
+      "docs": "irrelevant",
+      "agent-skills": "irrelevant"
+    },
+    "PERF-03": {
+      "docs": "irrelevant",
+      "agent-skills": "irrelevant"
+    },
+    "PERF-04": {
+      "docs": "irrelevant",
+      "agent-skills": "irrelevant"
+    },
+    "PERF-05": {
+      "docs": "irrelevant",
+      "agent-skills": "irrelevant"
+    },
+    "PERF-06": {
+      "docs": "irrelevant",
+      "agent-skills": "irrelevant"
+    },
+    "PERF-07": {
+      "docs": "irrelevant",
+      "agent-skills": "irrelevant"
+    },
+    "PERF-08": {
+      "docs": "irrelevant",
+      "agent-skills": "irrelevant"
+    },
+    "PERF-09": {
+      "docs": "irrelevant",
+      "agent-skills": "irrelevant"
+    },
+    "PERF-10": {
+      "docs": "irrelevant",
+      "agent-skills": "irrelevant"
+    },
+    "VEL-03": {
+      "docs": "irrelevant",
+      "agent-skills": "irrelevant"
+    },
+    "VEL-04": {
+      "docs": "irrelevant",
+      "agent-skills": "irrelevant"
+    },
+    "VEL-01": {
+      "agent-skills": "irrelevant"
+    }
+  },
   "tiers": {
     "healthy": 80,
     "moderate": [

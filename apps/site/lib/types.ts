@@ -4,11 +4,11 @@
  * never reaches past it. A live adapter replaces the mock at the same seam.
  */
 
-export type RowStatus = "measured" | "estimated" | "unknown";
+export type RowStatus = "measured" | "estimated" | "unknown" | "not_applicable" | "not_implemented";
 
 export type RowScore = 0 | 1 | 2 | 3;
 
-export type GateStatus = "proven" | "not-proven" | "needs-verification";
+export type GateStatus = "proven" | "not-proven" | "needs-verification" | "not_applicable" | "not_implemented";
 
 export interface EvidencePointer {
   file?: string;
@@ -79,6 +79,7 @@ export interface CategoryScore {
     estimated: number;
     unknown: number;
     not_applicable: number;
+    not_implemented?: number;
   };
   indicator_rows: IndicatorRow[];
 }
@@ -96,10 +97,13 @@ export interface CoverageCounts {
   estimated: number;
   unknown: number;
   not_applicable: number;
+  not_implemented?: number;
   /** display percentages over the 76 standard rows, e.g. "65%" */
   measured_pct: string;
   estimated_pct: string;
   unknown_pct: string;
+  not_applicable_pct?: string;
+  not_implemented_pct?: string;
 }
 
 export interface TopBlocker {
@@ -127,9 +131,16 @@ export interface Report {
     engine_version: string;
     rubric_version: string;
     scanned_commit?: string;
+    archetype?: string;
+    archetype_confidence?: string;
+    planeInventory?: Record<string, unknown>;
+    archetype_evidence?: string[];
+    perRoot?: unknown[];
+    archetype_source?: string;
   };
   headline: {
     score: number;
+    canonical_score?: number;
     /** display tier, top of band for readability */
     tier: string;
     ci_band: string;

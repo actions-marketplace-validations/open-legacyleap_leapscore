@@ -13,6 +13,8 @@
 
 ## 1. Inputs
 
+> **Archetype applicability (new):** `na_when` also fires on archetype+plane: DATA rows N/A if `!has_data && archetype in {library, docs, agent-skills, infra}`; PERF rows N/A if `!has_deploy`; API rows N/A if `!has_server`; irrelevant tiers (e.g. docs→API) fire without plane check. Required rows (SEC-01/02, ECOS-05/01) never N/A. Exhaustive plane inventory required.
+
 - **Planes:** gh-api
 - **Tools:** `GET /repos/{o}/{r}/pulls?state=closed` + per-PR reviews endpoint (sampled): review coverage %, size distribution (`additions+deletions`), time-to-first-approval, comment density, bypass/admin-merged rate, direct-push count to default branch (compare `commits` API authors vs PR merges)
 - **Rate-cost:** api-budgeted (sample cap: last 200 closed PRs)

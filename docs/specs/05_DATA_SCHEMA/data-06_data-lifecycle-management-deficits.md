@@ -13,6 +13,8 @@
 
 ## 1. Inputs
 
+> **Archetype applicability (new):** `na_when` also fires on archetype+plane: DATA rows N/A if `!has_data && archetype in {library, docs, agent-skills, infra}`; PERF rows N/A if `!has_deploy`; API rows N/A if `!has_server`; irrelevant tiers (e.g. docs→API) fire without plane check. Required rows (SEC-01/02, ECOS-05/01) never N/A. Exhaustive plane inventory required.
+
 - **Planes:** static-src + gh-api (scheduled workflows)
 - **Tools:** backup-evidence sweep: scheduled CI workflows (`schedule:` cron with `pg_dump`/`mysqldump`/snapshot steps), IaC backup config (`backup_vault`, PITR flags, versioning on buckets, snapshot policies), retention jobs (TTL/lifecycle rules), restore-drill artifacts (runbooks mentioning restore tests, CI jobs executing restores)
 - **Rate-cost:** api-budgeted (workflow list)

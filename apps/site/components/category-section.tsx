@@ -324,9 +324,12 @@ function scoreTone(score: number): string {
 }
 
 export function CategorySection({ category }: { category: CategoryScore }) {
+  const entirelyNA = category.applicable === 0 && category.status_counts.not_applicable > 0 && (category.status_counts.not_implemented ?? 0) === 0;
+  const entirelyNotImplemented = category.applicable === 0 && (category.status_counts.not_implemented ?? 0) > 0 && category.status_counts.not_applicable === 0;
+  const mixedNotImplemented = category.applicable === 0 && category.status_counts.not_applicable > 0 && (category.status_counts.not_implemented ?? 0) > 0;
   const isEmpty = category.indicator_rows.length === 0 || category.category_score == null;
   return (
-    <div className="instrument-panel overflow-hidden rounded-lg">
+    <div className={`instrument-panel overflow-hidden rounded-lg ${entirelyNA || entirelyNotImplemented || mixedNotImplemented ? 'opacity-60' : ''}`}>
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-hairline px-4 py-3">
         <div>
           <div className="flex items-center gap-2">
@@ -336,14 +339,21 @@ export function CategorySection({ category }: { category: CategoryScore }) {
             <h3 className="text-sm font-medium text-foreground">
               {category.name}
             </h3>
+            {entirelyNA ? <span className="rounded border border-hairline px-1.5 py-0.5 text-xs text-faint">N/A</span> : null}
+            {entirelyNotImplemented ? <span className="rounded border border-dashed border-hairline px-1.5 py-0.5 text-xs text-faint">Not implemented</span> : null}
+            {mixedNotImplemented ? <span className="rounded border border-hairline px-1.5 py-0.5 text-xs text-faint">N/A / Not implemented</span> : null}
           </div>
           <p className="mt-1 text-xs text-faint">
-            {category.applicable} rows · weight {category.weight}% · status{" "}
-            {statusLabel(category.status_counts)}
+            {entirelyNotImplemented ? `0 rows · Not implemented in this slice` : entirelyNA ? `0 rows · N/A — no ${category.id === 'DATA' ? 'data plane' : category.id === 'PERF' ? 'deploy plane' : category.id === 'API' ? 'server plane' : 'applicable plane'} for this repo type` : mixedNotImplemented ? `0 rows · N/A + Not implemented` : `${category.applicable} rows · weight ${category.weight}% · status ${statusLabel(category.status_counts)}`}
           </p>
         </div>
         <div className="flex items-center gap-3">
-          {isEmpty ? (
+          {entirelyNA || entirelyNotImplemented || mixedNotImplemented ? (
+            <>
+              <span className="font-mono text-xl font-semibold text-faint tabular-nums">—</span>
+              <span className="rounded border border-hairline px-1.5 py-0.5 font-mono text-xs text-faint">{entirelyNotImplemented ? 'Not implemented' : entirelyNA ? 'N/A' : 'N/A'}</span>
+            </>
+          ) : isEmpty ? (
             <>
               <span className="font-mono text-xl font-semibold text-faint tabular-nums">—</span>
               <span className="rounded border border-hairline px-1.5 py-0.5 font-mono text-xs text-faint">Not evaluated</span>
@@ -368,5 +378,5 @@ export function CategorySection({ category }: { category: CategoryScore }) {
 }
 
 function statusLabel(s: CategoryScore["status_counts"]): string {
-  return `${s.measured}m / ${s.estimated}e / ${s.unknown}u`;
+  return `${s.measured}m / ${s.estimated}e / ${s.unknown}u / ${s.not_applicable}na / ${(s.not_implemented ?? 0)}ni`;
 }

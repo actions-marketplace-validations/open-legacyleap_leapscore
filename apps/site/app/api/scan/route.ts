@@ -146,10 +146,14 @@ export async function GET(req: NextRequest) {
           setTimeout(() => inflightServerScans.delete(key), 5000);
           controller.close(); return;
         }
-        // Single terminal scoring — no intermediate report
-        const { scoreMvp } = await import("../../../../../packages/engine/scorer/mvp");
-        const mvp = scoreMvp(finalFacts as never);
         const rawSnapshot = (snapshot as Record<string, unknown>) ?? { repo, scanned_at: new Date().toISOString(), engine_version: 'unified/1.0', rubric_version: 'docs/rubric/@mvp' };
+        // Single terminal scoring — no intermediate report (with archetype-aware renormalization)
+        const { scoreMvp } = await import("../../../../../packages/engine/scorer/mvp");
+        const arch = (rawSnapshot as { archetype?: string }).archetype ?? 'unknown';
+        const plane = (rawSnapshot as { planeInventory?: unknown }).planeInventory as { has_server: boolean; has_data: boolean; has_deploy: boolean; has_client: boolean; has_test: boolean } | undefined;
+        const archetypeOverride = req.nextUrl.searchParams.get("archetype");
+        const effectiveArch = archetypeOverride && ['library','service','cli','infra','docs','agent-skills','mixed','unknown'].includes(archetypeOverride) ? archetypeOverride : arch;
+        const mvp = scoreMvp(finalFacts as never, { archetype: effectiveArch, planeInventory: plane });
         // Derive repoSha from snapshot or facts
         const snapSha = (rawSnapshot as { scanned_commit?: string }).scanned_commit;
         const factSha = finalFacts.find((f) => (f as unknown as { commitSha?: string }).commitSha && (f as unknown as { commitSha: string }).commitSha !== 'unknown');
@@ -190,10 +194,10 @@ export async function GET(req: NextRequest) {
             deepDiveScope = unknownRows.slice(0, 18).map(r => ({ row: r.id, name: r.name, what_it_takes: r.unknown_measure_path ?? "Not run" }));
           }
         } catch {}
-        const finalReport: Record<string, unknown> & { headline: { score: number; tier: string; ci_band: string }; snapshot: Record<string, unknown> } = {
+        const finalReport: Record<string, unknown> & { headline: { score: number; canonical_score: number; tier: string; ci_band: string }; snapshot: Record<string, unknown> } = {
           id: scanId ?? `ls_${Date.now().toString(36)}`,
-          snapshot: { ...rawSnapshot, scanned_commit: repoSha, repo: normalizedRepo, scanned_at: scannedAt },
-          headline: { score: Math.round(mvp.score*100)/100, tier: mvp.score >=80 ? 'Healthy' : mvp.score >=53 ? 'Moderate' : mvp.score >=27 ? 'High Risk' : 'Critical', ci_band: mvp.status === 'complete' ? 'complete' : 'degraded' },
+          snapshot: { ...rawSnapshot, archetype: effectiveArch, scanned_commit: repoSha, repo: normalizedRepo, scanned_at: scannedAt, archetype_source: archetypeOverride ? 'override' : 'auto', archetype_override_from: archetypeOverride ? arch : undefined },
+          headline: { score: Math.round(mvp.score*100)/100, canonical_score: Math.round(((mvp as unknown as { canonical_score?: number }).canonical_score ?? mvp.score)*100)/100, tier: mvp.score >=80 ? 'Healthy' : mvp.score >=53 ? 'Moderate' : mvp.score >=27 ? 'High Risk' : 'Critical', ci_band: mvp.status === 'complete' ? 'complete' : 'degraded' },
           categories: mvp.categories,
           coverage: mvp.coverage,
           status: mvp.status,

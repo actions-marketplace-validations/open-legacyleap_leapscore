@@ -17,7 +17,7 @@
 - **Tools:** IaC inventory: Terraform (`*.tf`, state backend configs), Pulumi, CloudFormation templates, Ansible playbooks; coverage heuristic: resource classes implied by deploy artifacts (PERF-02 facts) vs declared in IaC; config-change audit trail markers (plan/apply CI jobs)
 - **Rate-cost:** none
 - **Ecosystems:** agnostic
-- **Applicability:** `na_when: PERF-02 shows fully serverless-managed model with zero infra surface` (reason recorded). Else applicable — including zero-IaC trees (that's score signal).
+- **Applicability:** `na_when: PERF-02 shows fully serverless-managed model with zero infra surface` (reason recorded). Else applicable — including zero-IaC trees (that's score signal).; archetype+plane: `na_when archetype in {library, docs, agent-skills} && !has_data` (DATA) or `!has_deploy` (PERF) or `!has_server` (API) with exhaustive plane inventory — required rows never N/A
 
 ## 2. Detection recipe
 

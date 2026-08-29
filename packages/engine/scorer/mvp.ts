@@ -2,6 +2,7 @@ import type { FactRecord } from '../facts';
 import { factsToRows as phase1Rows, scorePhase1 } from './phase1';
 import rubricData from '../rubric.json' with { type: 'json' };
 import { evaluateGates } from './rollup';
+import { evaluateApplicability, renormalizeWeights } from './applicability';
 
 function flattenFacts(facts: Record<string, unknown>, detectorId: string): Record<string, unknown> {
   const normalized = detectorId.toLowerCase().replace('-', '');
@@ -302,7 +303,9 @@ function lookupEffort(id: string): string { return RUBRIC_REGISTRY[id]?.effort ?
 function lookupCategory(id: string): string { return RUBRIC_REGISTRY[id]?.category ?? id.split('-')[0]; }
 function lookupRemediation(id: string) { return RUBRIC_REGISTRY[id]?.remediation ?? { quick_win: '', structural: '', gold_standard: '', effort: '⚡ ≤30 min' }; }
 
-export function scoreMvp(facts: FactRecord[]) {
+export function scoreMvp(facts: FactRecord[], opts: { archetype?: string; planeInventory?: { has_server: boolean; has_data: boolean; has_deploy: boolean; has_client: boolean; has_test: boolean } } = {}) {
+  const archetype = (opts.archetype ?? 'unknown') as 'library' | 'service' | 'cli' | 'infra' | 'docs' | 'agent-skills' | 'mixed' | 'unknown';
+  const plane = opts.planeInventory ?? { has_server: true, has_data: true, has_deploy: true, has_client: true, has_test: true };
   // Reuse phase1 rows for first 6, then map remaining via simple measured mapping; supports both 19 and 31
   const byId = new Map(facts.map(f => [f.detectorId, f]));
   const rawPhase1 = phase1Rows(facts.filter(f => ['VEL-06','VEL-09','VEL-08','VEL-10','SEC-07','TEST-08'].includes(f.detectorId)));
@@ -327,9 +330,31 @@ export function scoreMvp(facts: FactRecord[]) {
       extraRows.push({ id, name, category_id: cat, status: 'measured', score, reason, evidence: { tool: f.provenance.tool, pointers: f.evidencePointers as unknown as [], facts: flat }, effort, remediation } as unknown as ReturnType<typeof phase1Rows>[number]);
     }
   }
-  const allRows = [...phase1, ...extraRows];
-  // Use scorePhase1 logic but it already handles categories; for MVP we need to recompute with 19
-  // For simplicity, reuse scorePhase1 for all rows grouped by cat
+  // 5-state precedence: not_implemented > not_applicable > unknown > estimated > measured
+  const IMPLEMENTED_SET = new Set(ALL_MEASURED_IDS);
+  const allRowsWithApplicability = [...phase1, ...extraRows].map(r => {
+    if (!IMPLEMENTED_SET.has(r.id)) {
+      return { ...r, status: 'not_implemented' as const, score: undefined, reason: 'detector not implemented in this slice', unknown_measure_path: `What it takes: ${r.id} — detector pending; see rubric`, evidence: undefined, not_applicable: false };
+    }
+    const evalRes = evaluateApplicability(r.id, archetype, plane as never);
+    if (evalRes.notApplicable) {
+      return { ...r, not_applicable: true, status: 'not_applicable' as const, score: undefined, reason: evalRes.reason, unknown_measure_path: evalRes.reason, evidence: undefined };
+    }
+    return r;
+  });
+  // Expand to full 102 for coverage.not_implemented accounting (append stub rows for non-implemented indicators)
+  const allIds102 = (rubricData as unknown as { indicators: Array<{ id: string; category: string }> }).indicators.map(i => i.id);
+  const existingIds = new Set(allRowsWithApplicability.map(r => r.id));
+  const notImplementedStubs = allIds102.filter(id => !existingIds.has(id)).map(id => {
+    const cat = lookupCategory(id);
+    const name = lookupName(id);
+    const effort = lookupEffort(id);
+    return { id, name, category_id: cat, status: 'not_implemented' as const, reason: 'detector not implemented in this slice', unknown_measure_path: `Not implemented — ${id} requires a detector (see rubric)`, effort, not_applicable: false };
+  });
+  const allRowsForCoverage = [...allRowsWithApplicability, ...notImplementedStubs];
+  // For required rows, ensure not_applicable never happens (evaluateApplicability already guarantees, but enforce) — keep 5-state table for categories
+  const allRows = allRowsForCoverage;
+  // Use scorePhase1 logic but it already handles categories; for MVP we need to recompute
   const byCat = new Map<string, typeof allRows>();
   for (const r of allRows) { if (!byCat.has(r.category_id)) byCat.set(r.category_id, []); byCat.get(r.category_id)!.push(r); }
   const BASE_WEIGHTS: Record<string, number> = { SEC: 20, VEL: 10, TEST: 10, ECOS: 10, ARCH: 15, DATA: 10, API: 10, PERF: 10, DOCS: 5 };
@@ -338,20 +363,63 @@ export function scoreMvp(facts: FactRecord[]) {
     ECOS: 'Dependency & Ecosystem Health', ARCH: 'Architecture & Code Quality', DATA: 'Data & Schema Evolution',
     API: 'API & Integration Surface', PERF: 'Performance & Cloud/Infrastructure Fit', DOCS: 'Documentation & Knowledge Continuity',
   };
+  // Determine applicable categories (those with at least one implemented-and-applicable row that is measured/estimated)
+  const applicableCats = [...byCat.entries()].filter(([, rows]) => rows.some(r => r.status === 'measured' || r.status === 'estimated')).map(([cat]) => cat);
+  const renormWeights = renormalizeWeights(applicableCats, BASE_WEIGHTS);
+  // Preserve canonical score for footnote
+  const canonicalScore = (() => {
+    let s = 0;
+    for (const [cat, rows] of byCat.entries()) {
+      const measured = rows.filter(r => !r.not_applicable && r.status === 'measured');
+      const sum = measured.reduce((a, r) => a + (r.score ?? 0), 0);
+      const applicable = measured.length;
+      const catPct = applicable ? (sum / (applicable * 3)) * 100 : 0;
+      s += (catPct * (BASE_WEIGHTS[cat] ?? 0)) / 100;
+    }
+    return s;
+  })();
   const categories = [...byCat.entries()].map(([cat, rows]) => {
+    const notApplicable = rows.filter(r => r.status === 'not_applicable').length;
+    const notImplemented = rows.filter(r => r.status === 'not_implemented').length;
     const measured = rows.filter(r => r.status === 'measured');
-    const sum = measured.reduce((a, r) => a + (r.score ?? 0), 0);
-    const applicable = measured.length;
+    const estimated = rows.filter(r => r.status === 'estimated');
+    const unknown = rows.filter(r => r.status === 'unknown').length;
+    const sum = measured.reduce((a, r) => a + (r.score ?? 0), 0) + estimated.reduce((a, r) => a + (r.score ?? 0), 0);
+    const applicable = measured.length + estimated.length;
     const category_score = applicable ? (sum / (applicable * 3)) * 100 : null;
-    const weighted_contribution = category_score == null ? 0 : (category_score * (BASE_WEIGHTS[cat] ?? 0))/100;
-    return { id: cat, name: CATEGORY_LABELS[cat] ?? cat, weight: BASE_WEIGHTS[cat] ?? 0, applicable, scored_sum: sum, category_score, weighted_contribution, status_counts: { measured: measured.length, estimated: 0, unknown: rows.length - measured.length, not_applicable: 0 }, indicator_rows: rows };
+    const weight = renormWeights[cat] ?? 0;
+    const canonicalWeight = BASE_WEIGHTS[cat] ?? 0;
+    const weighted_contribution = category_score == null ? 0 : (category_score * weight) / 100;
+    return { id: cat, name: CATEGORY_LABELS[cat] ?? cat, weight, canonical_weight: canonicalWeight, applicable, scored_sum: sum, category_score, weighted_contribution, status_counts: { measured: measured.length, estimated: estimated.length, unknown, not_applicable: notApplicable, not_implemented: notImplemented }, indicator_rows: rows };
   });
-  // No phantom empty categories — empty categories are omitted (not evaluated)
+  // No phantom empty categories — empty categories are omitted (not evaluated) but keep for display as dimmed if entirely N/A / Not Implemented
   const score = categories.reduce((a,c) => a + c.weighted_contribution, 0);
   const measured = allRows.filter(r => r.status === 'measured').length;
-  const unknown = 102 - measured;
-  const coverage = { measured, estimated: 0, unknown, not_applicable: 0, measured_pct: `${Math.round(measured/102*100)}%`, estimated_pct: '0%', unknown_pct: `${Math.round(unknown/102*100)}%` };
+  const estimated = allRows.filter(r => r.status === 'estimated').length;
+  const not_applicable = allRows.filter(r => r.status === 'not_applicable').length;
+  const not_implemented = allRows.filter(r => r.status === 'not_implemented').length;
+  const unknown = allRows.filter(r => r.status === 'unknown').length;
+  // coverage over applicable + unknown (not including not_applicable/not_implemented in denominator, but we expose them)
+  const totalApplicable = measured + estimated + unknown;
+  const coverage = { measured, estimated, unknown, not_applicable, not_implemented, measured_pct: `${Math.round(measured/(totalApplicable||1)*100)}%`, estimated_pct: `${Math.round(estimated/(totalApplicable||1)*100)}%`, unknown_pct: `${Math.round(unknown/(totalApplicable||1)*100)}%`, not_applicable_pct: `${Math.round(not_applicable/102*100)}%`, not_implemented_pct: `${Math.round(not_implemented/102*100)}%` };
   const status = (measured === ALL_MEASURED_IDS.length || measured === MVP_IDS.length) ? 'complete' as const : 'degraded' as const;
-  const gates = evaluateGates(facts);
-  return { categories, coverage, score, status, gates, rows: allRows };
+  const rawGates = evaluateGates(facts);
+  // Gates whose sole source rows are all not_implemented or all not_applicable -> that same status (precedence not_implemented > not_applicable)
+  const gates = rawGates.map(g => {
+    const statuses = g.source_rows.map(id => {
+      if (!new Set(ALL_MEASURED_IDS).has(id)) return 'not_implemented';
+      const evalRes = evaluateApplicability(id, archetype, plane as never);
+      if (evalRes.notApplicable) return 'not_applicable';
+      return 'applicable';
+    });
+    if (statuses.every(s => s === 'not_implemented')) return { ...g, status: 'not_implemented' as const, note: 'detector not implemented in this slice — gate not evaluable' };
+    if (statuses.every(s => s === 'not_applicable' || s === 'not_implemented')) {
+      // if any not_implemented, prefer that per precedence
+      const hasNotImplemented = statuses.includes('not_implemented');
+      return { ...g, status: hasNotImplemented ? 'not_implemented' as const : 'not_applicable' as const, note: hasNotImplemented ? 'detector not implemented — gate not evaluable' : 'not applicable for this archetype — gate not evaluable' };
+    }
+    if (statuses.every(s => s === 'not_applicable')) return { ...g, status: 'not_applicable' as const, note: 'not applicable for this archetype — gate not evaluable' };
+    return g;
+  });
+  return { categories, coverage, score, canonical_score: canonicalScore, status, gates, rows: allRows };
 }

@@ -43,6 +43,10 @@ When at least one FE indicator is applicable, FE becomes a 10% category and the 
 
 **Parameter note:** the FE weight (10%) is a parameter, not a law — adjust it here and the derived views regenerate. Proportional ×0.9 scaling keeps the *relative* importance of the nine base categories constant.
 
+### Generalized applicable-category renormalization (new — indicator-applicability)
+
+When an entire category becomes not applicable for the repo (e.g., DATA + PERF for a `library`, or all API/DATA/PERF for `docs`/`agent-skills`), the headline is renormalized **proportionally over the applicable categories only**: `renormWeight(cat) = canonicalWeight(cat) / Σ canonicalWeight(applicableCats)`, so the sum stays 100% and relative importance is preserved. This generalizes the FE-active `×0.9` pattern. Both the renormalized headline (`headline.score`) and the canonical headline (`headline.canonical_score`, over all 10 categories) are persisted; the renormalized headline is the primary display and the canonical is footnoted. A category with zero applicable rows is omitted or shown dimmed as `N/A` with no percentage and counted in `coverage.not_applicable`. Applicable-category determination uses `archetype + planeInventory` (`has_server/has_data/has_deploy/has_client/has_test`) via exhaustive tree enumeration; see `indicator-applicability` spec.
+
 ---
 
 ## 2 — Category scoring formula

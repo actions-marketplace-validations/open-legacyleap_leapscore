@@ -13,6 +13,8 @@
 
 ## 1. Inputs
 
+> **Archetype applicability (new):** `na_when` also fires on archetype+plane: DATA rows N/A if `!has_data && archetype in {library, docs, agent-skills, infra}`; PERF rows N/A if `!has_deploy`; API rows N/A if `!has_server`; irrelevant tiers (e.g. docs→API) fire without plane check. Required rows (SEC-01/02, ECOS-05/01) never N/A. Exhaustive plane inventory required.
+
 - **Planes:** git (+ gh-api branch list)
 - **Tools:** branch enumeration with last-commit dates (`git for-each-ref`); merge-commit vs rebase-lineage shape; long-lived branch detection (age > Y_DAYS, divergence depth from trunk); monorepo layout detection (multi-service roots — ECOS-09 reuse) + cross-root change span (single commits touching multiple roots)
 - **Rate-cost:** api-light

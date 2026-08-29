@@ -13,6 +13,8 @@
 
 ## 1. Inputs
 
+> **Archetype applicability (new):** `na_when` also fires on archetype+plane: DATA rows N/A if `!has_data && archetype in {library, docs, agent-skills, infra}`; PERF rows N/A if `!has_deploy`; API rows N/A if `!has_server`; irrelevant tiers (e.g. docs→API) fire without plane check. Required rows (SEC-01/02, ECOS-05/01) never N/A. Exhaustive plane inventory required.
+
 - **Planes:** static-src
 - **Tools:** column-name archaeology over reconstructed schema (DATA-03 reuse): version-suffixed columns (`_v2`, `_new`, `_old`, `_bak`), boolean feature-flag columns (`is_*_enabled`, `use_new_*`), business-campaign-named columns, append-only garbage-column share; event/audit-trail absence check (cross-ref DATA-09 presence facts recomputed inline)
 - **Rate-cost:** none

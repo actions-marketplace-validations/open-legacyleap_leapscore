@@ -12,7 +12,7 @@
 | § | Section | Content |
 |---|---------|---------|
 | 0 | Identity | ID · name · tier · default status · v1 flag · gates fed · rollup (standard/deep-dive) · verify-effort tag |
-| 1 | Inputs | data planes (git / gh-api / ecosystem / static-src) · tools + min versions · GH endpoints + rate-cost · ecosystems · **Applicability:** `na_when <predicate>` |
+| 1 | Inputs | data planes (git / gh-api / ecosystem / static-src) · tools + min versions · GH endpoints + rate-cost · ecosystems · **Applicability:** `na_when <predicate>` (archetype + plane + exhaustive proof; see `indicator-applicability` spec) |
 | 2 | Detection recipe | exact commands / API calls / flags, ordered, with preconditions |
 | 3 | Fact schema | JSON emitted to the fact-store; snake_case, units in field names |
 | 4 | Statusing rules | `measured_when / estimated_when / unknown_when` · scope_limited triggers · clamp · confidence hook |
@@ -28,7 +28,7 @@ Deep-dive rows additionally declare `folds_into: <category>` (rubric B4). Tier C
 
 1. **Statuses:** `measured` / `estimated` / `unknown`; modifier `scope-limited` (`docs/plans/02` §2, `docs/plans/05` §8). `estimated` clamps to [1,2], carries `confidence: low|medium`.
 2. **Confidence rule:** `medium` iff ≥2 independent surfaces agree or surface is exhaustive-by-construction; otherwise `low`. Never above `medium`.
-3. **N/A admissibility:** `na_when` fires only on (a) structural category gates (e.g., no user-facing client → FE rows) or (b) exhaustive-surface enumeration proving the subject absent (parsed lockfile, full file tree). Non-exhaustive absence → `unknown`, never N/A. Zero test files / zero CI configs are score-0 facts.
+3. **N/A admissibility:** `na_when` fires only on (a) structural category gates (e.g., no user-facing client → FE rows; archetype+plane gates per `indicator-applicability` — e.g., no data plane → DATA rows, no deploy plane → PERF rows, archetype `docs`/`agent-skills` → irrelevant tiers) or (b) exhaustive-surface enumeration proving the subject absent (parsed lockfile, full file tree, archetype+plane exhaustive proof via `archetype.ts` plane inventory). Non-exhaustive absence → `unknown`, never N/A. Zero test files / zero CI configs are score-0 facts when the plane is present; when the plane is absent they are `not_applicable`.
 4. **Budget classes:** `fast` · `slow-dissolvable` (sampled under budget → `estimated` + `scope-limited`) · `api-budgeted` (rate-limit exhausted → `unknown` "rate-limited").
 5. **Tool pinning:** specs pin tool + minimum major (`gitleaks >= 8`); exact executed version + flags recorded per fact record (`docs/plans/05` §7).
 6. **Fact naming:** `{ecos01: {...}}` indicator-namespaced, snake_case, units embedded (`days_until_eol`). Predicates reference same-spec facts only.

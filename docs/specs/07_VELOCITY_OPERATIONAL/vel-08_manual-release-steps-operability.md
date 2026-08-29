@@ -13,6 +13,8 @@
 
 ## 1. Inputs
 
+> **Archetype applicability (new):** `na_when` also fires on archetype+plane: DATA rows N/A if `!has_data && archetype in {library, docs, agent-skills, infra}`; PERF rows N/A if `!has_deploy`; API rows N/A if `!has_server`; irrelevant tiers (e.g. docs→API) fire without plane check. Required rows (SEC-01/02, ECOS-05/01) never N/A. Exhaustive plane inventory required.
+
 - **Planes:** static-src + gh-api
 - **Tools:** deploy-job detection in CI configs (environment deployment jobs, `deploy` steps, CD workflows); release-automation markers (`semantic-release`, `release-please`, `goreleaser`, `auto`); prod-edit script greps (`ssh `+prod aliases in scripts, `kubectl exec --it` runbooks as procedure); rollback-path evidence (`rollback` job/target)
 - **Rate-cost:** none/api-light

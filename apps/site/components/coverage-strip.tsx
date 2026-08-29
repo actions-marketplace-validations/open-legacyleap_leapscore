@@ -1,56 +1,44 @@
 import type { CoverageCounts } from "@/lib/types";
 
 const SEGMENTS: {
-  key: keyof Pick<CoverageCounts, "measured" | "estimated" | "unknown">;
+  key: keyof Pick<CoverageCounts, "measured" | "estimated" | "unknown" | "not_applicable" | "not_implemented">;
   label: string;
   tone: string;
+  dot: string;
 }[] = [
-  { key: "measured", label: "Measured", tone: "bg-foreground" },
-  { key: "estimated", label: "Estimated", tone: "bg-muted" },
-  { key: "unknown", label: "Unknown", tone: "bg-faint" },
+  { key: "measured", label: "Measured", tone: "bg-white", dot: "bg-white" },
+  { key: "estimated", label: "Estimated", tone: "bg-amber-400", dot: "bg-amber-400" },
+  { key: "unknown", label: "Unknown", tone: "bg-zinc-500", dot: "bg-zinc-500" },
+  { key: "not_applicable", label: "Not applicable", tone: "bg-zinc-700", dot: "bg-zinc-700 border border-zinc-600" },
+  { key: "not_implemented", label: "Not implemented", tone: "bg-transparent border border-dashed border-zinc-600", dot: "bg-transparent border border-dashed border-zinc-600" },
 ];
 
 export function CoverageStrip({ coverage }: { coverage: CoverageCounts }) {
-  const total = coverage.measured + coverage.estimated + coverage.unknown;
+  const total = coverage.measured + coverage.estimated + coverage.unknown + coverage.not_applicable + (coverage.not_implemented ?? 0);
   const denom = Math.max(total, 1);
 
   return (
     <div className="instrument-panel rounded-lg p-4">
       <div className="mb-3 flex items-baseline justify-between">
         <h3 className="text-sm font-medium text-ink">Evidence coverage</h3>
-        <span className="font-mono text-xs text-faint">76 indicator rows</span>
+        <span className="font-mono text-xs text-faint">102 indicator rows</span>
       </div>
-      <div className="flex h-2.5 overflow-hidden rounded-sm">
-        {SEGMENTS.map((s) => (
-          <div
-            key={s.key}
-            className={s.tone}
-            style={{ width: `${(coverage[s.key] / denom) * 100}%` }}
-            title={`${s.label}: ${coverage[s.key]}`}
-          />
-        ))}
-      </div>
-      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-        {SEGMENTS.map((s) => (
-          <div key={s.key}>
-            <div className="flex items-center justify-between text-sm">
-              <span className="flex items-center gap-2 text-muted">
-                <span className={`h-2 w-2 rounded-sm ${s.tone}`} />
-                {s.label}
-              </span>
-              <span className="font-mono text-ink">{coverage[s.key]}</span>
-            </div>
-            <div className="mt-0.5 text-xs text-faint">
-              n·{coverage[s.key]} / {total}
-              {s.key === "measured" ? ` · ${coverage.measured_pct}` : ""}
-            </div>
-          </div>
-        ))}
-        <div className="text-xs text-faint sm:col-span-3">
-          {coverage.not_applicable} rows N/A (no front-end client in this repo)
-          — excluded from the score.
-        </div>
+      <div className="flex h-3 overflow-hidden rounded-sm border border-zinc-800 bg-zinc-900">
+        {SEGMENTS.map((s) => {
+          const pct = (coverage[s.key] / denom) * 100;
+          if (pct === 0) return null;
+          return (
+            <div
+              key={s.key}
+              className={s.tone}
+              style={{ width: `${pct}%` }}
+              title={`${s.label}: ${coverage[s.key]} / ${total} (${pct.toFixed(0)}%)`}
+            />
+          );
+        })}
       </div>
     </div>
   );
 }
+
+export const COVERAGE_SEGMENTS = SEGMENTS;

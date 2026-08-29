@@ -17,7 +17,7 @@
 - **Tools:** versioning-marker greps (`/v1/`, `Accept: application/vnd.*v[0-9]`, `X-API-Version`); deprecation machinery (`Deprecation`/`Sunset` headers, `@deprecated` route decorators); release history mining for breaking-change markers (`BREAKING`, major bumps on API-touching commits)
 - **Rate-cost:** api-budgeted
 - **Ecosystems:** agnostic
-- **Applicability:** `na_when: no HTTP server surface` (API-01 clause-b). Else applicable.
+- **Applicability:** `na_when: no HTTP server surface` (API-01 clause-b). Else applicable.; archetype+plane: `na_when archetype in {library, docs, agent-skills} && !has_data` (DATA) or `!has_deploy` (PERF) or `!has_server` (API) with exhaustive plane inventory — required rows never N/A
 
 ## 2. Detection recipe
 

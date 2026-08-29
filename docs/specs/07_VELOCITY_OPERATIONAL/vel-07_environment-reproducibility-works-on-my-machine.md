@@ -13,6 +13,8 @@
 
 ## 1. Inputs
 
+> **Archetype applicability (new):** `na_when` also fires on archetype+plane: DATA rows N/A if `!has_data && archetype in {library, docs, agent-skills, infra}`; PERF rows N/A if `!has_deploy`; API rows N/A if `!has_server`; irrelevant tiers (e.g. docs→API) fire without plane check. Required rows (SEC-01/02, ECOS-05/01) never N/A. Exhaustive plane inventory required.
+
 - **Planes:** static-src
 - **Tools:** canonical-config inventory: IaC presence (PERF-06 reuse), env-config injection patterns (CI env refs vs committed per-env files — ARCH-10 reuse), runtime-version pins (ECOS-01 facts), container parity (`Dockerfile` + compose matching prod image lineage), config-drift comparison between committed env files
 - **Rate-cost:** none

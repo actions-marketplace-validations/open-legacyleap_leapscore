@@ -13,6 +13,8 @@
 
 ## 1. Inputs
 
+> **Archetype applicability (new):** `na_when` also fires on archetype+plane: DATA rows N/A if `!has_data && archetype in {library, docs, agent-skills, infra}`; PERF rows N/A if `!has_deploy`; API rows N/A if `!has_server`; irrelevant tiers (e.g. docs→API) fire without plane check. Required rows (SEC-01/02, ECOS-05/01) never N/A. Exhaustive plane inventory required.
+
 - **Planes:** static-src + gh-api (PR checks)
 - **Tools:** schema-registry presence (`confluent`, `buf.yaml`, `protos/` + `buf.gen`, apicurio); compat gates in CI (`buf breaking`, `openapi-diff`, `oasdiff`, json-schema compat steps); event-schema versioning conventions; PR-history mining for compat-check enforcement
 - **Rate-cost:** api-budgeted

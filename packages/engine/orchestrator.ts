@@ -7,6 +7,7 @@ import { sniffEcosystems } from './ecosystem';
 import { createQueue } from './queue';
 import type { FactRecord } from './facts';
 import { validateFact } from './facts';
+import { classifyArchetype, classifyArchetypePerRoot } from './archetype';
 import { detectVel06 } from './detectors/vel06';
 import { detectVel09 } from './detectors/vel09';
 import { detectVel08 } from './detectors/vel08';
@@ -201,6 +202,9 @@ export async function* runUnifiedScan(repoUrl: string, opts: { token?: string; i
     return;
   }
 
+  // Archetype sniff placeholder — will be filled after clone/sniff
+  let archetypeResult: Awaited<ReturnType<typeof classifyArchetype>> | null = null;
+
   // Clone phase — only if any clone-dependent ids requested; otherwise skip
   const needsClone = ids.some(id => phase2Ids.includes(id));
   let cloneFacts: FactRecord[] = [];
@@ -225,6 +229,17 @@ export async function* runUnifiedScan(repoUrl: string, opts: { token?: string; i
         const manifests = await sniffEcosystems(clone.clonePath);
         const sniffDurationMs = Date.now() - sniffStart;
         (job as unknown as { _sniffMeta?: unknown })._sniffMeta = { sniffDurationMs, manifestCount: manifests.length };
+        // Archetype sniff between manifest sniff and scheduler (design D1)
+        let archRes: Awaited<ReturnType<typeof classifyArchetype>> | null = null;
+        try {
+          const archStart = Date.now();
+          archRes = manifests.length > 1
+            ? await classifyArchetypePerRoot(clone.clonePath, clone.readFile, manifests.map(m => ({ root: m.root, ecosystem: m.ecosystem })))
+            : await classifyArchetype(clone.clonePath, clone.readFile, manifests.map(m => ({ root: m.root, ecosystem: m.ecosystem })));
+          (job as unknown as { _archMeta?: unknown })._archMeta = { archetype: archRes.archetype, confidence: archRes.confidence, planeInventory: archRes.planeInventory, evidencePointers: archRes.evidencePointers, perRoot: (archRes as unknown as { perRoot?: unknown }).perRoot, durationMs: Date.now() - archStart };
+        } catch (archE) {
+          (job as unknown as { _archMeta?: unknown })._archMeta = { error: archE instanceof Error ? archE.message : String(archE) };
+        }
         const ctx: ScanContext = {
           clonePath: clone.clonePath,
           commitSha: clone.commitSha,
@@ -235,9 +250,29 @@ export async function* runUnifiedScan(repoUrl: string, opts: { token?: string; i
           toolVersions: new Map([['phase2','1.0']]),
           readFile: clone.readFile,
         };
-        // Run only the requested phase2 detectors with per-detector timing
-        const reqPhase2Ids = phase2Ids.filter(id => ids.includes(id));
-        const reqDetectors = phase2Detectors.filter((_, i) => ids.includes(phase2Ids[i]));
+        // Filter by applicability (task 2.4) — skip not_applicable detectors
+        let reqPhase2Ids = phase2Ids.filter(id => ids.includes(id));
+        let reqDetectors = phase2Detectors.filter((_, i) => ids.includes(phase2Ids[i]));
+        if (archRes) {
+          try {
+            const { evaluateApplicability } = await import('./scorer/applicability');
+            const filtered: string[] = [];
+            const filteredDet: typeof reqDetectors = [];
+            const skipped: string[] = [];
+            for (let i = 0; i < reqPhase2Ids.length; i++) {
+              const id = reqPhase2Ids[i];
+              const det = reqDetectors[i];
+              const ev = evaluateApplicability(id, archRes.archetype as never, archRes.planeInventory as never);
+              if (ev.notApplicable) skipped.push(id);
+              else { filtered.push(id); filteredDet.push(det); }
+            }
+            if (skipped.length) {
+              (job as unknown as { _skipped?: string[] })._skipped = skipped;
+            }
+            reqPhase2Ids = filtered;
+            reqDetectors = filteredDet;
+          } catch {}
+        }
         const starts = reqDetectors.map(() => Date.now());
         const settled = await Promise.all(reqDetectors.map((fn, idx) => {
           const s = starts[idx];
@@ -287,6 +322,25 @@ export async function* runUnifiedScan(repoUrl: string, opts: { token?: string; i
         if (sniffMeta) {
           const elapsedMs = Date.now() - start;
           yield { type: 'trace', ts: elapsedMs, elapsedMs, label: `Sniff — ${sniffMeta.manifestCount} ecosystems in ${sniffMeta.sniffDurationMs}ms`, phase: 'sniff', durationMs: sniffMeta.sniffDurationMs };
+        }
+      }
+      {
+        const archMeta = (job as unknown as { _archMeta?: { archetype?: string; confidence?: string; durationMs?: number; error?: string; perRoot?: unknown } })._archMeta;
+        if (archMeta) {
+          const elapsedMs = Date.now() - start;
+          if (archMeta.error) {
+            yield { type: 'trace', ts: elapsedMs, elapsedMs, label: `Archetype — error: ${archMeta.error.slice(0,120)}`, phase: 'archetype', status: 'error' };
+          } else {
+            const perRootStr = archMeta.perRoot ? ` · per-root ${(archMeta.perRoot as unknown[]).length}` : '';
+            yield { type: 'trace', ts: elapsedMs, elapsedMs, label: `Archetype — ${archMeta.archetype} (${archMeta.confidence})${perRootStr}`, phase: 'archetype', status: archMeta.archetype ?? 'unknown' };
+            // stash for snapshot
+            archetypeResult = archMeta as unknown as Awaited<ReturnType<typeof classifyArchetype>>;
+          }
+        }
+        const skipped = (job as unknown as { _skipped?: string[] })._skipped;
+        if (skipped && skipped.length) {
+          const elapsedMs = Date.now() - start;
+          yield { type: 'trace', ts: elapsedMs, elapsedMs, label: `Skipped not_applicable: ${skipped.join(', ')}`, phase: 'budget', status: 'skipped' };
         }
       }
       // Per clone-detector traces
@@ -344,7 +398,21 @@ export async function* runUnifiedScan(repoUrl: string, opts: { token?: string; i
     const status = unknownCount === 0 ? 'complete' : 'degraded';
     yield { type: 'trace', ts: elapsedMs, elapsedMs, label: `Seal — ${status} · ${allFacts.filter(f => !(f as unknown as { error?: unknown }).error).length}/${ids.length} measured`, phase: 'seal', status };
   }
-  yield { type: 'done', facts: allFacts, snapshot: { repo: normalized, scanned_at: new Date().toISOString(), engine_version: 'unified/1.0', rubric_version: 'docs/rubric@tranche-a', scanned_commit }, id: scanId };
+  const snapshot: Record<string, unknown> = { repo: normalized, scanned_at: new Date().toISOString(), engine_version: 'unified/1.0', rubric_version: 'docs/rubric@tranche-a', scanned_commit };
+  if (archetypeResult) {
+    snapshot.archetype = archetypeResult.archetype;
+    snapshot.archetype_confidence = archetypeResult.confidence;
+    snapshot.planeInventory = archetypeResult.planeInventory;
+    snapshot.archetype_evidence = archetypeResult.evidencePointers;
+    if (archetypeResult.perRoot) snapshot.perRoot = archetypeResult.perRoot;
+  } else {
+    // GH-only or unknown — default to unknown with low confidence
+    snapshot.archetype = 'unknown';
+    snapshot.archetype_confidence = 'low';
+    snapshot.planeInventory = { has_server: false, has_data: false, has_deploy: false, has_client: false, has_test: false, evidence: { has_server: [], has_data: [], has_deploy: [], has_client: [], has_test: [] } };
+    snapshot.archetype_evidence = ['no clone — GH-only scan'];
+  }
+  yield { type: 'done', facts: allFacts, snapshot, id: scanId };
 }
 
 /** Back-compat: two-phase generator now delegates to unified scan but preserves legacy shape for callers that still consume phase events */

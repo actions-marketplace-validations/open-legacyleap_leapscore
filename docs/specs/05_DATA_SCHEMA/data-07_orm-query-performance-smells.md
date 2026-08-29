@@ -17,7 +17,7 @@
 - **Tools:** ORM-aware matcher packs: N+1 shapes (query call inside loop over relation results; `all()` then per-item lazy loads), missing-select-related hints (`prefetch_related`/`select_related`/`includes` absence in serializers), raw-SQL string interpolation, unbounded `.all()` result materialization, index-hint absence on hot-path filters (declared-index cross-check from DATA-03 schema state)
 - **Rate-cost:** none
 - **Ecosystems:** Django/Rails/Hibernate/EF/Prisma/Knex adapters
-- **Applicability:** `na_when: no ORM or query-building code detected` (clause-b). Else applicable.
+- **Applicability:** `na_when: no ORM or query-building code detected` (clause-b). Else applicable.; archetype+plane: `na_when archetype in {library, docs, agent-skills} && !has_data` (DATA) or `!has_deploy` (PERF) or `!has_server` (API) with exhaustive plane inventory — required rows never N/A
 
 ## 2. Detection recipe
 

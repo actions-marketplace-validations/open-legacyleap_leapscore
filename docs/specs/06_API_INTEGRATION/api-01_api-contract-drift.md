@@ -17,7 +17,7 @@
 - **Tools:** OpenAPI/Swagger file discovery + parse (`openapi: 3`, `swagger: 2`); route enumeration per framework (Express/Django/FastAPI/Spring/Flask/Gin annotations); validator-middleware presence (`@openapi/validator`, `pydantic` response models, drf-spectacular); client-gen artifacts (`/generated`, openapi-generator configs)
 - **Rate-cost:** none
 - **Ecosystems:** JS/TS · Python · Java · Go
-- **Applicability:** `na_when: no HTTP server surface detected` (clause-b). Else applicable.
+- **Applicability:** `na_when: no HTTP server surface detected` (clause-b). Else applicable.; archetype+plane: `na_when archetype in {library, docs, agent-skills} && !has_data` (DATA) or `!has_deploy` (PERF) or `!has_server` (API) with exhaustive plane inventory — required rows never N/A
 
 ## 2. Detection recipe
 

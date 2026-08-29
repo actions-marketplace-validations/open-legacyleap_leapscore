@@ -17,7 +17,7 @@
 - **Tools:** instrumentation matchers: OTel/StatsD/Prometheus deps + SDK init code, structured-logging config (`structlog`, `pino`, `logrus` JSON mode), request-ID middleware (API-07 reuse), tracing propagation headers, health/metrics endpoints in route tables, dashboard-as-code (`grafana/` dirs)
 - **Rate-cost:** none
 - **Ecosystems:** agnostic
-- **Applicability:** `na_when: no runnable service surface` (library-only repo, clause-b).
+- **Applicability:** `na_when: no runnable service surface` (library-only repo, clause-b).; archetype+plane: `na_when archetype in {library, docs, agent-skills} && !has_data` (DATA) or `!has_deploy` (PERF) or `!has_server` (API) with exhaustive plane inventory — required rows never N/A
 
 ## 2. Detection recipe
 
