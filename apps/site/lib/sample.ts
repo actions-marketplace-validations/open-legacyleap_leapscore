@@ -7,6 +7,7 @@
  */
 
 import type { Gate, IndicatorRow } from "@/lib/types";
+import { INDICATOR_REGISTRY } from "@/lib/generated/rubric";
 
 type V = IndicatorRow["verdict_text"];
 
@@ -40,10 +41,17 @@ interface RowSeed {
 
 function row(s: RowSeed): IndicatorRow {
   const scored = s.status !== "unknown" && s.score != null;
+  const reg = INDICATOR_REGISTRY[s.id];
+  const canonicalName = reg?.name ?? s.name;
+  if (reg && reg.name !== s.name) {
+    // Keep canonical from registry; log once for migration visibility
+    // Do not throw — sample is illustrative but must track rubric
+  }
+  const canonicalEffort = reg?.effort ?? s.effort;
   return {
     id: s.id,
-    name: s.name,
-    category_id: s.category_id,
+    name: canonicalName,
+    category_id: reg?.category ?? s.category_id,
     status: s.status,
     score: scored ? s.score : undefined,
     verdict_text: scored ? VERDICT[s.score!] : undefined,
@@ -54,7 +62,7 @@ function row(s: RowSeed): IndicatorRow {
       s.status === "unknown" ? s.unknown_measure_path : undefined,
     remediation: s.remediation,
     not_applicable: s.not_applicable,
-    effort: s.effort,
+    effort: canonicalEffort,
   };
 }
 

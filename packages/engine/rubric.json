@@ -1,11 +1,1033 @@
 {
   "_comment": "COMPILED from docs/rubric/01_*.md...10_*.md + 11_WEIGHTS_THRESHOLDS_CONFIG.md — do not hand-edit. Run npm run compile:rubric.",
-  "rubricVersion": "stub-sha",
+  "rubricVersion": "6bc6704",
   "weights": {
-    "base": { "SEC": 20, "ARCH": 15, "ECOS": 10, "TEST": 10, "DATA": 10, "API": 10, "VEL": 10, "PERF": 10, "DOCS": 5 },
-    "feActive": { "SEC": 18, "ARCH": 13.5, "ECOS": 9, "TEST": 9, "DATA": 9, "API": 9, "VEL": 9, "PERF": 9, "DOCS": 4.5, "FE": 10 }
+    "base": {
+      "SEC": 20,
+      "ARCH": 15,
+      "ECOS": 10,
+      "TEST": 10,
+      "DATA": 10,
+      "API": 10,
+      "VEL": 10,
+      "PERF": 10,
+      "DOCS": 5
+    },
+    "feActive": {
+      "SEC": 18,
+      "ARCH": 13.5,
+      "ECOS": 9,
+      "TEST": 9,
+      "DATA": 9,
+      "API": 9,
+      "VEL": 9,
+      "PERF": 9,
+      "DOCS": 4.5,
+      "FE": 10
+    }
   },
-  "tiers": { "healthy": 80, "moderate": [53, 79], "highRisk": [27, 52], "critical": 27 },
-  "gates": ["G1","G2","G3","G4","G5","G6","G7","G8"],
-  "indicators": []
+  "tiers": {
+    "healthy": 80,
+    "moderate": [
+      53,
+      79
+    ],
+    "highRisk": [
+      27,
+      52
+    ],
+    "critical": 27
+  },
+  "gates": [
+    "G1",
+    "G2",
+    "G3",
+    "G4",
+    "G5",
+    "G6",
+    "G7",
+    "G8"
+  ],
+  "indicators": [
+    {
+      "id": "ECOS-01",
+      "category": "ECOS",
+      "name": "Runtime/Language EOL",
+      "tier": "A",
+      "default_status": "estimated",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "ECOS-02",
+      "category": "ECOS",
+      "name": "Major Package Drift",
+      "tier": "A",
+      "default_status": "estimated",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "ECOS-03",
+      "category": "ECOS",
+      "name": "Abandoned / Unmaintained Libraries",
+      "tier": "B",
+      "default_status": "estimated",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "ECOS-04",
+      "category": "ECOS",
+      "name": "Deprecated API Usage",
+      "tier": "B",
+      "default_status": "estimated",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "ECOS-05",
+      "category": "ECOS",
+      "name": "License Compliance Risk",
+      "tier": "B",
+      "default_status": "measured",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "ECOS-06",
+      "category": "ECOS",
+      "name": "Dependency Bloat",
+      "tier": "A",
+      "default_status": "estimated",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "ECOS-07",
+      "category": "ECOS",
+      "name": "Build Reproducibility & Lockfile Integrity",
+      "tier": "A",
+      "default_status": "measured",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "ECOS-08",
+      "category": "ECOS",
+      "name": "Framework Lock-in & Monoculture Risk",
+      "tier": "A",
+      "default_status": "estimated",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "ECOS-09",
+      "category": "ECOS",
+      "name": "Version Skew Across Services",
+      "tier": "A",
+      "default_status": "estimated",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "ECOS-10",
+      "category": "ECOS",
+      "name": "Supply-Chain: Typosquatting, Malware, & Registry Risk",
+      "tier": "B",
+      "default_status": "measured",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "ARCH-01",
+      "category": "ARCH",
+      "name": "Cognitive Complexity & God Classes",
+      "tier": "A",
+      "default_status": "measured",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "ARCH-02",
+      "category": "ARCH",
+      "name": "Coupling & Cohesion",
+      "tier": "A",
+      "default_status": "measured",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "ARCH-03",
+      "category": "ARCH",
+      "name": "Layer & Boundary Violations",
+      "tier": "A",
+      "default_status": "measured",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "ARCH-04",
+      "category": "ARCH",
+      "name": "Dead & Orphaned Code",
+      "tier": "A",
+      "default_status": "measured",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "ARCH-05",
+      "category": "ARCH",
+      "name": "Code Churn vs. Defect Hot Spots",
+      "tier": "A",
+      "default_status": "measured",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "ARCH-06",
+      "category": "ARCH",
+      "name": "Architectural Era / Framework Generation",
+      "tier": "A",
+      "default_status": "estimated",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "ARCH-07",
+      "category": "ARCH",
+      "name": "Global Mutable State & Hidden Dependencies",
+      "tier": "A",
+      "default_status": "estimated",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "ARCH-08",
+      "category": "ARCH",
+      "name": "Duplication Debt",
+      "tier": "A",
+      "default_status": "measured",
+      "effort": "🔶 ~2–4 h",
+      "raw_effort": "🔶 ~2–4 h"
+    },
+    {
+      "id": "ARCH-09",
+      "category": "ARCH",
+      "name": "Agentic Operability (AI/LLM Codebase-Readiness)",
+      "tier": "A",
+      "default_status": "estimated",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "ARCH-10",
+      "category": "ARCH",
+      "name": "Feature-Flag & Configuration Debt",
+      "tier": "A",
+      "default_status": "estimated",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "ARCH-11",
+      "category": "ARCH",
+      "name": "Nullable/Untyped Code & Runtime Error Density",
+      "tier": "A",
+      "default_status": "estimated",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "ARCH-12",
+      "category": "ARCH",
+      "name": "Duplicated Cross-Cutting Concerns (auth, logging, error handling, transactions)",
+      "tier": "A",
+      "default_status": "estimated",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "TEST-01",
+      "category": "TEST",
+      "name": "Code Coverage Degradation",
+      "tier": "A",
+      "default_status": "measured",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤ 30 min"
+    },
+    {
+      "id": "TEST-02",
+      "category": "TEST",
+      "name": "Flaky Test Rate",
+      "tier": "B",
+      "default_status": "measured",
+      "effort": "🔶 ~2–4 h",
+      "raw_effort": "🔶 ~2–4 h"
+    },
+    {
+      "id": "TEST-03",
+      "category": "TEST",
+      "name": "Test Pyramid Inversion",
+      "tier": "A",
+      "default_status": "estimated",
+      "effort": "🔶 ~2–4 h",
+      "raw_effort": "🔶 ~2–4 h"
+    },
+    {
+      "id": "TEST-04",
+      "category": "TEST",
+      "name": "Test Run Time",
+      "tier": "B",
+      "default_status": "measured",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤ 30 min"
+    },
+    {
+      "id": "TEST-05",
+      "category": "TEST",
+      "name": "Skipped / Disabled Tests",
+      "tier": "A",
+      "default_status": "measured",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤ 30 min"
+    },
+    {
+      "id": "TEST-06",
+      "category": "TEST",
+      "name": "Core Domain Untested",
+      "tier": "B",
+      "default_status": "estimated",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "TEST-07",
+      "category": "TEST",
+      "name": "Test Isolation & Hermeticity",
+      "tier": "B",
+      "default_status": "estimated",
+      "effort": "🔶 ~2–4 h",
+      "raw_effort": "🔶 ~2–4 h"
+    },
+    {
+      "id": "TEST-08",
+      "category": "TEST",
+      "name": "Quality Gates in CI",
+      "tier": "A",
+      "default_status": "measured",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤ 30 min"
+    },
+    {
+      "id": "TEST-09",
+      "category": "TEST",
+      "name": "Mutation Testing Score",
+      "tier": "B",
+      "default_status": "estimated",
+      "effort": "🔷 ~1–2 days",
+      "raw_effort": "🔷 ~1–2 days"
+    },
+    {
+      "id": "TEST-10",
+      "category": "TEST",
+      "name": "Test Maintenance Burden",
+      "tier": "B",
+      "default_status": "estimated",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "SEC-01",
+      "category": "SEC",
+      "name": "Unpatched Vulnerabilities",
+      "tier": "A",
+      "default_status": "measured",
+      "effort": "🔶 ~2–4 h",
+      "raw_effort": "🔶 ~2–4 h"
+    },
+    {
+      "id": "SEC-02",
+      "category": "SEC",
+      "name": "Hardcoded Secrets & Credentials",
+      "tier": "A",
+      "default_status": "measured",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "SEC-03",
+      "category": "SEC",
+      "name": "Missing Web Security Controls",
+      "tier": "B",
+      "default_status": "estimated",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "SEC-04",
+      "category": "SEC",
+      "name": "Authentication & Authorization Weaknesses",
+      "tier": "B",
+      "default_status": "unknown",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "SEC-05",
+      "category": "SEC",
+      "name": "Audit Logging Deficits",
+      "tier": "B",
+      "default_status": "unknown",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "SEC-06",
+      "category": "SEC",
+      "name": "Insecure Transitive Chains",
+      "tier": "B",
+      "default_status": "measured",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "SEC-07",
+      "category": "SEC",
+      "name": "Patch Cadence & Update Workflow",
+      "tier": "A",
+      "default_status": "measured",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤ 30 min"
+    },
+    {
+      "id": "SEC-08",
+      "category": "SEC",
+      "name": "Compliance Drift",
+      "tier": "D",
+      "default_status": "unknown",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "SEC-09",
+      "category": "SEC",
+      "name": "Input Robustness & Fuzzing",
+      "tier": "B",
+      "default_status": "unknown",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "SEC-10",
+      "category": "SEC",
+      "name": "Security Testing in CI",
+      "tier": "A",
+      "default_status": "measured",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "DATA-01",
+      "category": "DATA",
+      "name": "Schema Migration Backlog / \"Migration Hell\"",
+      "tier": "A",
+      "default_status": "measured",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "DATA-02",
+      "category": "DATA",
+      "name": "Database Coupling & Hidden Dependencies",
+      "tier": "B",
+      "default_status": "estimated",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "DATA-03",
+      "category": "DATA",
+      "name": "Data Integrity & Constraint Degradation",
+      "tier": "A",
+      "default_status": "measured",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "DATA-04",
+      "category": "DATA",
+      "name": "Legacy Storage Technology",
+      "tier": "B",
+      "default_status": "unknown",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "DATA-05",
+      "category": "DATA",
+      "name": "Lock Contention & Scaling Bottleneck",
+      "tier": "B",
+      "default_status": "unknown",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "DATA-06",
+      "category": "DATA",
+      "name": "Data Lifecycle Management Deficits",
+      "tier": "B",
+      "default_status": "unknown",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "DATA-07",
+      "category": "DATA",
+      "name": "ORM / Query Performance Smells",
+      "tier": "A",
+      "default_status": "estimated",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "DATA-08",
+      "category": "DATA",
+      "name": "Schema Overfitting & Model Rigidity",
+      "tier": "B",
+      "default_status": "estimated",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "DATA-09",
+      "category": "DATA",
+      "name": "Event Sourcing / Audit Readiness",
+      "tier": "B",
+      "default_status": "unknown",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "DATA-10",
+      "category": "DATA",
+      "name": "Environment Schema Drift",
+      "tier": "A",
+      "default_status": "measured",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "API-01",
+      "category": "API",
+      "name": "API Contract Drift",
+      "tier": "A",
+      "default_status": "estimated",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "API-02",
+      "category": "API",
+      "name": "Versioning & Breaking-Change Discipline",
+      "tier": "A",
+      "default_status": "estimated",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "API-03",
+      "category": "API",
+      "name": "Integration Point Bloat",
+      "tier": "B",
+      "default_status": "estimated",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "API-04",
+      "category": "API",
+      "name": "Synchronous Coupling & Chatty Interfaces",
+      "tier": "B",
+      "default_status": "estimated",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "API-05",
+      "category": "API",
+      "name": "Third-Party & Vendor API Dependency Risk",
+      "tier": "B",
+      "default_status": "unknown",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "API-06",
+      "category": "API",
+      "name": "Protocol & Data-Format Legaciness",
+      "tier": "A",
+      "default_status": "estimated",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "API-07",
+      "category": "API",
+      "name": "Error Handling & API Observability Semantics",
+      "tier": "A",
+      "default_status": "estimated",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "API-08",
+      "category": "API",
+      "name": "Consumer Blindness & Backward Compatibility",
+      "tier": "B",
+      "default_status": "estimated",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "API-09",
+      "category": "API",
+      "name": "Idempotency & Retry Semantics",
+      "tier": "B",
+      "default_status": "unknown",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "API-10",
+      "category": "API",
+      "name": "Contract Schema Evolution Process",
+      "tier": "A",
+      "default_status": "measured",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "VEL-01",
+      "category": "VEL",
+      "name": "CI/CD Build Duration",
+      "tier": "B",
+      "default_status": "estimated",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤ 30 min"
+    },
+    {
+      "id": "VEL-02",
+      "category": "VEL",
+      "name": "Local Dev Setup Time & Friction",
+      "tier": "A",
+      "default_status": "estimated",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "VEL-03",
+      "category": "VEL",
+      "name": "Deployment Failure Rate (CFR)",
+      "tier": "B",
+      "default_status": "unknown",
+      "effort": "🔶 ~2–4 h",
+      "raw_effort": "🔶 ~2–4 h"
+    },
+    {
+      "id": "VEL-04",
+      "category": "VEL",
+      "name": "Deployment Frequency & Lead Time",
+      "tier": "B",
+      "default_status": "estimated",
+      "effort": "🔶 ~2–4 h",
+      "raw_effort": "🔶 ~2–4 h"
+    },
+    {
+      "id": "VEL-05",
+      "category": "VEL",
+      "name": "Onboarding Lead Time to First Production PR",
+      "tier": "D",
+      "default_status": "unknown",
+      "effort": "🔶 ~2–4 h",
+      "raw_effort": "🔶 ~2–4 h"
+    },
+    {
+      "id": "VEL-06",
+      "category": "VEL",
+      "name": "Bus Factor / Knowledge Concentration",
+      "tier": "A",
+      "default_status": "measured",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "VEL-07",
+      "category": "VEL",
+      "name": "Environment Reproducibility / Works-on-My-Machine",
+      "tier": "A",
+      "default_status": "estimated",
+      "effort": "🔶 ~2–4 h",
+      "raw_effort": "🔶 ~2–4 h"
+    },
+    {
+      "id": "VEL-08",
+      "category": "VEL",
+      "name": "Manual Release Steps & Operability",
+      "tier": "A",
+      "default_status": "measured",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "VEL-09",
+      "category": "VEL",
+      "name": "PR & Code-Review Hygiene",
+      "tier": "A",
+      "default_status": "measured",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "VEL-10",
+      "category": "VEL",
+      "name": "Branching & Monorepo Strategy Legacy",
+      "tier": "A",
+      "default_status": "measured",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "VEL-11",
+      "category": "VEL",
+      "name": "Developer Experience Tooling",
+      "tier": "B",
+      "default_status": "estimated",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "VEL-12",
+      "category": "VEL",
+      "name": "Incident Recovery / MTTR",
+      "tier": "B",
+      "default_status": "unknown",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "PERF-01",
+      "category": "PERF",
+      "name": "Observability Gaps",
+      "tier": "B",
+      "default_status": "measured",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "PERF-02",
+      "category": "PERF",
+      "name": "Legacy Deployment Model",
+      "tier": "B",
+      "default_status": "estimated",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "PERF-03",
+      "category": "PERF",
+      "name": "Resource Waste / Leakage",
+      "tier": "B",
+      "default_status": "unknown",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "PERF-04",
+      "category": "PERF",
+      "name": "Monolithic Scaling Bottleneck",
+      "tier": "B",
+      "default_status": "estimated",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "PERF-05",
+      "category": "PERF",
+      "name": "No Auto-Scaling / Capacity Planning",
+      "tier": "B",
+      "default_status": "estimated",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "PERF-06",
+      "category": "PERF",
+      "name": "Missing IaC / Config Drift",
+      "tier": "A",
+      "default_status": "estimated",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "PERF-07",
+      "category": "PERF",
+      "name": "No SLOs / Performance Budgets",
+      "tier": "C",
+      "default_status": "unknown",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "PERF-08",
+      "category": "PERF",
+      "name": "Runtime Waste & Startup Latency",
+      "tier": "B",
+      "default_status": "measured",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "PERF-09",
+      "category": "PERF",
+      "name": "Cost Efficiency / FinOps",
+      "tier": "B",
+      "default_status": "unknown",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "PERF-10",
+      "category": "PERF",
+      "name": "Disaster Recovery & Resiliency",
+      "tier": "D",
+      "default_status": "unknown",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "DOCS-01",
+      "category": "DOCS",
+      "name": "Missing Architectural Decision Records (ADRs)",
+      "tier": "A",
+      "default_status": "measured",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "DOCS-02",
+      "category": "DOCS",
+      "name": "Stale / Drifted Documentation",
+      "tier": "B",
+      "default_status": "estimated",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤ 30 min to sample-verif"
+    },
+    {
+      "id": "DOCS-03",
+      "category": "DOCS",
+      "name": "Missing Runbooks & Operational Docs",
+      "tier": "B",
+      "default_status": "unknown",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "DOCS-04",
+      "category": "DOCS",
+      "name": "No Onboarding Guide / Developer Setup Docs",
+      "tier": "B",
+      "default_status": "estimated",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤ 30 min"
+    },
+    {
+      "id": "DOCS-05",
+      "category": "DOCS",
+      "name": "Tribal Knowledge & Oral Tradition",
+      "tier": "D",
+      "default_status": "unknown",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "DOCS-06",
+      "category": "DOCS",
+      "name": "Comment Debt & Self-Documenting Code Imbalance",
+      "tier": "A",
+      "default_status": "estimated",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "DOCS-07",
+      "category": "DOCS",
+      "name": "Missing API Documentation",
+      "tier": "A",
+      "default_status": "estimated",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "DOCS-08",
+      "category": "DOCS",
+      "name": "No Release Communication / Changelog",
+      "tier": "B",
+      "default_status": "measured",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "DOCS-09",
+      "category": "DOCS",
+      "name": "Docs-as-Code & Automation",
+      "tier": "A",
+      "default_status": "estimated",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "DOCS-10",
+      "category": "DOCS",
+      "name": "Knowledge Exit & Documentation Ownership",
+      "tier": "D",
+      "default_status": "unknown",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "FE-01",
+      "category": "FE",
+      "name": "UI Framework / Stack EOL & Deprecation",
+      "tier": "A",
+      "default_status": "estimated",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "FE-02",
+      "category": "FE",
+      "name": "Bundle Size & Load Performance",
+      "tier": "A",
+      "default_status": "measured",
+      "effort": "🔶 ~2–4 h",
+      "raw_effort": "🔶 ~2–4 h"
+    },
+    {
+      "id": "FE-03",
+      "category": "FE",
+      "name": "Accessibility Deficits",
+      "tier": "B",
+      "default_status": "measured",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "FE-04",
+      "category": "FE",
+      "name": "Browser / Platform Support Drift",
+      "tier": "B",
+      "default_status": "measured",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "FE-05",
+      "category": "FE",
+      "name": "Client-Side Architecture Debt",
+      "tier": "B",
+      "default_status": "estimated",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "FE-06",
+      "category": "FE",
+      "name": "Design System / UI Consistency Drift",
+      "tier": "C",
+      "default_status": "unknown",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "FE-07",
+      "category": "FE",
+      "name": "Internationalization / Localization Debt",
+      "tier": "A",
+      "default_status": "unknown",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    },
+    {
+      "id": "FE-08",
+      "category": "FE",
+      "name": "Mobile / Responsive Adaptation & Offline Support",
+      "tier": "C",
+      "default_status": "unknown",
+      "effort": "⚡ ≤30 min",
+      "raw_effort": "⚡ ≤30 min"
+    }
+  ],
+  "categories": [
+    {
+      "id": "ECOS",
+      "name": "Dependency & Ecosystem Health",
+      "weight_base": 10,
+      "weight_fe": 9
+    },
+    {
+      "id": "ARCH",
+      "name": "Architecture & Code Quality",
+      "weight_base": 15,
+      "weight_fe": 13.5
+    },
+    {
+      "id": "TEST",
+      "name": "Testing & Quality Engineering",
+      "weight_base": 10,
+      "weight_fe": 9
+    },
+    {
+      "id": "SEC",
+      "name": "Security, Compliance & Vulnerability",
+      "weight_base": 20,
+      "weight_fe": 18
+    },
+    {
+      "id": "DATA",
+      "name": "Data & Schema Evolution",
+      "weight_base": 10,
+      "weight_fe": 9
+    },
+    {
+      "id": "API",
+      "name": "API & Integration Surface",
+      "weight_base": 10,
+      "weight_fe": 9
+    },
+    {
+      "id": "VEL",
+      "name": "Developer Velocity & Operational Drag",
+      "weight_base": 10,
+      "weight_fe": 9
+    },
+    {
+      "id": "PERF",
+      "name": "Performance & Cloud/Infrastructure Fit",
+      "weight_base": 10,
+      "weight_fe": 9
+    },
+    {
+      "id": "DOCS",
+      "name": "Documentation & Knowledge Continuity",
+      "weight_base": 5,
+      "weight_fe": 4.5
+    },
+    {
+      "id": "FE",
+      "name": "Frontend & Client Health",
+      "weight_base": 0,
+      "weight_fe": 10
+    }
+  ]
 }

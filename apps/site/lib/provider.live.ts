@@ -6,6 +6,7 @@
 
 import type { Report, ReportQuery, CategoryScore, IndicatorRow, Gate } from '@/lib/types';
 import { BASE_WEIGHTS, tierForScore, buildDeepDiveScope, coverageCounts, scoreSystem } from '@/lib/scoring';
+import { INDICATOR_REGISTRY, getIndicatorName, getIndicatorEffort } from '@/lib/generated/rubric';
 
 // Reuse phase-1 scorer types by duplicating minimal mapping (avoids cross-package import in Next bundle)
 // For testability, GH fetch is injected; live path uses engine's orchestrator via dynamic import.
@@ -39,13 +40,26 @@ export class LiveReportProvider {
       facts: Array<{ detectorId: string; facts: Record<string, unknown>; evidencePointers: Array<{ endpoint?: string; detail?: string }>; provenance: { tool: string; version: string; flags: string[]; durationMs: number } }>;
     };
 
-    // Build IndicatorRows for the 6 Phase-1 indicators from facts
-    const rows: IndicatorRow[] = phase1.categories.flatMap((c) => c.indicator_rows);
+    // Build IndicatorRows for the 6 Phase-1 indicators from facts — normalize to registry titles
+    const rawRows: IndicatorRow[] = phase1.categories.flatMap((c) => c.indicator_rows);
+    // Normalize engine rows to registry (engine may emit short/legacy names for GH-only scan)
+    const rows: IndicatorRow[] = rawRows.map((r) => {
+      const reg = INDICATOR_REGISTRY[r.id];
+      if (!reg) { console.warn(`Unknown indicator ${r.id}`); return { ...r, name: `Unknown indicator (${r.id})` }; }
+      return { ...r, name: reg.name, effort: reg.effort, category_id: reg.category };
+    });
     // Build full_table: phase-1 rows + 96 unknown placeholders for remaining indicators
     const fullTable = this.buildFullTable(rows);
 
-    // Build categories for site's scoring (reuse engine's categories but ensure shape matches site types)
-    const categories = phase1.categories as unknown as CategoryScore[];
+    // Build categories for site's scoring (reuse engine's categories but ensure shape matches site types + normalize row names)
+    const categories = (phase1.categories as unknown as CategoryScore[]).map((c) => ({
+      ...c,
+      indicator_rows: c.indicator_rows.map((r) => {
+        const reg = INDICATOR_REGISTRY[r.id];
+        if (!reg) return { ...r, name: `Unknown indicator (${r.id})` } as IndicatorRow;
+        return { ...r, name: reg.name, effort: reg.effort, category_id: reg.category } as IndicatorRow;
+      }),
+    }));
     const topBlockers = this.deriveTopBlockers(categories);
 
     return {
@@ -108,7 +122,6 @@ export class LiveReportProvider {
   }
 
   private deriveTopBlockers(categories: CategoryScore[]) {
-    // Reuse scoring helper but typed loosely
     const out: Array<{ row: string; name: string; points_lost: number; weight_pp: string; summary: string }> = [];
     for (const c of categories) {
       if (!c.applicable) continue;
@@ -117,7 +130,8 @@ export class LiveReportProvider {
         if (r.status === 'unknown' || r.not_applicable || r.score == null) continue;
         const lost = 3 - r.score;
         if (lost <= 0) continue;
-        out.push({ row: r.id, name: r.name, points_lost: lost, weight_pp: `${(lost * pointValue).toFixed(2)}pp`, summary: r.reason ?? '' });
+        const name = INDICATOR_REGISTRY[r.id]?.name ?? r.name;
+        out.push({ row: r.id, name, points_lost: lost, weight_pp: `${(lost * pointValue).toFixed(2)}pp`, summary: r.reason ?? '' });
       }
     }
     out.sort((a, b) => parseFloat(b.weight_pp) - parseFloat(a.weight_pp));
@@ -126,36 +140,32 @@ export class LiveReportProvider {
 
   private buildFullTable(phase1Rows: IndicatorRow[]): IndicatorRow[] {
     const knownIds = new Set(phase1Rows.map((r) => r.id));
-    // All 102 IDs from rubric — minimal list for Phase 1 full_table placeholders
-    const allIds: Array<{ id: string; cat: string; name: string }> = [
-      ...['ECOS-01','ECOS-02','ECOS-03','ECOS-04','ECOS-05','ECOS-06','ECOS-07','ECOS-08','ECOS-09','ECOS-10'].map((id) => ({ id, cat: 'ECOS', name: id })),
-      ...['ARCH-01','ARCH-02','ARCH-03','ARCH-04','ARCH-05','ARCH-06','ARCH-07','ARCH-08','ARCH-09','ARCH-10','ARCH-11','ARCH-12'].map((id) => ({ id, cat: 'ARCH', name: id })),
-      ...['TEST-01','TEST-02','TEST-03','TEST-04','TEST-05','TEST-06','TEST-07','TEST-08','TEST-09','TEST-10'].map((id) => ({ id, cat: 'TEST', name: id })),
-      ...['SEC-01','SEC-02','SEC-03','SEC-04','SEC-05','SEC-06','SEC-07','SEC-08','SEC-09','SEC-10'].map((id) => ({ id, cat: 'SEC', name: id })),
-      ...['DATA-01','DATA-02','DATA-03','DATA-04','DATA-05','DATA-06','DATA-07','DATA-08','DATA-09','DATA-10'].map((id) => ({ id, cat: 'DATA', name: id })),
-      ...['API-01','API-02','API-03','API-04','API-05','API-06','API-07','API-08','API-09','API-10'].map((id) => ({ id, cat: 'API', name: id })),
-      ...['VEL-01','VEL-02','VEL-03','VEL-04','VEL-05','VEL-06','VEL-07','VEL-08','VEL-09','VEL-10','VEL-11','VEL-12'].map((id) => ({ id, cat: 'VEL', name: id })),
-      ...['PERF-01','PERF-02','PERF-03','PERF-04','PERF-05','PERF-06','PERF-07','PERF-08','PERF-09','PERF-10'].map((id) => ({ id, cat: 'PERF', name: id })),
-      ...['DOCS-01','DOCS-02','DOCS-03','DOCS-04','DOCS-05','DOCS-06','DOCS-07','DOCS-08','DOCS-09','DOCS-10'].map((id) => ({ id, cat: 'DOCS', name: id })),
-      ...['FE-01','FE-02','FE-03','FE-04','FE-05','FE-06','FE-07','FE-08'].map((id) => ({ id, cat: 'FE', name: id })),
-    ];
-    const placeholders: IndicatorRow[] = allIds
-      .filter((x) => !knownIds.has(x.id))
-      .map((x) => ({
-        id: x.id,
-        name: x.name,
-        category_id: x.cat,
+    const placeholders: IndicatorRow[] = Object.values(INDICATOR_REGISTRY)
+      .filter((meta) => !knownIds.has(meta.id))
+      .map((meta) => ({
+        id: meta.id,
+        name: getIndicatorName(meta.id),
+        category_id: meta.category,
         status: 'unknown' as const,
-        unknown_measure_path: x.id.startsWith('FE-') ? 'No user-facing client — N/A in Phase 1' : 'what it takes: Phase 2 clone + heavy analyzers',
-        effort: '⚡ ≤30 min',
-        not_applicable: x.id.startsWith('FE-') ? true : undefined,
+        unknown_measure_path: meta.id.startsWith('FE-') ? 'No user-facing client — N/A in Phase 1' : 'what it takes: Phase 2 clone + heavy analyzers',
+        effort: getIndicatorEffort(meta.id),
+        not_applicable: meta.id.startsWith('FE-') ? true : undefined,
       }));
-    return [...phase1Rows, ...placeholders];
+    // Normalize known rows to registry names/effort as well (fact-passthrough may carry stale/short names)
+    const normalizedKnown: IndicatorRow[] = phase1Rows.map((r) => {
+      const reg = INDICATOR_REGISTRY[r.id];
+      if (!reg) {
+        console.warn(`Unknown indicator ${r.id}`);
+        return { ...r, name: `Unknown indicator (${r.id})` };
+      }
+      return { ...r, name: reg.name, effort: reg.effort, category_id: reg.category };
+    });
+    return [...normalizedKnown, ...placeholders];
   }
 
   private buildDeepDive(rows: IndicatorRow[], fullTable: IndicatorRow[]) {
-    const direct = rows.filter((r) => r.status === 'unknown').map((r) => ({ row: r.id, name: r.name, what_it_takes: r.unknown_measure_path ?? '' }));
-    const placeholders = fullTable.filter((r) => r.status === 'unknown' && !rows.find((x) => x.id === r.id)).slice(0, 5).map((r) => ({ row: r.id, name: r.name, what_it_takes: r.unknown_measure_path ?? '' }));
+    const direct = rows.filter((r) => r.status === 'unknown').map((r) => ({ row: r.id, name: INDICATOR_REGISTRY[r.id]?.name ?? r.name, what_it_takes: r.unknown_measure_path ?? '' }));
+    const placeholders = fullTable.filter((r) => r.status === 'unknown' && !rows.find((x) => x.id === r.id)).slice(0, 5).map((r) => ({ row: r.id, name: INDICATOR_REGISTRY[r.id]?.name ?? r.name, what_it_takes: r.unknown_measure_path ?? '' }));
     return [...direct, ...placeholders];
   }
 }

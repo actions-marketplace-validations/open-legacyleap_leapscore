@@ -100,6 +100,14 @@ function RowDetail({ r }: { r: IndicatorRow }) {
   );
 }
 
+function displayName(r: IndicatorRow): string {
+  if (!r.name || r.name === r.id) {
+    if (typeof console !== 'undefined' && console.warn) console.warn(`Unknown indicator ${r.id}`);
+    return `Unknown indicator (${r.id})`;
+  }
+  return r.name;
+}
+
 function Row({ r }: { r: IndicatorRow }) {
   return (
     <div className="border-b border-hairline last:border-0">
@@ -110,7 +118,7 @@ function Row({ r }: { r: IndicatorRow }) {
               <span className="w-16 shrink-0 font-mono text-xs text-faint">
                 {r.id}
               </span>
-              <span className="flex-1 text-sm text-foreground">{r.name}</span>
+              <span className="flex-1 text-sm text-foreground">{displayName(r)}</span>
               {r.score != null ? (
                 <span
                   className={`shrink-0 font-mono text-sm ${scoreTone(r.score)}`}
