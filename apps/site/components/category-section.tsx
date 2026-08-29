@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import type { CategoryScore, IndicatorRow } from "@/lib/types";
 
 import {
@@ -25,6 +27,146 @@ function tierBadge(score: number) {
   );
 }
 
+function flattenFactsForDisplay(facts: Record<string, unknown>): Record<string, unknown> {
+  const keys = Object.keys(facts);
+  if (keys.length === 1) {
+    const outer = keys[0];
+    const v = (facts as Record<string, unknown>)[outer];
+    if (v && typeof v === 'object' && !Array.isArray(v) && /^(docs|perf|ecos|sec|data|vel|arch|test|api)/i.test(outer)) {
+      return v as Record<string, unknown>;
+    }
+  }
+  return facts;
+}
+
+function formatFactValue(key: string, v: unknown): string {
+  if (v == null) return '—';
+  if (key === 'breaking_with_migration_guide' && typeof v === 'object' && v !== null) {
+    const o = v as { total_breaking?: number; documented?: number };
+    return `${o.documented ?? 0}/${o.total_breaking ?? 0} documented`;
+  }
+  if (Array.isArray(v)) {
+    if (v.length === 0) return 'none';
+    return v.map((x) => (typeof x === 'object' && x !== null ? JSON.stringify(x) : String(x))).join(', ');
+  }
+  if (typeof v === 'object') return JSON.stringify(v);
+  return String(v);
+}
+
+function prettyFactValue(key: string, v: unknown): string {
+  if (v == null) return '—';
+  if (key === 'breaking_with_migration_guide' && typeof v === 'object' && v !== null) {
+    const o = v as { total_breaking?: number; documented?: number };
+    return `${o.documented ?? 0}/${o.total_breaking ?? 0} documented`;
+  }
+  if (Array.isArray(v)) {
+    try { return JSON.stringify(v, null, 2); } catch { return String(v); }
+  }
+  if (typeof v === 'object') {
+    try { return JSON.stringify(v, null, 2); } catch { return String(v); }
+  }
+  return String(v);
+}
+
+function FactCell({ k, v }: { k: string; v: unknown }) {
+  const str = formatFactValue(k, v);
+  const pretty = prettyFactValue(k, v);
+  const isLong = str.length > 80 || str.includes('{') || str.includes('[') || str.includes('\n');
+  const [open, setOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  if (!isLong) {
+    return (
+      <>
+        <td className="px-2 py-1 align-top font-medium text-faint break-words">{k}</td>
+        <td className="px-2 py-1 align-top text-muted break-all">{str}</td>
+      </>
+    );
+  }
+  const truncated = str.length > 80 ? `${str.slice(0, 80)}…` : str;
+  return (
+    <>
+      <td className="px-2 py-1 align-top font-medium text-faint break-words">{k}</td>
+      <td className="px-2 py-1 align-top text-muted">
+        <span className="break-all">{truncated}</span>{' '}
+        <button
+          onClick={() => setOpen(true)}
+          className="shrink-0 rounded border border-hairline bg-panel-raised px-1 py-0 text-[10px] text-faint hover:text-foreground hover:border-foreground/30"
+        >
+          view
+        </button>
+        {open ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setOpen(false)}>
+            <div
+              className="flex max-h-[80vh] w-full max-w-[640px] flex-col overflow-hidden rounded-lg border border-hairline bg-background shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between border-b border-hairline px-4 py-2">
+                <span className="font-mono text-xs text-faint">{k}</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={async () => {
+                      try { await navigator.clipboard.writeText(pretty); setCopied(true); setTimeout(() => setCopied(false), 1200); } catch {}
+                    }}
+                    className="rounded border border-hairline px-2 py-0.5 text-[11px] text-faint hover:text-foreground"
+                  >
+                    {copied ? 'copied' : 'copy'}
+                  </button>
+                  <button onClick={() => setOpen(false)} className="rounded bg-foreground px-2 py-0.5 text-[11px] text-background">
+                    close
+                  </button>
+                </div>
+              </div>
+              <pre className="overflow-auto p-4 font-mono text-[11px] leading-relaxed text-muted whitespace-pre-wrap break-all">{pretty}</pre>
+            </div>
+          </div>
+        ) : null}
+      </td>
+    </>
+  );
+}
+
+function FactPill({ k, v }: { k: string; v: unknown }) {
+  const str = formatFactValue(k, v);
+  const pretty = prettyFactValue(k, v);
+  const isLong = str.length > 80 || str.includes('{') || str.includes('[');
+  const [open, setOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const label = isLong && str.length > 80 ? `${k}: ${str.slice(0, 80)}…` : `${k}: ${str}`;
+  if (!isLong) {
+    return <span className="rounded bg-panel-raised px-1.5 py-0.5 text-faint break-all">{label}</span>;
+  }
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        className="rounded bg-panel-raised px-1.5 py-0.5 text-faint hover:text-foreground hover:border hover:border-hairline break-all text-left"
+        title={str}
+      >
+        {label} <span className="underline decoration-dotted">view</span>
+      </button>
+      {open ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setOpen(false)}>
+          <div className="flex max-h-[80vh] w-full max-w-[640px] flex-col overflow-hidden rounded-lg border border-hairline bg-background shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-hairline px-4 py-2">
+              <span className="font-mono text-xs text-faint">{k}</span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={async () => { try { await navigator.clipboard.writeText(pretty); setCopied(true); setTimeout(() => setCopied(false), 1200);} catch {} }}
+                  className="rounded border border-hairline px-2 py-0.5 text-[11px] text-faint hover:text-foreground"
+                >
+                  {copied ? 'copied' : 'copy'}
+                </button>
+                <button onClick={() => setOpen(false)} className="rounded bg-foreground px-2 py-0.5 text-[11px] text-background">close</button>
+              </div>
+            </div>
+            <pre className="overflow-auto p-4 font-mono text-[11px] leading-relaxed text-muted whitespace-pre-wrap break-all">{pretty}</pre>
+          </div>
+        </div>
+      ) : null}
+    </>
+  );
+}
+
 function RowDetail({ r }: { r: IndicatorRow }) {
   return (
     <div className="space-y-2 text-xs leading-relaxed">
@@ -34,31 +176,46 @@ function RowDetail({ r }: { r: IndicatorRow }) {
         <div className="rounded border border-hairline bg-background/60 p-2 font-mono text-[11px] text-muted">
           <div>
             <span className="text-faint">detected via</span> {r.evidence.tool}
-            {r.evidence.args ? (
-              <span className="text-faint"> · {r.evidence.args}</span>
-            ) : null}
+            {r.evidence.args ? <span className="text-faint"> · {r.evidence.args}</span> : null}
           </div>
           {r.evidence.pointers.map((p, i) => (
-            <div key={i} className="mt-1 truncate text-muted">
+            <div key={i} className="mt-1 break-all text-muted">
               <span className="text-tier-moderate">{p.file ?? "repo"}</span>
               {p.line ? <span className="text-faint">:{p.line}</span> : null}
-              {p.detail ? (
-                <span className="text-faint"> — {p.detail}</span>
-              ) : null}
+              {p.detail ? <span className="text-faint"> — {p.detail}</span> : null}
             </div>
           ))}
-          {Object.entries(r.evidence.facts).length > 0 && (
-            <div className="mt-1.5 flex flex-wrap gap-1.5">
-              {Object.entries(r.evidence.facts).map(([k, v]) => (
-                <span
-                  key={k}
-                  className="rounded bg-panel-raised px-1.5 py-0.5 text-faint"
-                >
-                  {k}: {String(v)}
-                </span>
-              ))}
-            </div>
-          )}
+          {(() => {
+            const flat = flattenFactsForDisplay(r.evidence!.facts as Record<string, unknown>);
+            const entries = Object.entries(flat).filter(([, v]) => {
+              if (v == null) return false;
+              if (typeof v === 'object' && !Array.isArray(v) && Object.keys(v as Record<string, unknown>).length === 0) return false;
+              return true;
+            });
+            if (entries.length === 0) return null;
+            if (entries.length <= 5) {
+              return (
+                <div className="mt-1.5 overflow-hidden rounded border border-hairline">
+                  <table className="w-full table-fixed text-[11px]">
+                    <tbody>
+                      {entries.map(([k, v]) => (
+                        <tr key={k} className="border-b border-hairline last:border-0">
+                          <FactCell k={k} v={v} />
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            }
+            return (
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {entries.map(([k, v]) => (
+                  <FactPill key={k} k={k} v={v} />
+                ))}
+              </div>
+            );
+          })()}
         </div>
       )}
 

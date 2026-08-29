@@ -73,9 +73,86 @@ const SCORERS: Record<string, (facts: Record<string, unknown>) => number> = {
   'TEST-08': scoreTest08,
 };
 
+function flattenFacts(facts: Record<string, unknown>, detectorId: string): Record<string, unknown> {
+  const normalized = detectorId.toLowerCase().replace('-', '');
+  const inner = (facts as Record<string, unknown>)[normalized];
+  if (inner && typeof inner === 'object' && !Array.isArray(inner)) return inner as Record<string, unknown>;
+  const lower = detectorId.toLowerCase();
+  const inner2 = (facts as Record<string, unknown>)[lower];
+  if (inner2 && typeof inner2 === 'object' && !Array.isArray(inner2)) return inner2 as Record<string, unknown>;
+  const keys = Object.keys(facts);
+  if (keys.length === 1 && typeof (facts as Record<string, unknown>)[keys[0]] === 'object' && (facts as Record<string, unknown>)[keys[0]] !== null) {
+    const v = (facts as Record<string, unknown>)[keys[0]] as Record<string, unknown>;
+    if (!Array.isArray(v)) return v;
+  }
+  return facts as Record<string, unknown>;
+}
+
+function reasonVel06(score: number, f: Record<string, unknown>): string {
+  const bf = (f.bus_factor_repo as number) ?? (f as unknown as { bus_factor?: number }).bus_factor ?? 1;
+  const share = (f.top_author_share as number) ?? 0.5;
+  if (score === 3) return `Bus factor ${bf} with top author ${Math.round(share * 100)}% — knowledge is distributed — per VEL-06 Green: no single point of failure — score 3.`;
+  if (score === 2) return `Bus factor ${bf} — two owners — per VEL-06 Yellow flag: knowledge concentrated in a pair — score 2.`;
+  if (score === 1) return `Bus factor ${bf} — per VEL-06 Yellow: some concentration, manageable — score 1.`;
+  return `Bus factor ${bf} — single owner at ${Math.round(share * 100)}% — per VEL-06 Red flag: bus factor 1, critical knowledge silo — score 0.`;
+}
+function reasonVel09(score: number, f: Record<string, unknown>): string {
+  const p = (f as { review_coverage_pct?: number; prs_sampled?: number }) ?? {};
+  const cov = p.review_coverage_pct ?? 0;
+  const samp = (p as { prs_sampled?: number }).prs_sampled ?? 0;
+  if (score === 3) return `PR review coverage ${Math.round(cov * 100)}% over ${samp} sampled PRs — nearly every change reviewed — per VEL-09 Green: review hygiene sound — score 3.`;
+  if (score === 2) return `Review coverage ${Math.round(cov * 100)}% — most PRs reviewed — per VEL-09 Yellow: some gaps — score 2.`;
+  if (score === 1) return `Review coverage ${Math.round(cov * 100)}% — half of PRs slip through without review — per VEL-09 Yellow: review hygiene weak — score 1.`;
+  return `Review coverage ${Math.round(cov * 100)}% — per VEL-09 Red: most changes merge unreviewed — score 0.`;
+}
+function reasonVel08(score: number, f: Record<string, unknown>): string {
+  const c = (f.cd_chain as { build?: boolean; deploy_job?: boolean }) ?? {};
+  const rb = (f.rollback_target as boolean) ?? false;
+  if (score === 3) return `CD chain build and deploy present with rollback target — per VEL-08 Green: delivery is automated and reversible — score 3.`;
+  if (score === 2) return `Build and deploy chain present, rollback ${rb ? 'present' : 'missing'} — per VEL-08 Yellow: deploy automation present but not fully wrapped — score 2.`;
+  if (score === 1) return `Build present without deploy linkage — per VEL-08 Yellow: manual promotion remains — score 1.`;
+  return `No build or deploy chain — per VEL-08 Red: delivery by hand, high friction — score 0.`;
+}
+function reasonVel10(score: number, f: Record<string, unknown>): string {
+  const b = f as { model?: string; stale_over_30d?: number; branches_total?: number };
+  if (b.model === 'trunk-based') return `Trunk-based branching with ${b.branches_total ?? 0} branches — per VEL-10 Green: short-lived branches, low divergence — score 3.`;
+  if ((b.stale_over_30d ?? 0) > 20) return `${b.stale_over_30d} stale branches out of ${b.branches_total ?? 0} — per VEL-10 Red: long-lived release branches diverge — score 0.`;
+  if ((b.stale_over_30d ?? 0) > 5) return `${b.stale_over_30d} stale branches — per VEL-10 Yellow: branch hygiene drifting — score 1.`;
+  return `${b.stale_over_30d ?? 0} stale branches — per VEL-10 Yellow/Green: mostly trunk-like — score 2.`;
+}
+function reasonSec07(score: number, f: Record<string, unknown>): string {
+  const s = f as { bot?: { present?: boolean }; open_bot_prs?: { p95_age_days?: number } };
+  const present = s.bot?.present ?? false;
+  const p95 = s.open_bot_prs?.p95_age_days ?? 0;
+  if (!present) return `No Dependabot/Renovate automation — patch cadence is manual — per SEC-07 Red: dependency updates unmanaged — score 0.`;
+  if (score === 3) return `Bot present; oldest open bot PR ${p95}d — patch backlog healthy — per SEC-07 Green: automated updates merged promptly — score 3.`;
+  if (score === 2) return `Bot present; P95 open bot PR age ${p95}d — per SEC-07 Yellow: backlog starting to age — score 2.`;
+  return `Bot present but P95 open bot PR age ${p95}d — per SEC-07 Yellow/Red: stale update queue — score 1.`;
+}
+function reasonTest08(score: number, f: Record<string, unknown>): string {
+  const t = f as { gates?: { lint?: { present?: boolean }; sast?: { present?: boolean }; coverage_gate?: { present?: boolean } } };
+  const gates = t.gates;
+  if (!gates) return `No CI gate inventory — per TEST-08 Red: quality gates absent — score 0.`;
+  const count = [gates.lint?.present, gates.sast?.present, gates.coverage_gate?.present].filter(Boolean).length;
+  if (count >= 3) return `Lint, SAST and coverage gates all present and blocking — per TEST-08 Green: CI enforces the quality bar — score 3.`;
+  if (count === 2) return `${count}/3 gates present — per TEST-08 Yellow: most gates present — score 2.`;
+  if (count === 1) return `Only ${count}/3 gates present — per TEST-08 Yellow: gates minimal — score 1.`;
+  return `No lint/SAST/coverage gates — per TEST-08 Red: CI lets quality slip — score 0.`;
+}
+const REASONERS: Record<string, (score: number, facts: Record<string, unknown>) => string> = {
+  'VEL-06': reasonVel06,
+  'VEL-09': reasonVel09,
+  'VEL-08': reasonVel08,
+  'VEL-10': reasonVel10,
+  'SEC-07': reasonSec07,
+  'TEST-08': reasonTest08,
+};
+
 function reasonFor(id: string, score: number, facts: Record<string, unknown>): string {
+  const fn = REASONERS[id];
+  if (fn) return fn(score, facts);
   const s = `${score} — ${['Critical', 'Severe Debt', 'Minor Debt', 'Healthy'][score] ?? ''}`;
-  return `${id} ${s}: gh-api facts ${JSON.stringify(facts).slice(0, 120)}`;
+  return `${s}: ${JSON.stringify(facts).slice(0, 120)} — per ${id} rubric band — score ${score}.`;
 }
 
 export function factsToRows(facts: FactRecord[]): Phase1Row[] {
@@ -99,11 +176,12 @@ export function factsToRows(facts: FactRecord[]): Phase1Row[] {
       };
     }
     const scorer = SCORERS[d.id];
-    const score = scorer ? scorer(f.facts as Record<string, unknown>) : 2;
+    const flat = flattenFacts(f.facts as Record<string, unknown>, d.id);
+    const score = scorer ? scorer(flat) : 2;
     return {
       id: d.id, name: d.name, category_id: d.cat, status: 'measured' as const, score,
-      reason: reasonFor(d.id, score, f.facts as Record<string, unknown>),
-      evidence: { tool: f.provenance.tool, pointers: f.evidencePointers as unknown as Array<Record<string, string | number>>, facts: f.facts as Record<string, unknown> },
+      reason: reasonFor(d.id, score, flat),
+      evidence: { tool: f.provenance.tool, pointers: f.evidencePointers as unknown as Array<Record<string, string | number>>, facts: flat },
       effort: d.effort,
     };
   });
