@@ -52,6 +52,13 @@ export const INDICATOR_BUDGET_CLASS: Record<string, string> = {
   'SEC-01': 'fast', 'SEC-06': 'fast', 'SEC-02': 'fast',
   'ARCH-01': 'slow-dissolvable', 'ARCH-08': 'slow-dissolvable', 'ARCH-05': 'api-budgeted',
   'TEST-03': 'fast', 'TEST-05': 'fast',
+  // Tranche A (12 Tier-A measured, fast except DOCS-08 api-budgeted)
+  'DOCS-01': 'fast', 'DOCS-03': 'fast', 'DOCS-04': 'fast', 'DOCS-09': 'fast',
+  'PERF-02': 'fast', 'PERF-06': 'fast',
+  'DATA-01': 'fast',
+  'ECOS-06': 'fast', 'ECOS-08': 'fast',
+  'SEC-09': 'fast', 'SEC-10': 'fast',
+  'DOCS-08': 'api-budgeted',
 };
 
 export function budgetForIndicators(ids: string[], opts: { withCloneBase?: boolean } = {}): { budgetMs: number; breakdown: Record<string, number>; indicatorCount: number } {

@@ -26,25 +26,45 @@ import { detectArch08 } from './detectors/arch08';
 import { detectArch05 } from './detectors/arch05';
 import { detectTest03 } from './detectors/test03';
 import { detectTest05 } from './detectors/test05';
+import { detectDocs01 } from './detectors/docs01';
+import { detectDocs03 } from './detectors/docs03';
+import { detectDocs04 } from './detectors/docs04';
+import { detectDocs08 } from './detectors/docs08';
+import { detectDocs09 } from './detectors/docs09';
+import { detectPerf02 } from './detectors/perf02';
+import { detectPerf06 } from './detectors/perf06';
+import { detectData01 } from './detectors/data01';
+import { detectEcos06 } from './detectors/ecos06';
+import { detectEcos08 } from './detectors/ecos08';
+import { detectSec09 } from './detectors/sec09';
+import { detectSec10 } from './detectors/sec10';
 import type { Phase1ScanContext, ScanContext } from './detector';
 
 const phase1Ids = ['VEL-06','VEL-09','VEL-08','VEL-10','SEC-07','TEST-08'];
-const phase2Ids = ['ECOS-01','ECOS-02','ECOS-03','ECOS-05','ECOS-07','SEC-01','SEC-06','SEC-02','ARCH-01','ARCH-08','ARCH-05','TEST-03','TEST-05'];
-export const MVP_IDS = [...phase1Ids, ...phase2Ids];
+const phase2MvpIds = ['ECOS-01','ECOS-02','ECOS-03','ECOS-05','ECOS-07','SEC-01','SEC-06','SEC-02','ARCH-01','ARCH-08','ARCH-05','TEST-03','TEST-05'];
+export const TRANCHE_A_IDS = ['DOCS-01','DOCS-03','DOCS-04','DOCS-08','DOCS-09','PERF-02','PERF-06','DATA-01','ECOS-06','ECOS-08','SEC-09','SEC-10'];
+const phase2Ids = [...phase2MvpIds, ...TRANCHE_A_IDS];
+export const MVP_IDS = [...phase1Ids, ...phase2MvpIds];
+export const EXPANDED_IDS = [...phase1Ids, ...phase2Ids];
 const phase2Detectors = [
   detectEcos01, detectEcos02, detectEcos03, detectEcos05, detectEcos07,
   detectSec01, detectSec06, detectSec02,
   detectArch01, detectArch08, detectArch05,
   detectTest03, detectTest05,
+  detectDocs01, detectDocs03, detectDocs04, detectDocs08, detectDocs09,
+  detectPerf02, detectPerf06,
+  detectData01,
+  detectEcos06, detectEcos08,
+  detectSec09, detectSec10,
 ];
 
-export function getUnifiedBudget(indicatorIds: string[] = MVP_IDS) {
+export function getUnifiedBudget(indicatorIds: string[] = EXPANDED_IDS) {
   return budgetForIndicators(indicatorIds, { withCloneBase: indicatorIds.some(id => INDICATOR_BUDGET_CLASS[id] === 'slow-dissolvable') });
 }
 
 /** Unified scan: single budget covering GH + clone detectors, streaming meta/progress/done */
 export async function* runUnifiedScan(repoUrl: string, opts: { token?: string; indicatorIds?: string[] } = {}): AsyncGenerator<{ type: string; budgetMs?: number; breakdown?: Record<string, number>; indicatorCount?: number; pct?: number; elapsedMs?: number; remainingMs?: number; completedIds?: string[]; completedCost?: number; totalCost?: number; facts?: FactRecord[]; snapshot?: unknown; id?: string; error?: string; reason?: string; detail?: string; milestone?: string }> {
-  const ids = opts.indicatorIds ?? MVP_IDS;
+  const ids = opts.indicatorIds ?? EXPANDED_IDS;
   const { budgetMs, breakdown, indicatorCount } = getUnifiedBudget(ids);
   const totalCost = ids.reduce((a, id) => a + (BUDGET_COST[INDICATOR_BUDGET_CLASS[id] ?? 'fast'] ?? 5000), 0) + (ids.some(id => INDICATOR_BUDGET_CLASS[id] === 'slow-dissolvable') ? 30000 : 5000);
   const budget = createBudgetControllerForIndicators(ids, { withCloneBase: ids.some(id => INDICATOR_BUDGET_CLASS[id] === 'slow-dissolvable') });
@@ -108,7 +128,7 @@ export async function* runUnifiedScan(repoUrl: string, opts: { token?: string; i
     const unknownFacts: FactRecord[] = remainingIds.map(id => ({ id, detectorId: id, schemaVersion: '1.0.0', facts: {}, evidencePointers: [], provenance: { tool: 'budget', version: '1', flags: [], durationMs: 0 }, truncated: true, error: { kind: 'cap' as const, detail: 'budget-exceeded' }, root: '/', scanId } as unknown as FactRecord));
     const allFacts = [...ghFacts, ...unknownFacts];
     budget.cancel();
-    yield { type: 'done', facts: allFacts, snapshot: { repo: normalized, scanned_at: new Date().toISOString(), engine_version: 'unified/1.0', rubric_version: 'docs/rubric/@mvp' }, id: scanId };
+    yield { type: 'done', facts: allFacts, snapshot: { repo: normalized, scanned_at: new Date().toISOString(), engine_version: 'unified/1.0', rubric_version: 'docs/rubric@tranche-a' }, id: scanId };
     return;
   }
 
@@ -193,7 +213,7 @@ export async function* runUnifiedScan(repoUrl: string, opts: { token?: string; i
   for (const id of ids) if (!covered.has(id)) {
     allFacts.push({ id, detectorId: id, schemaVersion: '1.0.0', facts: {}, evidencePointers: [], provenance: { tool: 'budget', version: '1', flags: [], durationMs: 0 }, truncated: true, error: { kind: 'cap' as const, detail: 'budget-exceeded' }, root: '/', scanId } as unknown as FactRecord);
   }
-  yield { type: 'done', facts: allFacts, snapshot: { repo: normalized, scanned_at: new Date().toISOString(), engine_version: 'unified/1.0', rubric_version: 'docs/rubric/@mvp' }, id: scanId };
+  yield { type: 'done', facts: allFacts, snapshot: { repo: normalized, scanned_at: new Date().toISOString(), engine_version: 'unified/1.0', rubric_version: 'docs/rubric@tranche-a' }, id: scanId };
 }
 
 /** Back-compat: two-phase generator now delegates to unified scan but preserves legacy shape for callers that still consume phase events */

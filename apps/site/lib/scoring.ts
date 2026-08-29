@@ -93,15 +93,15 @@ export function scoreCategory(
 ): CategoryScore {
   const applicable = applicableCount(rows);
   const sum = scoredSum(rows);
-  const percent = applicable ? (sum / (3 * applicable)) * 100 : 0;
+  const percent = applicable ? (sum / (3 * applicable)) * 100 : null;
   return {
     id: meta.id,
     name: meta.name,
     weight: meta.weight,
     applicable,
     scored_sum: sum,
-    category_score: percent,
-    weighted_contribution: (percent * meta.weight) / 100,
+    category_score: percent as unknown as number,
+    weighted_contribution: percent == null ? 0 : (percent * meta.weight) / 100,
     status_counts: statusCounts(rows),
     indicator_rows: rows,
   };

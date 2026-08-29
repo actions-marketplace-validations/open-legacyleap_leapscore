@@ -158,6 +158,7 @@ function scoreTone(score: number): string {
 }
 
 export function CategorySection({ category }: { category: CategoryScore }) {
+  const isEmpty = category.indicator_rows.length === 0 || category.category_score == null;
   return (
     <div className="instrument-panel overflow-hidden rounded-lg">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-hairline px-4 py-3">
@@ -176,10 +177,19 @@ export function CategorySection({ category }: { category: CategoryScore }) {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <span className="font-mono text-2xl font-semibold text-foreground tabular-nums">
-            {category.category_score.toFixed(0)}
-          </span>
-          {tierBadge(category.category_score)}
+          {isEmpty ? (
+            <>
+              <span className="font-mono text-xl font-semibold text-faint tabular-nums">—</span>
+              <span className="rounded border border-hairline px-1.5 py-0.5 font-mono text-xs text-faint">Not evaluated</span>
+            </>
+          ) : (
+            <>
+              <span className="font-mono text-2xl font-semibold text-foreground tabular-nums">
+                {(category.category_score as number).toFixed(0)}
+              </span>
+              {tierBadge(category.category_score as number)}
+            </>
+          )}
         </div>
       </div>
       <div>

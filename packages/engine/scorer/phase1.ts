@@ -121,14 +121,11 @@ export function scorePhase1(rows: Phase1Row[]) {
     const measured = catRows.filter((r) => r.status === 'measured');
     const sum = measured.reduce((a, r) => a + (r.score ?? 0), 0);
     const applicable = measured.length;
-    const category_score = applicable ? (sum / (applicable * 3)) * 100 : 0;
-    return { id: cat, name: cat, weight: BASE_WEIGHTS[cat] ?? 0, applicable, scored_sum: sum, category_score, weighted_contribution: (category_score * (BASE_WEIGHTS[cat] ?? 0)) / 100, status_counts: { measured: measured.length, estimated: 0, unknown: catRows.length - measured.length, not_applicable: 0 }, indicator_rows: catRows };
+    const category_score = applicable ? (sum / (applicable * 3)) * 100 : null;
+    const weighted_contribution = category_score == null ? 0 : (category_score * (BASE_WEIGHTS[cat] ?? 0)) / 100;
+    return { id: cat, name: cat, weight: BASE_WEIGHTS[cat] ?? 0, applicable, scored_sum: sum, category_score, weighted_contribution, status_counts: { measured: measured.length, estimated: 0, unknown: catRows.length - measured.length, not_applicable: 0 }, indicator_rows: catRows };
   });
-  // Add unknown categories for report completeness (96 rows)
-  const allCats = ['ECOS', 'ARCH', 'DATA', 'API', 'PERF', 'DOCS'];
-  for (const c of allCats) {
-    if (!byCat.has(c)) categories.push({ id: c, name: c, weight: BASE_WEIGHTS[c] ?? 0, applicable: 0, scored_sum: 0, category_score: 0, weighted_contribution: 0, status_counts: { measured: 0, estimated: 0, unknown: 0, not_applicable: 0 }, indicator_rows: [] });
-  }
+  // No phantom empty categories — omitted (not evaluated); full 102 rows still via full_table
   const score = categories.reduce((a, c) => a + c.weighted_contribution, 0);
   const measured = rows.filter((r) => r.status === 'measured').length;
   const unknown = rows.filter((r) => r.status === 'unknown').length + 96; // remaining non-phase-1 indicators

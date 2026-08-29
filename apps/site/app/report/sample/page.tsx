@@ -91,7 +91,7 @@ export default async function ReportPage({
           </span>
         </div>
         <div className="grid gap-4 lg:grid-cols-2">
-          {report.categories.map((c) => (
+          {report.categories.filter((c) => c.indicator_rows.length > 0).map((c) => (
             <CategorySection key={c.id} category={c} />
           ))}
         </div>

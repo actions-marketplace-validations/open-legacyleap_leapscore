@@ -70,9 +70,9 @@ export interface CategoryScore {
   /** rows in the denominator (standard rows minus unknown/N-A) */
   applicable: number;
   scored_sum: number;
-  /** (Σ scores ÷ applicable×3) × 100, derived — never hand-typed */
-  category_score: number;
-  /** category% × weight, in percentage points */
+  /** (Σ scores ÷ applicable×3) × 100, derived — null when applicable===0 (not evaluated) */
+  category_score: number | null;
+  /** category% × weight, in percentage points — 0 when not evaluated */
   weighted_contribution: number;
   status_counts: {
     measured: number;

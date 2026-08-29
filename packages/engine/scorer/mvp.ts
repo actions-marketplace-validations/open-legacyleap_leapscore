@@ -4,6 +4,8 @@ import rubricData from '../rubric.json' with { type: 'json' };
 import { evaluateGates } from './rollup';
 
 const MVP_IDS = ['VEL-06','VEL-09','VEL-08','VEL-10','SEC-07','TEST-08','ECOS-01','ECOS-02','ECOS-03','ECOS-05','ECOS-07','SEC-01','SEC-06','SEC-02','ARCH-01','ARCH-08','ARCH-05','TEST-03','TEST-05'];
+export const TRANCHE_A_IDS = ['DOCS-01','DOCS-03','DOCS-04','DOCS-08','DOCS-09','PERF-02','PERF-06','DATA-01','ECOS-06','ECOS-08','SEC-09','SEC-10'];
+export const ALL_MEASURED_IDS = [...MVP_IDS, ...TRANCHE_A_IDS];
 
 const RUBRIC_REGISTRY: Record<string, { name: string; category: string; effort: string }> = Object.fromEntries(
   ((rubricData as unknown as { indicators: Array<{ id: string; category: string; name: string; effort: string }> }).indicators ?? []).map(i => [i.id, { name: i.name, category: i.category, effort: i.effort }])
@@ -17,12 +19,13 @@ function lookupEffort(id: string): string { return RUBRIC_REGISTRY[id]?.effort ?
 function lookupCategory(id: string): string { return RUBRIC_REGISTRY[id]?.category ?? id.split('-')[0]; }
 
 export function scoreMvp(facts: FactRecord[]) {
-  // Reuse phase1 rows for first 6, then map remaining 13 via simple measured mapping
+  // Reuse phase1 rows for first 6, then map remaining via simple measured mapping; supports both 19 and 31
   const byId = new Map(facts.map(f => [f.detectorId, f]));
   const phase1 = phase1Rows(facts.filter(f => ['VEL-06','VEL-09','VEL-08','VEL-10','SEC-07','TEST-08'].includes(f.detectorId)));
-  // For remaining, create measured rows if fact exists and no error
+  // For remaining, create measured rows if fact exists and no error — include tranche A (31 total); tranche rows become unknown placeholders when not requested
+  const extraIds = [...MVP_IDS.slice(6), ...TRANCHE_A_IDS];
   const extraRows: ReturnType<typeof phase1Rows> = [];
-  for (const id of MVP_IDS.slice(6)) {
+  for (const id of extraIds) {
     const f = byId.get(id);
     const cat = lookupCategory(id);
     const name = lookupName(id);
@@ -48,16 +51,16 @@ export function scoreMvp(facts: FactRecord[]) {
     const measured = rows.filter(r => r.status === 'measured');
     const sum = measured.reduce((a, r) => a + (r.score ?? 0), 0);
     const applicable = measured.length;
-    const category_score = applicable ? (sum / (applicable * 3)) * 100 : 0;
-    return { id: cat, name: CATEGORY_LABELS[cat] ?? cat, weight: BASE_WEIGHTS[cat] ?? 0, applicable, scored_sum: sum, category_score, weighted_contribution: (category_score * (BASE_WEIGHTS[cat] ?? 0))/100, status_counts: { measured: measured.length, estimated: 0, unknown: rows.length - measured.length, not_applicable: 0 }, indicator_rows: rows };
+    const category_score = applicable ? (sum / (applicable * 3)) * 100 : null;
+    const weighted_contribution = category_score == null ? 0 : (category_score * (BASE_WEIGHTS[cat] ?? 0))/100;
+    return { id: cat, name: CATEGORY_LABELS[cat] ?? cat, weight: BASE_WEIGHTS[cat] ?? 0, applicable, scored_sum: sum, category_score, weighted_contribution, status_counts: { measured: measured.length, estimated: 0, unknown: rows.length - measured.length, not_applicable: 0 }, indicator_rows: rows };
   });
-  // Add empty categories for 19 coverage completeness
-  for (const c of ['DATA','API','PERF','DOCS']) if (!byCat.has(c)) categories.push({ id: c, name: CATEGORY_LABELS[c] ?? c, weight: BASE_WEIGHTS[c], applicable: 0, scored_sum: 0, category_score: 0, weighted_contribution: 0, status_counts: { measured: 0, estimated: 0, unknown: 0, not_applicable: 0 }, indicator_rows: [] });
+  // No phantom empty categories — empty categories are omitted (not evaluated)
   const score = categories.reduce((a,c) => a + c.weighted_contribution, 0);
   const measured = allRows.filter(r => r.status === 'measured').length;
   const unknown = 102 - measured;
   const coverage = { measured, estimated: 0, unknown, not_applicable: 0, measured_pct: `${Math.round(measured/102*100)}%`, estimated_pct: '0%', unknown_pct: `${Math.round(unknown/102*100)}%` };
-  const status = measured === 19 ? 'complete' as const : 'degraded' as const;
+  const status = (measured === ALL_MEASURED_IDS.length || measured === MVP_IDS.length) ? 'complete' as const : 'degraded' as const;
   const gates = evaluateGates(facts);
   return { categories, coverage, score, status, gates, rows: allRows };
 }

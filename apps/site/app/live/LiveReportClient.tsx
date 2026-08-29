@@ -410,7 +410,7 @@ export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
             <span className="text-xs text-faint">weights from the rubric — base set</span>
           </div>
           <div className="grid gap-4 lg:grid-cols-2">
-            {report.categories.map((c) => (
+            {report.categories.filter((c) => c.indicator_rows.length > 0).map((c) => (
               <CategorySection key={c.id} category={c} />
             ))}
           </div>
