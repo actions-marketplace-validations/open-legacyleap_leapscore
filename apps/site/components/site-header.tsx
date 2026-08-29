@@ -33,9 +33,6 @@ export function SiteHeader() {
               {n.label}
             </Link>
           ))}
-          <span className="hidden rounded border border-hairline px-2 py-0.5 text-xs text-faint sm:inline">
-            engine: coming
-          </span>
         </nav>
       </div>
     </header>

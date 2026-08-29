@@ -270,9 +270,7 @@ export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
             <br />
             Try a public GitHub URL like <code className="font-mono">vercel/next.js</code>.
           </p>
-          <p className="mt-4 text-xs text-faint">
-            Shareable URL: <code className="font-mono">/live?repo={refused.repo}</code> · alias <code className="font-mono">/report/live?repo=...</code>
-          </p>
+          
           <Link href="/" className="mt-4 inline-block text-sm underline underline-offset-2 hover:text-foreground">
             ← Back to home
           </Link>
@@ -307,7 +305,6 @@ export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
         </div>
         <div className="mb-8 mt-6">
           <h1 className="mt-1 font-mono text-2xl font-semibold tracking-tight">{report.snapshot.repo}</h1>
-          <p className="mt-1 text-xs text-faint">Sealed · share: <code className="font-mono">/live?repo={report.snapshot.repo}</code></p>
         </div>
 
         <div className="instrument-panel rounded-lg border border-hairline bg-panel/50 p-4">
@@ -363,7 +360,6 @@ export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
         </div>
         <div className="mb-8 mt-6">
           <h1 className="mt-1 font-mono text-2xl font-semibold tracking-tight">{initialRepo}</h1>
-          <p className="mt-1 text-xs text-faint">Scanning… share: <code className="font-mono">/live?repo={initialRepo}</code></p>
         </div>
         <div className="instrument-panel rounded-lg border border-hairline bg-panel/50 p-4">
           <h2 className="text-sm font-medium text-ink">Scan timeline</h2>
@@ -387,6 +383,11 @@ export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
 
   const tier = tierForScore(report.headline.score);
   const sealedElapsedS = Math.floor(elapsedMs / 1000);
+  const repoCommitSha = report.snapshot.scanned_commit;
+  const shortSha = repoCommitSha && repoCommitSha !== "unknown" ? repoCommitSha.slice(0, 7) : null;
+  const commitLink = repoCommitSha && repoCommitSha !== "unknown"
+    ? `https://github.com/${report.snapshot.repo}/commit/${repoCommitSha}`
+    : null;
   return (
     <div className="mx-auto max-w-5xl px-4 py-10">
       <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
@@ -398,12 +399,15 @@ export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
             <span className={`rounded px-1.5 py-0.5 text-xs ${report.status === "complete" ? "bg-foreground text-background" : "border border-hairline text-faint"}`}>{report.status}</span>
           </h1>
           <p className="mt-1 text-xs text-faint">
-            schema {report.report_schema} · {report.snapshot.rubric_version} · {report.snapshot.scanned_at.slice(0, 10)} · share: <code className="font-mono">/live?repo={report.snapshot.repo}</code>
+            {shortSha ? (
+              <>
+                commit <a href={commitLink} className="underline underline-offset-2 hover:text-foreground font-mono">{shortSha}</a>
+              </>
+            ) : (
+              "commit unknown"
+            )}
           </p>
         </div>
-        <p className="text-xs text-muted">
-          <Link className="underline underline-offset-2 hover:text-foreground" href="/method">see method</Link> · <Link className="underline underline-offset-2 hover:text-foreground" href="/report/sample">view sample</Link>
-        </p>
       </div>
 
       {/* Report — animated in after reveal, timeline collapsible above */}

@@ -89,3 +89,9 @@ body {
 .font-mono {
   font-variant-numeric: tabular-nums;
 }
+
+/* button affordance — consistent pointer cursor */
+button,
+[role="button"] {
+  cursor: pointer;
+}

@@ -40,6 +40,7 @@ yarn-error.log*
 # keep directory but ignore generated envelopes
 /reports/*.json
 !/reports/.gitkeep
+!/reports/django__django__506fc82__2026-08-12T000000-000Z.json
 
 # typescript
 *.tsbuildinfo
