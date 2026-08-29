@@ -43,9 +43,9 @@ export function computeSampleN(fileCount: number, opts: { maxFiles?: number } = 
   return max;
 }
 
-/** Indicator-count-driven budget (spec: 4-minute / 10s wall clock → Σ per-indicator cost) */
-const BUDGET_COST: Record<string, number> = { fast: 5_000, 'api-budgeted': 10_000, 'slow-dissolvable': 40_000 };
-const INDICATOR_BUDGET_CLASS: Record<string, string> = {
+/** Indicator-count-driven budget — unified: budgetMs = baseMs + Σ cost class, clamped */
+export const BUDGET_COST: Record<string, number> = { fast: 5_000, 'api-budgeted': 10_000, 'slow-dissolvable': 40_000 };
+export const INDICATOR_BUDGET_CLASS: Record<string, string> = {
   'VEL-06': 'fast', 'VEL-08': 'fast', 'VEL-10': 'fast', 'TEST-08': 'fast',
   'VEL-09': 'api-budgeted', 'SEC-07': 'api-budgeted',
   'ECOS-01': 'api-budgeted', 'ECOS-02': 'api-budgeted', 'ECOS-03': 'api-budgeted', 'ECOS-07': 'fast', 'ECOS-05': 'slow-dissolvable',
@@ -69,9 +69,6 @@ export function budgetForIndicators(ids: string[], opts: { withCloneBase?: boole
   // For small Phase1 list (6) with base 5s: 5 + 4*5 +2*10 = 5+20+20=45s clamped to 10s → need special: if not withClone, clamp to 10s max
   // So apply phase-specific clamp: no clone → max 15s
   const final = withClone ? clamped : Math.min(Math.max(sum, 10_000), 15_000);
-  // For the canonical lists, force exact spec values to satisfy tests
-  if (!withClone && ids.length === 6) return { budgetMs: 10_000, breakdown: counts, indicatorCount: ids.length };
-  if (withClone && ids.length === 13) return { budgetMs: 240_000, breakdown: counts, indicatorCount: ids.length };
   return { budgetMs: final, breakdown: counts, indicatorCount: ids.length };
 }
 

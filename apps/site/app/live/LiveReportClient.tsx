@@ -12,29 +12,54 @@ import { tierForScore } from "@/lib/scoring";
 import { SampleFullTable } from "@/components/sample-full-table";
 import type { Report } from "@/lib/types";
 
-type Step = { id: string; label: string; status: "pending" | "active" | "done" };
-
-const STEPS: Step[] = [
-  { id: "ingest", label: "Ingesting URL", status: "pending" },
-  { id: "fetch", label: "Fetching repo", status: "pending" },
-  { id: "checks", label: "Running 6 checks (VEL-06, VEL-09, VEL-08, VEL-10, SEC-07, TEST-08)", status: "pending" },
-  { id: "cloning", label: "Cloning (shallow --filter=blob:none)", status: "pending" },
-  { id: "sniffing", label: "Sniffing manifests", status: "pending" },
-  { id: "scanning", label: "Scanning 13 (ECOS 5 + SEC 3 + ARCH 3 + TEST 2)", status: "pending" },
-  { id: "scoring", label: "Scoring 19", status: "pending" },
-];
-
 export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
-  const [steps, setSteps] = useState<Step[]>(STEPS);
-  const [elapsed, setElapsed] = useState(0);
+  const [budgetMs, setBudgetMs] = useState<number | null>(null);
+  const [indicatorCount, setIndicatorCount] = useState<number | null>(null);
+  const [pct, setPct] = useState(0);
+  const [elapsedMs, setElapsedMs] = useState(0);
+  const [remainingMs, setRemainingMs] = useState<number | null>(null);
+  const [completedIds, setCompletedIds] = useState<string[]>([]);
   const [report, setReport] = useState<Report | null>(null);
   const [refused, setRefused] = useState<{ reason: string; detail: string; repo: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [sealed, setSealed] = useState(false);
+
+  const startRef = useRef<number>(Date.now());
+  const budgetRef = useRef<number | null>(null);
+  const sealedRef = useRef(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    const start = Date.now();
-    const timer = setInterval(() => setElapsed(Math.floor((Date.now() - start) / 1000)), 200);
+    startRef.current = Date.now();
+    sealedRef.current = false;
+    setSealed(false);
+    setPct(0);
+    setElapsedMs(0);
+    setRemainingMs(null);
+    setCompletedIds([]);
+    setReport(null);
+    setRefused(null);
+    setError(null);
+    setBudgetMs(null);
+    setIndicatorCount(null);
+
+    // local tick for smooth elapsed/remaining between progress frames
+    intervalRef.current = setInterval(() => {
+      if (sealedRef.current) return;
+      const elapsed = Date.now() - startRef.current;
+      setElapsedMs(elapsed);
+      const b = budgetRef.current;
+      if (b !== null) {
+        setRemainingMs(Math.max(0, b - elapsed));
+        // time-only fallback pct if no progress frame yet
+        setPct((prev) => {
+          if (prev >= 99) return prev;
+          const timePct = Math.min(99, Math.round((elapsed / b) * 100));
+          return Math.max(prev, timePct);
+        });
+      }
+    }, 200);
 
     async function run() {
       try {
@@ -44,9 +69,17 @@ export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
           throw new Error(txt.slice(0, 500));
         }
         if (!res.body) {
-          const json = await res.json();
-          if (json.type === "report") setReport(json.report as Report);
-          else if (json.type === "refused") setRefused({ reason: json.reason, detail: json.detail, repo: json.repo ?? initialRepo });
+          const json = await res.json() as Record<string, unknown>;
+          if ((json as { type?: string }).type === "report") {
+            sealedRef.current = true; setSealed(true);
+            if (intervalRef.current) clearInterval(intervalRef.current);
+            setReport((json as { report: Report }).report);
+          } else if ((json as { type?: string }).type === "refused") {
+            sealedRef.current = true; setSealed(true);
+            if (intervalRef.current) clearInterval(intervalRef.current);
+            const e = json as { reason: string; detail: string; repo: string };
+            setRefused({ reason: e.reason, detail: e.detail, repo: e.repo ?? initialRepo });
+          }
           return;
         }
         const reader = res.body.getReader();
@@ -63,23 +96,34 @@ export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
             try {
               const evt = JSON.parse(line) as Record<string, unknown>;
               if (cancelled) break;
-              if ((evt as { step?: string }).step) {
-                const stepId = (evt as { step: string }).step;
-                const status = (evt as { status: string }).status;
-                setSteps((prev) =>
-                  prev.map((s) => (s.id === stepId ? { ...s, status: status === "start" ? "active" : status === "done" ? "done" : s.status } : s)),
-                );
-              }
-              if ((evt as { type?: string }).type === "phase1") {
-                setReport((evt as { report: Report }).report);
-              }
-              if ((evt as { type?: string }).type === "report") {
-                setSteps((prev) => prev.map((p) => ({ ...p, status: "done" })));
-                setReport((evt as { report: Report }).report);
-              }
-              if ((evt as { type?: string }).type === "refused") {
+              const type = (evt as { type?: string }).type;
+              if (type === "meta") {
+                const b = (evt as { budgetMs: number }).budgetMs;
+                const ic = (evt as { indicatorCount: number }).indicatorCount;
+                budgetRef.current = b;
+                setBudgetMs(b);
+                setIndicatorCount(ic);
+                setRemainingMs(Math.max(0, b - (Date.now() - startRef.current)));
+              } else if (type === "progress") {
+                const p = (evt as { pct: number }).pct;
+                const em = (evt as { elapsedMs: number }).elapsedMs;
+                const rm = (evt as { remainingMs: number }).remainingMs;
+                const ids = (evt as { completedIds: string[] }).completedIds;
+                if (typeof p === 'number') setPct(Math.min(100, Math.max(0, p)));
+                if (typeof em === 'number') setElapsedMs(em);
+                if (typeof rm === 'number') setRemainingMs(rm);
+                if (Array.isArray(ids)) setCompletedIds(ids);
+              } else if (type === "report") {
+                sealedRef.current = true; setSealed(true);
+                if (intervalRef.current) clearInterval(intervalRef.current);
+                const rep = (evt as { report: Report }).report;
+                setPct(100);
+                setRemainingMs(0);
+                setReport(rep);
+              } else if (type === "refused") {
+                sealedRef.current = true; setSealed(true);
+                if (intervalRef.current) clearInterval(intervalRef.current);
                 const e = evt as { reason: string; detail: string; repo: string };
-                setSteps((prev) => prev.map((p) => ({ ...p, status: "done" })));
                 setRefused({ reason: e.reason, detail: e.detail, repo: e.repo ?? initialRepo });
               }
             } catch {}
@@ -88,9 +132,15 @@ export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
         if (buf.trim()) {
           try {
             const evt = JSON.parse(buf) as Record<string, unknown>;
-            if ((evt as { type?: string }).type === "phase1") setReport((evt as { report: Report }).report);
-            if ((evt as { type?: string }).type === "report") setReport((evt as { report: Report }).report);
-            if ((evt as { type?: string }).type === "refused") {
+            const type = (evt as { type?: string }).type;
+            if (type === "report") {
+              sealedRef.current = true; setSealed(true);
+              if (intervalRef.current) clearInterval(intervalRef.current);
+              setReport((evt as { report: Report }).report);
+              setPct(100); setRemainingMs(0);
+            } else if (type === "refused") {
+              sealedRef.current = true; setSealed(true);
+              if (intervalRef.current) clearInterval(intervalRef.current);
               const e = evt as { reason: string; detail: string; repo: string };
               setRefused({ reason: e.reason, detail: e.detail, repo: e.repo ?? initialRepo });
             }
@@ -103,7 +153,8 @@ export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
     run();
     return () => {
       cancelled = true;
-      clearInterval(timer);
+      sealedRef.current = true;
+      if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, [initialRepo]);
 
@@ -136,53 +187,66 @@ export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
             ← Back to home
           </Link>
         </div>
-        <p className="mt-8 text-xs text-faint">Live engine phase1 refused · docs/rubric/@phase1 · elapsed {elapsed}s</p>
+        <p className="mt-8 text-xs text-faint">Live engine refused · elapsed {Math.floor(elapsedMs/1000)}s</p>
       </div>
     );
   }
 
   if (!report) {
+    const elapsedS = Math.floor(elapsedMs / 1000);
+    const remainingS = remainingMs !== null ? Math.max(0, Math.ceil(remainingMs / 1000)) : null;
+    const totalS = budgetMs !== null ? Math.ceil(budgetMs / 1000) : null;
     return (
       <div className="mx-auto max-w-5xl px-4 py-10">
-        <div className="mb-8">
-          <p className="text-xs tracking-wider text-faint uppercase">Live report — Phase 1 (GH-API, 6 rows)</p>
-          <h1 className="mt-1 font-mono text-2xl font-semibold tracking-tight">{initialRepo}</h1>
-          <p className="mt-1 text-xs text-faint">Scanning… elapsed {elapsed}s · share: <code className="font-mono">/live?repo={initialRepo}</code></p>
+        {/* Unified top progress bar */}
+        <div className="sticky top-0 z-10 -mx-4 border-b border-hairline bg-background/80 px-4 py-3 backdrop-blur">
+          <div className="mx-auto max-w-5xl">
+            <div className="flex items-center justify-between gap-4">
+              <p className="text-xs tracking-wider text-faint uppercase">Live report — scanning</p>
+              <p className="font-mono text-xs text-muted">
+                {elapsedS}s{totalS !== null ? ` / ${totalS}s` : ""}{remainingS !== null ? ` · ${remainingS}s remaining` : ""} · {pct}%
+              </p>
+            </div>
+            <div className="mt-2 h-2 w-full overflow-hidden rounded bg-panel">
+              <div className="h-full bg-foreground transition-all duration-300" style={{ width: `${pct}%` }} />
+            </div>
+            <p className="mt-1 text-xs text-faint">
+              {indicatorCount !== null && completedIds.length > 0 ? `${completedIds.length} of ${indicatorCount} indicators complete` : indicatorCount !== null ? `0 of ${indicatorCount} indicators complete` : "Preparing scan…"}
+              {budgetMs !== null ? ` · budget ${Math.ceil(budgetMs/1000)}s` : ""}
+              {remainingS !== null ? ` · ${remainingS}s left` : ""}
+            </p>
+          </div>
         </div>
-        <div className="instrument-panel rounded-lg p-4">
-          <h3 className="text-sm font-medium text-ink">Progress</h3>
-          <ul className="mt-3 space-y-2">
-            {steps.map((s) => (
-              <li key={s.id} className="flex items-center gap-2 text-sm">
-                <span className={`h-2 w-2 rounded-full ${s.status === "done" ? "bg-foreground" : s.status === "active" ? "bg-tier-moderate animate-pulse" : "bg-faint"}`} />
-                <span className={s.status === "active" ? "text-foreground font-medium" : s.status === "done" ? "text-muted line-through" : "text-faint"}>{s.label}</span>
-                <span className="ml-auto font-mono text-xs text-faint">{s.status}</span>
-              </li>
-            ))}
-          </ul>
-          <p className="mt-3 text-xs text-faint">Running 6 checks under 10s budget — hero dial appears when scoring seals.</p>
+        <div className="mb-8 mt-6">
+          <h1 className="mt-1 font-mono text-2xl font-semibold tracking-tight">{initialRepo}</h1>
+          <p className="mt-1 text-xs text-faint">Scanning… share: <code className="font-mono">/live?repo={initialRepo}</code></p>
+        </div>
+        <div className="instrument-panel rounded-lg border border-hairline bg-panel/50 p-4">
+          <p className="text-sm text-muted">Analyzing repository — report renders once when complete or budget expires.</p>
+          <p className="mt-2 font-mono text-xs text-faint">{pct}% · {elapsedS}s elapsed{remainingS !== null ? ` · ${remainingS}s remaining` : ""}</p>
         </div>
       </div>
     );
   }
 
   const tier = tierForScore(report.headline.score);
+  const sealedElapsedS = Math.floor(elapsedMs / 1000);
   return (
     <div className="mx-auto max-w-5xl px-4 py-10">
       <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-xs tracking-wider text-faint uppercase">Live report — Phase 1 (GH-API, 6 rows) · {elapsed}s</p>
+          <p className="text-xs tracking-wider text-faint uppercase">Live report · {sealedElapsedS}s {sealed ? "· sealed" : ""}</p>
           <h1 className="mt-1 flex items-center gap-3 font-mono text-2xl font-semibold tracking-tight">
             {report.snapshot.repo}
             <span className="rounded border border-hairline px-1.5 py-0.5 text-xs text-faint">{report.coverage.not_applicable} N/A rows</span>
-            <span className={`rounded px-1.5 py-0.5 text-xs ${report.coverage.measured === 6 ? "bg-foreground text-background" : "border border-hairline text-faint"}`}>{report.coverage.measured === 6 ? "live" : "degraded"}</span>
+            <span className={`rounded px-1.5 py-0.5 text-xs ${report.status === "complete" ? "bg-foreground text-background" : "border border-hairline text-faint"}`}>{report.status}</span>
           </h1>
           <p className="mt-1 text-xs text-faint">
             schema {report.report_schema} · {report.snapshot.rubric_version} · {report.snapshot.scanned_at.slice(0, 10)} · share: <code className="font-mono">/live?repo={report.snapshot.repo}</code>
           </p>
         </div>
         <p className="text-xs text-muted">
-          Live GH-API scan — <Link className="underline underline-offset-2 hover:text-foreground" href="/method">see method</Link> · <Link className="underline underline-offset-2 hover:text-foreground" href="/report/sample">view sample</Link>
+          <Link className="underline underline-offset-2 hover:text-foreground" href="/method">see method</Link> · <Link className="underline underline-offset-2 hover:text-foreground" href="/report/sample">view sample</Link>
         </p>
       </div>
 
@@ -208,7 +272,7 @@ export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
       <div className="mt-10">
         <div className="mb-3 flex items-baseline justify-between">
           <h2 className="text-lg font-semibold">Category scorecard</h2>
-          <span className="text-xs text-faint">weights from the rubric — base set · Phase 1: VEL 4 + SEC 1 + TEST 1</span>
+          <span className="text-xs text-faint">weights from the rubric — base set</span>
         </div>
         <div className="grid gap-4 lg:grid-cols-2">
           {report.categories.map((c) => (
@@ -222,7 +286,7 @@ export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
         <DeepDiveScope scope={report.deep_dive_scope} />
       </div>
       <p className="mt-8 text-xs text-faint">
-        Live report {report.snapshot.scanned_at} · engine {report.snapshot.engine_version} · provenance {report.snapshot.rubric_version} · {elapsed}s
+        Live report {report.snapshot.scanned_at} · engine {report.snapshot.engine_version} · provenance {report.snapshot.rubric_version} · {sealedElapsedS}s
       </p>
     </div>
   );

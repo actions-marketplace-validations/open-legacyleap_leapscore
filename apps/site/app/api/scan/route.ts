@@ -8,69 +8,90 @@ export async function GET(req: NextRequest) {
   const stream = new ReadableStream({
     async start(controller) {
       const send = (o: unknown) => controller.enqueue(encoder.encode(JSON.stringify(o) + "\n"));
-      send({ step: "ingest", status: "start", label: "Ingesting URL" });
-      await new Promise(r => setTimeout(r, 60));
-      send({ step: "ingest", status: "done" });
-      send({ step: "fetch", status: "start", label: "Fetching repo" });
-      send({ step: "checks", status: "start", label: "Running 6 checks (VEL-06, VEL-09, VEL-08, VEL-10, SEC-07, TEST-08)" });
+      const startMs = Date.now();
+      let heartbeat: ReturnType<typeof setInterval> | null = null;
+      let lastPct = 0;
+      let metaSent = false;
+      let budgetMs = 0;
+      let totalCost = 0;
       try {
-        const { runPhase1Scan } = await import("../../../../../packages/engine/orchestrator.phase1");
-        const phase1 = await runPhase1Scan(`https://github.com/${repo}`);
-        if ('status' in phase1 && (phase1 as {status:string}).status === 'snapshot_refused') {
-          const r = phase1 as { status: 'snapshot_refused', reason: string, detail: string };
-          send({ step: "fetch", status: "done" }); send({ step: "checks", status: "done" });
-          send({ type: "refused", reason: r.reason, detail: r.detail, repo });
+        const { runUnifiedScan } = await import("../../../../../packages/engine/orchestrator");
+        const gen = runUnifiedScan(`https://github.com/${repo}`);
+        let finalFacts: import("../../../../../packages/engine/facts").FactRecord[] | undefined;
+        let snapshot: unknown;
+        let scanId: string | undefined;
+
+        for await (const evt of gen) {
+          if (evt.type === 'meta') {
+            budgetMs = evt.budgetMs ?? 0;
+            totalCost = evt.totalCost ?? 0;
+            send({ type: "meta", budgetMs: evt.budgetMs, indicatorCount: evt.indicatorCount, breakdown: evt.breakdown, totalCost });
+            metaSent = true;
+            // heartbeat every 2s to keep proxy alive
+            heartbeat = setInterval(() => {
+              const elapsedMs = Date.now() - startMs;
+              const remainingMs = Math.max(0, (budgetMs ?? 0) - elapsedMs);
+              const timePct = budgetMs ? Math.min(elapsedMs / budgetMs, 1) : 0;
+              const pct = Math.min(100, Math.round(timePct * 100));
+              if (pct > lastPct) lastPct = pct;
+              send({ type: "progress", pct: lastPct, elapsedMs, remainingMs, completedCost: 0, totalCost, completedIds: [] });
+            }, 2000);
+            // yield a heartbeat unref if possible
+            if (heartbeat && typeof (heartbeat as unknown as { unref?: () => void }).unref === 'function') (heartbeat as unknown as { unref: () => void }).unref?.();
+            continue;
+          }
+          if (evt.type === 'progress') {
+            lastPct = evt.pct ?? lastPct;
+            send({ type: "progress", pct: evt.pct, elapsedMs: evt.elapsedMs, remainingMs: evt.remainingMs, completedCost: evt.completedCost, totalCost: evt.totalCost, completedIds: evt.completedIds });
+            continue;
+          }
+          if (evt.type === 'refused') {
+            if (heartbeat) clearInterval(heartbeat);
+            send({ type: "refused", reason: evt.reason, detail: evt.detail, repo });
+            controller.close(); return;
+          }
+          if (evt.type === 'done') {
+            finalFacts = evt.facts as import("../../../../../packages/engine/facts").FactRecord[];
+            snapshot = evt.snapshot;
+            scanId = evt.id;
+            break;
+          }
+        }
+        if (heartbeat) clearInterval(heartbeat);
+        if (!finalFacts) {
+          send({ type: "refused", reason: "crash", detail: "no facts", repo });
           controller.close(); return;
         }
-        const p1 = phase1 as Exclude<typeof phase1, {status:string}>;
-        send({ step: "fetch", status: "done" }); send({ step: "checks", status: "done" });
-        // Send Phase1 report immediately (6/102)
-        send({ type: "phase1", report: { ...p1, coverage: { measured: 6, estimated: 0, unknown: 96, not_applicable: 0, measured_pct: "6%", estimated_pct: "0%", unknown_pct: "94%" } } });
-        // Phase 2
-        send({ step: "cloning", status: "start", label: "Cloning (shallow --filter=blob:none)" });
-        await new Promise(r => setTimeout(r, 80));
-        send({ step: "cloning", status: "done" });
-        send({ step: "sniffing", status: "start", label: "Sniffing manifests" });
-        await new Promise(r => setTimeout(r, 60));
-        send({ step: "sniffing", status: "done" });
-        send({ step: "scanning", status: "start", label: "Scanning 13 (ECOS 5 + SEC 3 + ARCH 3 + TEST 2)" });
-        // Run Phase2 via orchestrator two-phase (in-process)
-        const { runTwoPhaseScan } = await import("../../../../../packages/engine/orchestrator");
-        const gen = runTwoPhaseScan(`https://github.com/${repo}`);
-        let finalFacts: unknown[] | undefined;
-        for await (const evt of gen) {
-          if ((evt as {phase:string}).phase === 'scanning') send({ step: "scanning", status: "active" });
-          if ((evt as {facts: unknown[]}).facts && (evt as {phase:string}).phase === 'done') finalFacts = (evt as {facts: unknown[]}).facts;
-          if ((evt as {error:string}).error) { send({ type: "refused", reason: "phase2_error", detail: (evt as {error:string}).error, repo }); controller.close(); return; }
-        }
-        send({ step: "scanning", status: "done" });
-        send({ step: "scoring", status: "start", label: "Scoring 19" });
-        await new Promise(r => setTimeout(r, 50));
-        send({ step: "scoring", status: "done" });
-        // For MVP, if Phase2 facts not available, synthesize 19-row report from Phase1 + mock Phase2
+        // Single terminal scoring — no intermediate report
         const { scoreMvp } = await import("../../../../../packages/engine/scorer/mvp");
-        const factsForScorer = (finalFacts as unknown as import("../../../../../packages/engine/facts").FactRecord[]) ?? (p1 as {facts: import("../../../../../packages/engine/facts").FactRecord[]}).facts;
-        const mvp = scoreMvp(factsForScorer as never);
+        const mvp = scoreMvp(finalFacts as never);
         const finalReport = {
-          id: p1.id,
-          snapshot: (p1 as {snapshot: unknown}).snapshot,
-          headline: { score: Math.round(mvp.score*100)/100, tier: mvp.score >=80 ? 'Healthy' : mvp.score >=53 ? 'Moderate' : mvp.score >=27 ? 'High Risk' : 'Critical' },
+          id: scanId ?? `ls_${Date.now().toString(36)}`,
+          snapshot: snapshot ?? { repo, scanned_at: new Date().toISOString(), engine_version: 'unified/1.0', rubric_version: 'docs/rubric/@mvp' },
+          headline: { score: Math.round(mvp.score*100)/100, tier: mvp.score >=80 ? 'Healthy' : mvp.score >=53 ? 'Moderate' : mvp.score >=27 ? 'High Risk' : 'Critical', ci_band: mvp.status === 'complete' ? 'complete' : 'degraded' },
           categories: mvp.categories,
           coverage: mvp.coverage,
           status: mvp.status,
           gates: mvp.gates,
-          provenance: (p1 as {provenance: unknown}).provenance,
+          provenance: { tool_manifest: [] },
           top_blockers: [],
           deep_dive_scope: [],
           full_table: mvp.rows,
           report_schema: "1",
           sample: true,
         };
+        // Ensure 100% progress before terminal report
+        const elapsedMs = Date.now() - startMs;
+        send({ type: "progress", pct: 100, elapsedMs, remainingMs: 0, completedCost: totalCost, totalCost, completedIds: [] });
         send({ type: "report", report: finalReport });
       } catch (e) {
+        if (heartbeat) clearInterval(heartbeat);
         const detail = e instanceof Error ? e.message : String(e);
         send({ type: "refused", reason: "crash", detail: detail.slice(0,500), repo });
-      } finally { controller.close(); }
+      } finally {
+        if (heartbeat) clearInterval(heartbeat);
+        controller.close();
+      }
     }});
   return new Response(stream, { headers: { "content-type": "application/x-ndjson", "cache-control": "no-cache, no-store" } });
 }
