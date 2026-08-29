@@ -130,6 +130,11 @@ export type TraceEntry = {
   elapsedMs?: number;
   remainingMs?: number;
   completedIds?: string[];
+  phase?: "ingest" | "gh" | "clone" | "sniff" | "detector" | "scoring" | "budget" | "seal" | "milestone" | "start" | "meta" | "progress" | "scoring-old" | "sealed";
+  detectorId?: string;
+  durationMs?: number;
+  status?: "measured" | "estimated" | "unknown" | "error" | "complete" | "degraded";
+  errorKind?: "cap" | "crash" | "rate-limit";
 };
 
 export interface ReportEnvelope {
@@ -203,6 +208,7 @@ export async function readReportEnvelope(runId: string): Promise<ReportEnvelope 
     const raw = await readFile(filePath, "utf8");
     const parsed = JSON.parse(raw) as ReportEnvelope;
     if (!parsed.meta || !parsed.report) return null;
+    if (!Array.isArray(parsed.trace)) parsed.trace = [];
     return parsed;
   } catch {
     return null;

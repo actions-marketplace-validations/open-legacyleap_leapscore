@@ -113,6 +113,17 @@ export async function GET(req: NextRequest) {
             }
             continue;
           }
+          if (evt.type === 'trace') {
+            const label = (evt as { label?: string }).label ?? String(evt.milestone ?? "");
+            const phase = (evt as { phase?: string }).phase;
+            const detectorId = (evt as { detectorId?: string }).detectorId;
+            const durationMs = (evt as { durationMs?: number }).durationMs;
+            const status = (evt as { status?: string }).status;
+            const errorKind = (evt as { errorKind?: string }).errorKind;
+            send({ type: "trace", ts: evt.elapsedMs ?? Date.now() - startMs, elapsedMs: evt.elapsedMs, label, phase, detectorId, durationMs, status, errorKind });
+            tracePush(label, { type: "trace", phase, detectorId, durationMs, status, errorKind } as Partial<import("@/lib/reports").TraceEntry>);
+            continue;
+          }
           if (evt.type === 'refused') {
             if (heartbeat) clearInterval(heartbeat);
             send({ type: "refused", reason: evt.reason, detail: evt.detail, repo });
@@ -164,43 +175,53 @@ export async function GET(req: NextRequest) {
         tracePush(`Scoring — gates evaluated`, { type: "scoring" });
         const sealedLabel = `Sealed — ${mvp.status} · ${mvp.coverage.measured}/${mvp.coverage.measured + mvp.coverage.unknown + mvp.coverage.estimated} measured`;
         tracePush(sealedLabel, { type: "sealed", pct: 100 });
-        // Persist envelope: { meta, report, trace } — single JSON per run, do not fail scan if write errors
-        // If client aborted (StrictMode double-fetch), skip writing duplicate
+        // Truncate trace if unbounded (>200) — keep seal last, sentinel first
+        let traceToPersist: import("@/lib/reports").TraceEntry[] = trace;
+        if (trace.length > 200) {
+          const sealIdx = trace.findIndex(t => t.type === "sealed");
+          const sealEntry = sealIdx >= 0 ? trace[sealIdx] : null;
+          const withoutSeal = sealIdx >= 0 ? trace.filter((_, i) => i !== sealIdx) : trace;
+          const toDrop = withoutSeal.length - 199;
+          const kept = withoutSeal.slice(toDrop);
+          const sentinel: import("@/lib/reports").TraceEntry = { ts: kept[0]?.ts ?? 0, elapsedMs: kept[0]?.elapsedMs ?? 0, label: `… ${toDrop} earlier entries truncated`, phase: "budget" };
+          traceToPersist = sealEntry ? [sentinel, ...kept, sealEntry] : [sentinel, ...kept];
+        }
+        // Build meta deterministically before deciding to persist (so client always gets runId)
         let persistedMeta: unknown = null;
-        if (!clientAborted && !req.signal.aborted) {
-          try {
-            const { repoSlugFromUrl, normalizeTs, buildRunId, buildMeta, resolveEngineSha7, writeReportEnvelope } = await import("@/lib/reports");
-            const repoSlug = repoSlugFromUrl(normalizedRepo);
-            const ranAt = scannedAt;
-            const ts = normalizeTs(ranAt);
-            const engineSha7 = resolveEngineSha7();
-            const runId = buildRunId(repoSlug, engineSha7, ts);
-            const durationMs = Date.now() - startMs;
-            const meta = buildMeta({
-              repo: normalizedRepo,
-              repoSlug,
-              engineSha7,
-              runId,
-              ranAt,
-              durationMs,
-              budgetMs,
-              repoSha: String(repoSha),
-              report: finalReport as unknown as import("@/lib/types").Report,
-            });
-            persistedMeta = meta;
-            await writeReportEnvelope({ meta, report: finalReport as unknown as import("@/lib/types").Report, trace });
-          } catch (e) {
-            console.warn("[scan] failed to persist report", (e as Error).message);
+        try {
+          const { repoSlugFromUrl, normalizeTs, buildRunId, buildMeta, resolveEngineSha7, writeReportEnvelope } = await import("@/lib/reports");
+          const repoSlug = repoSlugFromUrl(normalizedRepo);
+          const ranAt = scannedAt;
+          const ts = normalizeTs(ranAt);
+          const engineSha7 = resolveEngineSha7();
+          const runId = buildRunId(repoSlug, engineSha7, ts);
+          const durationMs = Date.now() - startMs;
+          const meta = buildMeta({
+            repo: normalizedRepo,
+            repoSlug,
+            engineSha7,
+            runId,
+            ranAt,
+            durationMs,
+            budgetMs,
+            repoSha: String(repoSha),
+            report: finalReport as unknown as import("@/lib/types").Report,
+          });
+          persistedMeta = meta;
+          if (!clientAborted && !req.signal.aborted) {
+            await writeReportEnvelope({ meta, report: finalReport as unknown as import("@/lib/types").Report, trace: traceToPersist });
+          } else {
+            console.warn("[scan] client aborted — skipping persist to avoid duplicate file (meta still sent)");
           }
-        } else {
-          console.warn("[scan] client aborted — skipping persist to avoid duplicate file");
+        } catch (e) {
+          console.warn("[scan] failed to persist report", (e as Error).message);
         }
         // Ensure 100% progress before terminal report
         const elapsedMs = Date.now() - startMs;
         send({ type: "progress", pct: 100, elapsedMs, remainingMs: 0, completedCost: totalCost, totalCost, completedIds: [] });
-        send({ type: "report", report: finalReport, meta: persistedMeta, trace });
+        send({ type: "report", report: finalReport, meta: persistedMeta, trace: traceToPersist });
         // Resolve single-flight promise so coalesced followers reuse the same file
-        resolveLeader({ report: finalReport, meta: persistedMeta, trace, budgetMs, totalCost });
+        resolveLeader({ report: finalReport, meta: persistedMeta, trace: traceToPersist, budgetMs, totalCost });
       } catch (e) {
         if (heartbeat) clearInterval(heartbeat);
         const detail = e instanceof Error ? e.message : String(e);

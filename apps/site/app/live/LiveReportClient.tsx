@@ -2,25 +2,19 @@
 
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
-import { DeepDiveScope, TopBlockers } from "@/components/blockers";
-import { CategorySection } from "@/components/category-section";
-import { CoverageStrip } from "@/components/coverage-strip";
-import { DialGauge } from "@/components/dial-gauge";
-import { GatesTable } from "@/components/gates-table";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
-import { tierForScore } from "@/lib/scoring";
-import { SampleFullTable } from "@/components/sample-full-table";
 import type { Report } from "@/lib/types";
+import type { TraceEntry } from "@/lib/reports";
 
 type TimelineEntry = { ts: number; label: string };
 
 // StrictMode double-mount guard: in dev React mounts/unmounts/mounts,
-// which would otherwise trigger two concurrent /api/scan fetches and thus
-// two distinct persisted files per logical run. Keep one in-flight per repo.
 const inflightScans = new Map<string, AbortController>();
 
 export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
+  const router = useRouter();
   const [budgetMs, setBudgetMs] = useState<number | null>(null);
   const [indicatorCount, setIndicatorCount] = useState<number | null>(null);
   const [pct, setPct] = useState(0);
@@ -29,11 +23,14 @@ export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
   const [completedIds, setCompletedIds] = useState<string[]>([]);
   const [timeline, setTimeline] = useState<TimelineEntry[]>([]);
   const [report, setReport] = useState<Report | null>(null);
+  const [persistedMeta, setPersistedMeta] = useState<{ runId: string } | null>(null);
+  const [pendingRunId, setPendingRunId] = useState<string | null>(null);
   const [refused, setRefused] = useState<{ reason: string; detail: string; repo: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sealed, setSealed] = useState(false);
-  const [showReport, setShowReport] = useState(false);
   const [timelineOpen, setTimelineOpen] = useState(true);
+  const [detectorTraceOpen, setDetectorTraceOpen] = useState(false);
+  const [traces, setTraces] = useState<TraceEntry[]>([]);
 
   const startRef = useRef<number>(Date.now());
   const budgetRef = useRef<number | null>(null);
@@ -41,6 +38,7 @@ export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const prevCompletedRef = useRef<Set<string>>(new Set());
   const timelineRef = useRef<TimelineEntry[]>([]);
+  const tracesRef = useRef<TraceEntry[]>([]);
 
   function appendTimeline(label: string) {
     const elapsed = Date.now() - startRef.current;
@@ -49,10 +47,13 @@ export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
     setTimeline([...timelineRef.current]);
   }
 
+  function appendTrace(entry: TraceEntry) {
+    tracesRef.current = [...tracesRef.current, entry];
+    setTraces([...tracesRef.current]);
+  }
+
   useEffect(() => {
     let cancelled = false;
-    // StrictMode double-mount: abort the previous in-flight fetch for this repo
-    // so only the second (real) mount runs to completion and produces one file.
     const prev = inflightScans.get(initialRepo);
     if (prev) {
       prev.abort();
@@ -64,27 +65,31 @@ export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
     startRef.current = Date.now();
     sealedRef.current = false;
     timelineRef.current = [];
+    tracesRef.current = [];
     prevCompletedRef.current = new Set();
     setSealed(false);
-    setShowReport(false);
     setTimelineOpen(true);
+    setDetectorTraceOpen(false);
+    setTraces([]);
     setTimeline([]);
     setPct(0);
     setElapsedMs(0);
     setRemainingMs(null);
     setCompletedIds([]);
     setReport(null);
+    setPersistedMeta(null);
+    setPendingRunId(null);
     setRefused(null);
     setError(null);
     setBudgetMs(null);
     setIndicatorCount(null);
 
-    // initial entry
     const initLabel = `Starting scan — ${initialRepo}`;
     timelineRef.current = [{ ts: 0, label: initLabel }];
     setTimeline([...timelineRef.current]);
+    tracesRef.current = [{ ts: 0, elapsedMs: 0, label: initLabel, phase: "ingest" }];
+    setTraces([...tracesRef.current]);
 
-    // local tick for smooth elapsed/remaining between progress frames
     intervalRef.current = setInterval(() => {
       if (sealedRef.current) return;
       const elapsed = Date.now() - startRef.current;
@@ -92,7 +97,6 @@ export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
       const b = budgetRef.current;
       if (b !== null) {
         setRemainingMs(Math.max(0, b - elapsed));
-        // time-only fallback pct if no progress frame yet
         setPct((prev) => {
           if (prev >= 99) return prev;
           const timePct = Math.min(99, Math.round((elapsed / b) * 100));
@@ -100,6 +104,11 @@ export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
         });
       }
     }, 200);
+
+    async function navigateToReport(runId: string) {
+      if (cancelled || !runId) return;
+      router.push(`/reports/${encodeURIComponent(runId)}`);
+    }
 
     async function run() {
       try {
@@ -114,12 +123,21 @@ export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
             sealedRef.current = true; setSealed(true);
             if (intervalRef.current) clearInterval(intervalRef.current);
             const rep = (json as { report: Report }).report;
+            const meta = (json as { meta?: { runId?: string } }).meta;
+            const tr = (json as { trace?: TraceEntry[] }).trace;
+            if (tr && Array.isArray(tr)) {
+              tracesRef.current = tr as TraceEntry[];
+              setTraces([...tracesRef.current]);
+            }
             appendTimeline(`Scoring — gates evaluated`);
             appendTimeline(`Sealed — ${rep.status} · ${rep.coverage.measured}/${(rep.coverage.measured + rep.coverage.unknown + rep.coverage.estimated)} measured`);
             setReport(rep);
-            // auto-reveal fallback if background tab
-            if (typeof document !== "undefined" && document.hidden) {
-              setTimeout(() => { if (!cancelled) setShowReport(true); }, 2000);
+            if (meta?.runId) {
+              setPersistedMeta({ runId: meta.runId });
+              setPendingRunId(meta.runId);
+              if (typeof document !== "undefined" && document.hidden) {
+                setTimeout(() => { if (!cancelled) navigateToReport(meta.runId!); }, 2000);
+              }
             }
           } else if ((json as { type?: string }).type === "refused") {
             sealedRef.current = true; setSealed(true);
@@ -166,7 +184,6 @@ export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
                 if (typeof rm === 'number') setRemainingMs(rm);
                 if (Array.isArray(ids)) {
                   setCompletedIds(ids);
-                  // delta append
                   const prev = prevCompletedRef.current;
                   const news = ids.filter((id) => !prev.has(id));
                   if (news.length > 0) {
@@ -181,19 +198,45 @@ export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
                 if (typeof milestone === "string" && milestone.trim()) {
                   appendTimeline(milestone);
                 }
+              } else if (type === "trace") {
+                const label = String((evt as { label?: string }).label ?? "");
+                if (!label.trim()) continue;
+                const entry: TraceEntry = {
+                  ts: (evt as { ts?: number }).ts ?? (evt as { elapsedMs?: number }).elapsedMs ?? Date.now() - startRef.current,
+                  elapsedMs: (evt as { elapsedMs?: number }).elapsedMs,
+                  label,
+                  phase: (evt as { phase?: string }).phase as TraceEntry["phase"],
+                  detectorId: (evt as { detectorId?: string }).detectorId,
+                  durationMs: (evt as { durationMs?: number }).durationMs,
+                  status: (evt as { status?: string }).status as TraceEntry["status"],
+                  errorKind: (evt as { errorKind?: string }).errorKind as TraceEntry["errorKind"],
+                };
+                appendTrace(entry);
               } else if (type === "report") {
                 sealedRef.current = true; setSealed(true);
                 if (intervalRef.current) clearInterval(intervalRef.current);
                 const rep = (evt as { report: Report }).report;
+                const meta = (evt as { meta?: { runId?: string } }).meta;
+                const tr = (evt as { trace?: TraceEntry[] }).trace;
+                if (tr && Array.isArray(tr) && tr.length > 0) {
+                  // Prefer full trace from terminal report if we missed frames
+                  tracesRef.current = tr as TraceEntry[];
+                  setTraces([...tracesRef.current]);
+                } else {
+                  appendTimeline(`Scoring — gates evaluated`);
+                  const total = rep.coverage.measured + rep.coverage.unknown + rep.coverage.estimated + rep.coverage.not_applicable;
+                  const measured = rep.coverage.measured;
+                  appendTimeline(`Sealed — ${rep.status} · ${measured}/${indicatorCount ?? total} measured`);
+                }
                 setPct(100);
                 setRemainingMs(0);
-                appendTimeline(`Scoring — gates evaluated`);
-                const total = rep.coverage.measured + rep.coverage.unknown + rep.coverage.estimated + rep.coverage.not_applicable;
-                const measured = rep.coverage.measured;
-                appendTimeline(`Sealed — ${rep.status} · ${measured}/${indicatorCount ?? total} measured`);
                 setReport(rep);
-                if (typeof document !== "undefined" && document.hidden) {
-                  setTimeout(() => { if (!cancelled) setShowReport(true); }, 2000);
+                if (meta?.runId) {
+                  setPersistedMeta({ runId: meta.runId });
+                  setPendingRunId(meta.runId);
+                  if (typeof document !== "undefined" && document.hidden) {
+                    setTimeout(() => { if (!cancelled) navigateToReport(meta.runId!); }, 2000);
+                  }
                 }
               } else if (type === "refused") {
                 sealedRef.current = true; setSealed(true);
@@ -212,13 +255,24 @@ export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
               sealedRef.current = true; setSealed(true);
               if (intervalRef.current) clearInterval(intervalRef.current);
               const rep = (evt as { report: Report }).report;
-              appendTimeline(`Scoring — gates evaluated`);
-              const total = rep.coverage.measured + rep.coverage.unknown + rep.coverage.estimated + rep.coverage.not_applicable;
-              appendTimeline(`Sealed — ${rep.status} · ${rep.coverage.measured}/${indicatorCount ?? total} measured`);
+              const meta = (evt as { meta?: { runId?: string } }).meta;
+              const tr = (evt as { trace?: TraceEntry[] }).trace;
+              if (tr && Array.isArray(tr) && tr.length > 0) {
+                tracesRef.current = tr as TraceEntry[];
+                setTraces([...tracesRef.current]);
+              } else {
+                appendTimeline(`Scoring — gates evaluated`);
+                const total = rep.coverage.measured + rep.coverage.unknown + rep.coverage.estimated + rep.coverage.not_applicable;
+                appendTimeline(`Sealed — ${rep.status} · ${rep.coverage.measured}/${indicatorCount ?? total} measured`);
+              }
               setReport((evt as { report: Report }).report);
               setPct(100); setRemainingMs(0);
-              if (typeof document !== "undefined" && document.hidden) {
-                setTimeout(() => { if (!cancelled) setShowReport(true); }, 2000);
+              if (meta?.runId) {
+                setPersistedMeta({ runId: meta.runId });
+                setPendingRunId(meta.runId);
+                if (typeof document !== "undefined" && document.hidden) {
+                  setTimeout(() => { if (!cancelled) navigateToReport(meta.runId!); }, 2000);
+                }
               }
             } else if (type === "refused") {
               sealedRef.current = true; setSealed(true);
@@ -241,12 +295,8 @@ export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
       sealedRef.current = true;
       if (intervalRef.current) clearInterval(intervalRef.current);
       abortController.abort();
-      // Don't delete here if StrictMode cleanup will be followed by second mount:
-      // the abort will cause the fetch to reject, then finally deletes. But if
-      // cleanup is for unmount not StrictMode, we still want to clear.
-      // Keep delete in finally too; this immediate abort handles duplicate.
     };
-  }, [initialRepo]);
+  }, [initialRepo, router]);
 
   if (error) {
     return (
@@ -270,7 +320,6 @@ export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
             <br />
             Try a public GitHub URL like <code className="font-mono">vercel/next.js</code>.
           </p>
-          
           <Link href="/" className="mt-4 inline-block text-sm underline underline-offset-2 hover:text-foreground">
             ← Back to home
           </Link>
@@ -280,13 +329,36 @@ export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
     );
   }
 
-  // Sealed but not yet revealed — show timeline + reveal CTA (no hard swap)
-  if (report && !showReport) {
+  // Derived grouping: milestones primary, detector secondary
+  const milestoneRows = traces.filter(t => t.phase !== "detector");
+  const detectorRows = traces.filter(t => t.phase === "detector");
+  const hasTraceStream = traces.length > 1; // beyond init
+
+  function renderTimelineList(entries: Array<{ ts: number; label: string }>) {
+    return (
+      <ol className="mt-3 space-y-1.5">
+        {entries.map((e, idx) => (
+          <li key={idx} className="flex gap-3 font-mono text-xs">
+            <span className="w-12 shrink-0 text-faint tabular-nums">{(e.ts / 1000).toFixed(1)}s</span>
+            <span className="text-muted">{e.label}</span>
+          </li>
+        ))}
+      </ol>
+    );
+  }
+
+  // Sealed — show CTA navigating to persisted report
+  if (report) {
     const isDegraded = report.status !== "complete";
     const measured = report.coverage.measured;
     const totalForLabel = indicatorCount ?? (report.coverage.measured + report.coverage.unknown + report.coverage.estimated + report.coverage.not_applicable);
-    const ctaLabel = isDegraded ? `Reveal partial report — ${measured}/${totalForLabel} measured` : "Reveal report";
+    const ctaLabel = isDegraded ? `Reveal report — ${measured}/${totalForLabel} measured` : "Reveal report";
     const elapsedS = Math.floor(elapsedMs / 1000);
+    const runId = persistedMeta?.runId ?? pendingRunId;
+    const reportHref = runId ? `/reports/${encodeURIComponent(runId)}` : null;
+    const handleReveal = () => {
+      if (reportHref) router.push(reportHref);
+    };
     return (
       <div className="mx-auto max-w-5xl px-4 py-10">
         <div className="sticky top-0 z-10 -mx-4 border-b border-hairline bg-background/80 px-4 py-3 backdrop-blur">
@@ -300,6 +372,7 @@ export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
             </div>
             <p className="mt-1 text-xs text-faint">
               {measured} of {totalForLabel} indicators measured · {report.status}
+              {runId ? ` · ${runId.slice(0, 32)}…` : ""}
             </p>
           </div>
         </div>
@@ -309,26 +382,83 @@ export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
 
         <div className="instrument-panel rounded-lg border border-hairline bg-panel/50 p-4">
           <h2 className="text-sm font-medium text-ink">Scan timeline</h2>
-          <p className="mt-0.5 text-xs text-faint">{timeline.length} steps · {elapsedS}s elapsed</p>
-          <ol className="mt-3 space-y-1.5">
-            {timeline.map((e, idx) => (
-              <li key={idx} className="flex gap-3 font-mono text-xs">
-                <span className="w-12 shrink-0 text-faint tabular-nums">{(e.ts / 1000).toFixed(1)}s</span>
-                <span className="text-muted">{e.label}</span>
-              </li>
-            ))}
-          </ol>
+          <p className="mt-0.5 text-xs text-faint">{(hasTraceStream ? traces : timeline).length} steps · {elapsedS}s elapsed</p>
+          {hasTraceStream ? (
+            <>
+              <ol className="mt-3 space-y-1.5">
+                {milestoneRows.map((e, idx) => (
+                  <li key={`m-${idx}`} className="flex gap-3 font-mono text-xs">
+                    <span className="w-12 shrink-0 text-faint tabular-nums">{(e.ts / 1000).toFixed(1)}s</span>
+                    <span className="text-muted">{e.label}</span>
+                  </li>
+                ))}
+              </ol>
+              {detectorRows.length > 0 && (
+                <Collapsible open={detectorTraceOpen} onOpenChange={setDetectorTraceOpen} className="mt-3">
+                  <CollapsibleTrigger className="flex w-full items-center justify-between rounded border border-hairline px-3 py-2 text-left hover:bg-panel focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                    <span className="text-xs font-medium text-ink">Show detector trace ({detectorRows.length})</span>
+                    <span className="text-xs text-faint">{detectorTraceOpen ? "Hide" : "Show"}</span>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <ol className="mt-2 max-h-64 space-y-1 overflow-auto pr-1">
+                      {detectorRows.map((e, idx) => (
+                        <li key={`d-${idx}`} className="flex gap-3 font-mono text-xs">
+                          <span className="w-12 shrink-0 text-faint tabular-nums">{(e.ts / 1000).toFixed(1)}s</span>
+                          <span className="text-muted">{e.label}</span>
+                          {e.durationMs != null && <span className="text-faint">· {e.durationMs}ms</span>}
+                        </li>
+                      ))}
+                    </ol>
+                  </CollapsibleContent>
+                </Collapsible>
+              )}
+            </>
+          ) : (
+            renderTimelineList(timeline)
+          )}
         </div>
 
-        <div className="mt-6 flex justify-center">
-          <button
-            onClick={() => setShowReport(true)}
-            className="rounded-md bg-foreground px-6 py-3 text-sm font-medium text-background hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            {ctaLabel}
-          </button>
+        <div className="mt-6 flex flex-col items-center gap-2">
+          {reportHref ? (
+            <Link
+              href={reportHref}
+              prefetch
+              onClick={(e) => {
+                // also handle via router for consistency, but allow native link semantics for bookmark/copy
+                // let Next.js handle navigation
+              }}
+              className="rounded-md bg-foreground px-6 py-3 text-sm font-medium text-background hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {ctaLabel}
+            </Link>
+          ) : (
+            <button
+              disabled
+              className="rounded-md bg-foreground px-6 py-3 text-sm font-medium text-background opacity-50"
+            >
+              {ctaLabel}
+            </button>
+          )}
+          {/* Fallback button for programmatic navigation (e.g. keyboard) kept for parity */}
+          {reportHref && (
+            <button onClick={handleReveal} className="sr-only">
+              reveal
+            </button>
+          )}
         </div>
-        <p className="mt-2 text-center text-xs text-faint">Timeline stays available after reveal as “Show scan log”</p>
+        <p className="mt-2 text-center text-xs text-faint">
+          {runId ? (
+            <>
+              Report will open at{" "}
+              <Link href={reportHref!} className="font-mono underline underline-offset-2 hover:text-foreground">
+                /reports/{runId}
+              </Link>{" "}
+              — bookmarkable
+            </>
+          ) : (
+            <>Preparing permalink… (report sealed, awaiting runId)</>
+          )}
+        </p>
       </div>
     );
   }
@@ -339,7 +469,6 @@ export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
     const totalS = budgetMs !== null ? Math.ceil(budgetMs / 1000) : null;
     return (
       <div className="mx-auto max-w-5xl px-4 py-10">
-        {/* Unified top progress bar */}
         <div className="sticky top-0 z-10 -mx-4 border-b border-hairline bg-background/80 px-4 py-3 backdrop-blur">
           <div className="mx-auto max-w-5xl">
             <div className="flex items-center justify-between gap-4">
@@ -364,123 +493,66 @@ export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
         <div className="instrument-panel rounded-lg border border-hairline bg-panel/50 p-4">
           <h2 className="text-sm font-medium text-ink">Scan timeline</h2>
           <p className="mt-0.5 text-xs text-faint">
-            {timeline.length > 0 ? `${timeline.length} steps · live` : "Preparing scan…"}
+            {hasTraceStream ? `${traces.length} steps · live` : timeline.length > 0 ? `${timeline.length} steps · live` : "Preparing scan…"}
           </p>
-          <ol className="mt-3 max-h-64 space-y-1.5 overflow-auto pr-1">
-            {timeline.map((e, idx) => (
-              <li key={idx} className="flex gap-3 font-mono text-xs">
-                <span className="w-12 shrink-0 text-faint tabular-nums">{(e.ts / 1000).toFixed(1)}s</span>
-                <span className="text-muted">{e.label}</span>
-              </li>
-            ))}
-            {timeline.length === 0 && <li className="text-xs text-faint">Waiting for ingest…</li>}
-          </ol>
+          {hasTraceStream ? (
+            <>
+              <ol className="mt-3 max-h-64 space-y-1.5 overflow-auto pr-1">
+                {milestoneRows.map((e, idx) => (
+                  <li key={`m-${idx}`} className="flex gap-3 font-mono text-xs">
+                    <span className="w-12 shrink-0 text-faint tabular-nums">{(e.ts / 1000).toFixed(1)}s</span>
+                    <span className="text-muted">{e.label}</span>
+                  </li>
+                ))}
+              </ol>
+              {detectorRows.length > 0 && (
+                <Collapsible open={detectorTraceOpen} onOpenChange={setDetectorTraceOpen} className="mt-3">
+                  <CollapsibleTrigger className="flex w-full items-center justify-between rounded border border-hairline px-3 py-2 text-left hover:bg-panel focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                    <span className="text-xs font-medium text-ink">Detector trace ({detectorRows.length})</span>
+                    <span className="text-xs text-faint">{detectorTraceOpen ? "Hide" : "Show"}</span>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <ol className="mt-2 max-h-64 space-y-1 overflow-auto pr-1">
+                      {detectorRows.map((e, idx) => (
+                        <li key={`d-${idx}`} className="flex gap-3 font-mono text-xs">
+                          <span className="w-12 shrink-0 text-faint tabular-nums">{(e.ts / 1000).toFixed(1)}s</span>
+                          <span className="text-muted">{e.label}</span>
+                          {e.durationMs != null && <span className="text-faint">· {e.durationMs}ms</span>}
+                        </li>
+                      ))}
+                    </ol>
+                  </CollapsibleContent>
+                </Collapsible>
+              )}
+            </>
+          ) : (
+            <>
+              <ol className="mt-3 max-h-64 space-y-1.5 overflow-auto pr-1">
+                {timeline.map((e, idx) => (
+                  <li key={idx} className="flex gap-3 font-mono text-xs">
+                    <span className="w-12 shrink-0 text-faint tabular-nums">{(e.ts / 1000).toFixed(1)}s</span>
+                    <span className="text-muted">{e.label}</span>
+                  </li>
+                ))}
+                {timeline.length === 0 && <li className="text-xs text-faint">Waiting for ingest…</li>}
+              </ol>
+            </>
+          )}
           <p className="mt-3 font-mono text-xs text-faint">{pct}% · {elapsedS}s elapsed{remainingS !== null ? ` · ${remainingS}s remaining` : ""}</p>
         </div>
       </div>
     );
   }
 
-  const tier = tierForScore(report.headline.score);
-  const sealedElapsedS = Math.floor(elapsedMs / 1000);
-  const repoCommitSha = report.snapshot.scanned_commit;
-  const shortSha = repoCommitSha && repoCommitSha !== "unknown" ? repoCommitSha.slice(0, 7) : null;
-  const commitLink = repoCommitSha && repoCommitSha !== "unknown"
-    ? `https://github.com/${report.snapshot.repo}/commit/${repoCommitSha}`
-    : null;
-  return (
-    <div className="mx-auto max-w-5xl px-4 py-10">
-      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="text-xs tracking-wider text-faint uppercase">Live report · {sealedElapsedS}s {sealed ? "· sealed" : ""}</p>
-          <h1 className="mt-1 flex items-center gap-3 font-mono text-2xl font-semibold tracking-tight">
-            {report.snapshot.repo}
-            <span className="rounded border border-hairline px-1.5 py-0.5 text-xs text-faint">{report.coverage.not_applicable} N/A rows</span>
-            <span className={`rounded px-1.5 py-0.5 text-xs ${report.status === "complete" ? "bg-foreground text-background" : "border border-hairline text-faint"}`}>{report.status}</span>
-          </h1>
-          <p className="mt-1 text-xs text-faint">
-            {shortSha ? (
-              <>
-                commit <a href={commitLink} className="underline underline-offset-2 hover:text-foreground font-mono">{shortSha}</a>
-              </>
-            ) : (
-              "commit unknown"
-            )}
-          </p>
-        </div>
-      </div>
-
-      {/* Report — animated in after reveal, timeline collapsible above */}
-      <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 motion-reduce:animate-none motion-reduce:transition-none">
-        <div className="grid gap-8 lg:grid-cols-[260px_minmax(0,1fr)]">
-          <div className="flex flex-col items-center">
-            <DialGauge score={report.headline.score} tierColor={tier.color} label="system score" />
-            <div className="mt-2 text-center">
-              <div className="font-mono text-4xl font-semibold tabular-nums">{report.headline.score}</div>
-              <div className={`text-sm ${tierLabel(tier.color)}`}>{report.headline.tier}</div>
-              <div className="mt-1 text-xs text-faint">{report.headline.ci_band}</div>
-            </div>
-          </div>
-          <div className="space-y-6">
-            <CoverageStrip coverage={report.coverage} />
-            <TopBlockers blockers={report.top_blockers ?? []} />
-          </div>
-        </div>
-
-        <div className="mt-10 space-y-6">
-          <GatesTable gates={report.gates} />
-        </div>
-
-        <div className="mt-10">
-          <div className="mb-3 flex items-baseline justify-between">
-            <h2 className="text-lg font-semibold">Category scorecard</h2>
-            <span className="text-xs text-faint">weights from the rubric — base set</span>
-          </div>
-          <div className="grid gap-4 lg:grid-cols-2">
-            {report.categories.filter((c) => c.indicator_rows.length > 0).map((c) => (
-              <CategorySection key={c.id} category={c} />
-            ))}
-          </div>
-        </div>
-
-        <SampleFullTable rows={report.full_table} />
-        <div className="mt-10 border-t border-hairline pt-8">
-          <DeepDiveScope scope={report.deep_dive_scope} />
-        </div>
-        <p className="mt-8 text-xs text-faint">
-          Live report {report.snapshot.scanned_at} · engine {report.snapshot.engine_version} · provenance {report.snapshot.rubric_version} · {sealedElapsedS}s
-        </p>
-      </div>
-
-      {/* Collapsed timeline after reveal */}
-      <div className="mt-10 instrument-panel overflow-hidden rounded-lg border border-hairline">
-        <Collapsible open={timelineOpen} onOpenChange={setTimelineOpen}>
-          <CollapsibleTrigger className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-panel/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-            <span className="text-sm font-medium text-ink">Scan log</span>
-            <span className="text-xs text-faint">{timeline.length} steps · {showReport ? "Show scan log" : "Hide"} · {sealedElapsedS}s</span>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <ol className="border-t border-hairline px-4 py-3 space-y-1.5">
-              {timeline.map((e, idx) => (
-                <li key={idx} className="flex gap-3 font-mono text-xs">
-                  <span className="w-12 shrink-0 text-faint tabular-nums">{(e.ts / 1000).toFixed(1)}s</span>
-                  <span className="text-muted">{e.label}</span>
-                </li>
-              ))}
-            </ol>
-          </CollapsibleContent>
-        </Collapsible>
-      </div>
-    </div>
-  );
+  return null;
 }
 
-function tierLabel(color: ReturnType<typeof tierForScore>["color"]): string {
+function tierLabel(color: string): string {
   const map: Record<string, string> = {
     healthy: "text-tier-healthy",
     moderate: "text-tier-moderate",
     high: "text-tier-high",
     critical: "text-tier-critical",
   };
-  return map[color];
+  return map[color] ?? "text-muted";
 }
