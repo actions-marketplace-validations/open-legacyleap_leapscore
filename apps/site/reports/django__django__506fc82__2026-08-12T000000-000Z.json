@@ -12,7 +12,7 @@
     "score": 58,
     "tier": "Moderate",
     "status": "complete",
-    "engine_version": "illustrative sample — mock adapter (live engine: coming)",
+    "engine_version": "illustrative sample \u2014 mock adapter (live engine: coming)",
     "rubric_version": "docs/rubric/@planning",
     "filename": "django__django__506fc82__2026-08-12T000000-000Z.json",
     "coverage": {
@@ -32,13 +32,13 @@
     "snapshot": {
       "repo": "django/django",
       "scanned_at": "2026-08-12T00:00:00Z",
-      "engine_version": "illustrative sample — mock adapter (live engine: coming)",
+      "engine_version": "illustrative sample \u2014 mock adapter (live engine: coming)",
       "rubric_version": "docs/rubric/@planning"
     },
     "headline": {
       "score": 58,
       "tier": "Moderate",
-      "ci_band": "±4 (uncertainty from estimated rows)"
+      "ci_band": "\u00b14 (uncertainty from estimated rows)"
     },
     "coverage": {
       "measured": 49,
@@ -66,7 +66,7 @@
         "source_rows": [
           "SEC-01"
         ],
-        "note": "HEAVY NEAR-MISS — 2 Critical CVEs were open 9–11 days and patched on day 11, inside the 14-day window. Whether the affected path is internet-exposed can't be confirmed from code."
+        "note": "HEAVY NEAR-MISS \u2014 2 Critical CVEs were open 9\u201311 days and patched on day 11, inside the 14-day window. Whether the affected path is internet-exposed can't be confirmed from code."
       },
       {
         "id": "G3",
@@ -147,10 +147,10 @@
             "category_id": "ECOS",
             "status": "measured",
             "score": 3,
-            "verdict_text": "3 — Healthy",
+            "verdict_text": "3 \u2014 Healthy",
             "reason": "Python 3.11 (LTS) is the app runtime; endoflife.date window open through Oct 2027. No deprecation pressure.",
             "evidence": {
-              "tool": "manifest pin → endoflife.date",
+              "tool": "manifest pin \u2192 endoflife.date",
               "args": "pyproject.toml requires-python >=3.11,<3.12",
               "pointers": [
                 {
@@ -165,7 +165,13 @@
                 "window_ok": true
               }
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min",
+            "remediation": {
+              "quick_win": "document the gap, create the upgrade ticket with a date.",
+              "structural": "parallel runtime upgrade plan \u2014 run new runtime in CI behind a feature gate, migrate one service at a time, dual-run in prod. For truly stuck runtimes, isolate behind a facade and treat like a rewrite candidate.",
+              "gold_standard": "Every production runtime within its vendor-supported window; CI builds a canary job on the current runtime; a deprecation calendar exists and is reviewed quarterly.",
+              "effort": "\u26a1 \u226430 min"
+            }
           },
           {
             "id": "ECOS-02",
@@ -173,7 +179,7 @@
             "category_id": "ECOS",
             "status": "measured",
             "score": 2,
-            "verdict_text": "2 — Minor Debt",
+            "verdict_text": "2 \u2014 Minor Debt",
             "reason": "Core web framework pinned one LTS generation behind current (3.2 line vs 5.x); > 30% of direct deps within one major, none more.",
             "evidence": {
               "tool": "pip list --outdated / lockfile vs registry",
@@ -191,7 +197,13 @@
                 "share_gt_2_majors": "0%"
               }
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min",
+            "remediation": {
+              "quick_win": "enable Dependabot/Renovate with major-update grouping and a monthly budget.",
+              "structural": "\"upgrade train\" \u2014 pick one major hop per quarter, keep intermediate commits shippable, use the dependency graph from tools to sequence hops (don't skip majors). Establish a \"never more than 1 major behind\" policy for core deps.",
+              "gold_standard": "Core framework within 1 major of current; < 30% of direct deps behind by a major; automatic update PRs flowing weekly; majors scheduled explicitly on the roadmap.",
+              "effort": "\u26a1 \u226430 min"
+            }
           },
           {
             "id": "ECOS-03",
@@ -199,7 +211,7 @@
             "category_id": "ECOS",
             "status": "measured",
             "score": 2,
-            "verdict_text": "2 — Minor Debt",
+            "verdict_text": "2 \u2014 Minor Debt",
             "reason": "One transitive signing lib (siphashc) unmaintained ~4 years; not on the hot path, flagged for swap.",
             "evidence": {
               "tool": "osv-scanner / last-release audit",
@@ -215,7 +227,13 @@
                 "last_release_yr": 2022
               }
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min",
+            "remediation": {
+              "quick_win": "audit the dependency surface for abandoned libs and create a removal/swap ticket with a date.",
+              "structural": "replace load-bearing abandoned libs with maintained alternatives or fork-and-own with a maintenance budget; pin to the exact version and wrap it behind your own interface so it's swappable.",
+              "gold_standard": "Every load-bearing dependency either actively maintained or deliberately forked-and-owned; a quarterly \"library health\" review is on the calendar; no archived repos in the dependency surface.",
+              "effort": "\u26a1 \u226430 min"
+            }
           },
           {
             "id": "ECOS-04",
@@ -223,14 +241,20 @@
             "category_id": "ECOS",
             "status": "estimated",
             "score": 2,
-            "verdict_text": "2 — Minor Debt",
+            "verdict_text": "2 \u2014 Minor Debt",
             "reason": "Deprecation warnings surfaced in the template parser and i18n layers; no removed-API dependency in the core model layer.",
             "basis": {
               "pattern": "compiler deprecation warnings + eslint/djlint rules",
-              "sample": "django/template → DeprecationWarning at render",
+              "sample": "django/template \u2192 DeprecationWarning at render",
               "confidence": "medium"
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min",
+            "remediation": {
+              "quick_win": "turn deprecation warnings into a CI-visible report (not silent); fix the 20 highest-value warnings.",
+              "structural": "treat deprecation debt like feature debt \u2014 a quarterly \"modernize the deprecated surface\" slice; keep the target version's removal list as a tracked checklist.",
+              "gold_standard": "Zero deprecation warnings in the core module build; a CI gate that fails (or reports) on new deprecation warnings; removal timelines tracked.",
+              "effort": "\u26a1 \u226430 min"
+            }
           },
           {
             "id": "ECOS-05",
@@ -238,7 +262,7 @@
             "category_id": "ECOS",
             "status": "measured",
             "score": 3,
-            "verdict_text": "3 — Healthy",
+            "verdict_text": "3 \u2014 Healthy",
             "reason": "SBOM (syft) + github/licensee: BSD-3 root, zero copyleft in the transitive graph, no unknown licenses.",
             "evidence": {
               "tool": "syft + github/licensee",
@@ -254,7 +278,13 @@
                 "sbom_attested": true
               }
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min",
+            "remediation": {
+              "quick_win": "generate an SBOM (`syft . > sbom.json`), wire it into CI, publish attribution files.",
+              "structural": "add a license gate to CI (fail on GPL in closed-source), replace copyleft deps, retire unknown-license packages, review vendored code for stripped notices.",
+              "gold_standard": "SBOM generated and attested on every release; license policy enforced in CI; zero unknown licenses; copyleft list reviewed quarterly and signed off.",
+              "effort": "\ud83d\udd36 ~2\u20134 h"
+            }
           },
           {
             "id": "ECOS-06",
@@ -262,7 +292,7 @@
             "category_id": "ECOS",
             "status": "measured",
             "score": 1,
-            "verdict_text": "1 — Severe Debt",
+            "verdict_text": "1 \u2014 Severe Debt",
             "reason": "Transitive graph over 300 packages (pipdeptree); ~14 unused direct deps per depcheck; install surface larger than runtime needs.",
             "evidence": {
               "tool": "depcheck + pipdeptree",
@@ -278,7 +308,13 @@
                 "bloat_band": "> 300"
               }
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min",
+            "remediation": {
+              "quick_win": "run `knip`/`depcheck`, remove unused direct deps, enable `npm dedupe`/lockfile optimization in CI.",
+              "structural": "set a budget (e.g., \"no net-new transitive deps without review\"), replace kitchen-sink libs with narrow ones, dedupe semver ranges, and periodically prune.",
+              "gold_standard": "Transitive count within a declared budget; zero unused direct deps; single version of every critical lib; dependency review is part of code review.",
+              "effort": "\u26a1 \u226430 min"
+            }
           },
           {
             "id": "ECOS-07",
@@ -286,7 +322,7 @@
             "category_id": "ECOS",
             "status": "measured",
             "score": 3,
-            "verdict_text": "3 — Healthy",
+            "verdict_text": "3 \u2014 Healthy",
             "reason": "Hashed lockfiles committed; CI installs with --require-hashes and a frozen flag; two clean builds byte-identical.",
             "evidence": {
               "tool": "lockfile + CI install flags",
@@ -304,7 +340,13 @@
                 "ci_flag": "--require-hashes"
               }
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min",
+            "remediation": {
+              "quick_win": "commit the lockfile, switch CI to `npm ci`/`pip install --require-hashes`/`--frozen-lockfile`, add a \"lockfile up-to-date\" CI check.",
+              "structural": "adopt content-hash pinning, build from clean containers, produce provenance attestations (SLSA level 1\u21922), verify registry integrity.",
+              "gold_standard": "Lockfile committed and current; CI immutable install; two clean builds produce byte-identical artifacts; SLSA provenance generated per release.",
+              "effort": "\u26a1 \u226430 min"
+            }
           },
           {
             "id": "ECOS-08",
@@ -312,10 +354,10 @@
             "category_id": "ECOS",
             "status": "measured",
             "score": 0,
-            "verdict_text": "0 — Critical",
+            "verdict_text": "0 \u2014 Critical",
             "reason": "Web framework out of official support since 2024-04 (Django 3.2 LTS EOL) with the migration deferred; the upgrade path exists but is unowned.",
             "evidence": {
-              "tool": "framework version → endoflife.date",
+              "tool": "framework version \u2192 endoflife.date",
               "pointers": [
                 {
                   "file": "requirements/base.txt",
@@ -329,7 +371,13 @@
                 "upgrade_owned": false
               }
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min",
+            "remediation": {
+              "quick_win": "quantify the coupling (which modules touch framework-specific APIs directly) and freeze scope on framework-dependent features.",
+              "structural": "extract the framework behind a facade at the boundaries (ports & adapters), migrate incrementally module-by-module on the critical path, keep the system runnable through the whole migration.",
+              "gold_standard": "Framework either current-and-supported, or the core logic is framework-independent behind an interface with an active migration plan.",
+              "effort": "\u26a1 \u226430 min"
+            }
           }
         ]
       },
@@ -354,7 +402,7 @@
             "category_id": "ARCH",
             "status": "measured",
             "score": 1,
-            "verdict_text": "1 — Severe Debt",
+            "verdict_text": "1 \u2014 Severe Debt",
             "reason": "Methods over complexity 30 in django/forms and admin views; django/db/models/options.py exceeds 1,000 LOC with 8 responsibilities.",
             "evidence": {
               "tool": "radon cc + Lizard",
@@ -374,9 +422,9 @@
               "quick_win": "Carve the top 5 offenders by automated extract-method, add a complexity budget to CI (eslint max-complexity, SonarQube gate).",
               "structural": "Structured decomposition of God Classes by responsibility; strangle complexity behind facades; pair the two riskiest files on a refactor sprint.",
               "gold_standard": "Complexity budget enforced in CI; max method complexity < 15; no file > 1,000 LOC; top-decile list shrinking.",
-              "effort": "🔶 ~2–4 h"
+              "effort": "\ud83d\udd36 ~2\u20134 h"
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min"
           },
           {
             "id": "ARCH-02",
@@ -384,8 +432,8 @@
             "category_id": "ARCH",
             "status": "measured",
             "score": 1,
-            "verdict_text": "1 — Severe Debt",
-            "reason": "contrib modules show circular references across bounded contexts (auth ↔ admin ↔ contenttypes ↔ sessions); a shared utils hub has fan-in > 400.",
+            "verdict_text": "1 \u2014 Severe Debt",
+            "reason": "contrib modules show circular references across bounded contexts (auth \u2194 admin \u2194 contenttypes \u2194 sessions); a shared utils hub has fan-in > 400.",
             "evidence": {
               "tool": "dependency-cruiser",
               "pointers": [
@@ -404,9 +452,9 @@
               "quick_win": "Draw the DSM, pick the 3 highest-fan-in hubs, wrap them behind interfaces and shrink their API.",
               "structural": "Define bounded contexts and enforce them with ArchUnit-style rules in CI; extract the shared hub into a stable, narrow contract; invert dependencies toward stable abstractions.",
               "gold_standard": "Acyclic dependency graph at the module boundary; every module has narrow, explicit dependencies.",
-              "effort": "🔶 ~2–4 h"
+              "effort": "\ud83d\udd36 ~2\u20134 h"
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min"
           },
           {
             "id": "ARCH-03",
@@ -414,7 +462,7 @@
             "category_id": "ARCH",
             "status": "measured",
             "score": 1,
-            "verdict_text": "1 — Severe Debt",
+            "verdict_text": "1 \u2014 Severe Debt",
             "reason": "import-linter flags handlers reaching the ORM directly and business rules in views; no arch tests enforce direction.",
             "evidence": {
               "tool": "import-linter",
@@ -430,7 +478,13 @@
                 "arch_tests": false
               }
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min",
+            "remediation": {
+              "quick_win": "add an arch test (ArchUnit/import-linter) and fix the top violations; enforce at PR time.",
+              "structural": "rebuild the lost layers \u2014 extract domain into its own module, move persistence behind repositories, keep UI thin; do it one vertical slice at a time.",
+              "gold_standard": "Architecture rules enforced in CI; a 30-minute vertical-slice tour confirms correct directions; business rules live in the domain layer only.",
+              "effort": "\ud83d\udd36 ~2\u20134 h"
+            }
           },
           {
             "id": "ARCH-04",
@@ -438,7 +492,7 @@
             "category_id": "ARCH",
             "status": "measured",
             "score": 2,
-            "verdict_text": "2 — Minor Debt",
+            "verdict_text": "2 \u2014 Minor Debt",
             "reason": "vulture finds ~12% unreferenced exports; one legacy admin endpoint kept alive with zero traffic for 12 months (auth-protected).",
             "evidence": {
               "tool": "vulture + route traffic log",
@@ -454,7 +508,13 @@
                 "in_core": false
               }
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min",
+            "remediation": {
+              "quick_win": "run knip/vulture, delete safely (git history preserves), remove orphaned endpoints and the routes that point to them.",
+              "structural": "a \"no dead code\" PR gate (knip in CI, fail on new unreferenced exports), flag retirement policy (flags > 6 months get removed or justified), quarterly pruning ritual.",
+              "gold_standard": "Dead-code scan clean in CI; every feature flag has an owner and a retirement date; all prod endpoints are in an API inventory with traffic.",
+              "effort": "\u26a1 \u226430 min"
+            }
           },
           {
             "id": "ARCH-05",
@@ -462,8 +522,8 @@
             "category_id": "ARCH",
             "status": "measured",
             "score": 1,
-            "verdict_text": "1 — Severe Debt",
-            "reason": "Top-10% churned files (models/base.py, core/cache) account for 44% of bug-fix commits — churn and defect concentration overlap.",
+            "verdict_text": "1 \u2014 Severe Debt",
+            "reason": "Top-10% churned files (models/base.py, core/cache) account for 44% of bug-fix commits \u2014 churn and defect concentration overlap.",
             "evidence": {
               "tool": "git hot-spot analysis",
               "args": "git log --oneline --no-merges",
@@ -478,7 +538,13 @@
                 "hotspot_in_core": true
               }
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min",
+            "remediation": {
+              "quick_win": "put the top hot spot behind a designated owner, add targeted tests, freeze feature scope on it for one sprint.",
+              "structural": "redesign the hot spot \u2014 decompose by responsibility, rewrite the risky core with tests first, rotate engineers to avoid bus-factor in the fix. Track the metric quarterly to prove improvement.",
+              "gold_standard": "Churn evenly distributed relative to responsibility; no file in the top churn\u2229defect intersection for two quarters; hot-spot list tracked in the refactoring backlog.",
+              "effort": "\ud83d\udd36 ~2\u20134 h"
+            }
           },
           {
             "id": "ARCH-06",
@@ -486,14 +552,20 @@
             "category_id": "ARCH",
             "status": "estimated",
             "score": 1,
-            "verdict_text": "1 — Severe Debt",
+            "verdict_text": "1 \u2014 Severe Debt",
             "reason": "Server-rendered monolith without DI; module seams are implicit on disk; a unit test of core logic still spins the full URLconf and settings.",
             "basis": {
               "pattern": "generation test (unit-test-without-stack experiment)",
               "sample": "instantiate core service without live stack: fails",
               "confidence": "medium"
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min",
+            "remediation": {
+              "quick_win": "introduce interface seams around the 3 worst-coupled cores, add a couple of tests to prove the seams work.",
+              "structural": "adopt the modern architecture incrementally \u2014 introduce a DI container, extract modules with enforced boundaries, wrap legacy access behind ports, migrate vertical slices one at a time.",
+              "gold_standard": "Core logic testable without live infrastructure; DI and module boundaries standard; new features land in the modern style while legacy shrinks.",
+              "effort": "\ud83d\udd36 ~2\u20134 h"
+            }
           },
           {
             "id": "ARCH-07",
@@ -501,20 +573,20 @@
             "category_id": "ARCH",
             "status": "estimated",
             "score": 1,
-            "verdict_text": "1 — Severe Debt",
+            "verdict_text": "1 \u2014 Severe Debt",
             "reason": "settings, the app registry (django/apps/registry.py), and connection defaults (django/db/__init__.py) are process-wide mutable singletons read from core request paths; correctness depends on import order and parallel workers disagree on state.",
             "basis": {
               "pattern": "grep: module-level singletons + hidden time/IO in model methods",
-              "sample": "django/db/__init__.py → connections default resolved at import",
+              "sample": "django/db/__init__.py \u2192 connections default resolved at import",
               "confidence": "medium"
             },
             "remediation": {
               "quick_win": "Inject the clock/random/IO at the seams you can reach; make the top 5 singletons instances with explicit wiring.",
               "structural": "Eliminate globals by constructor injection; make state explicit and owned; introduce a proper initialization/DI lifecycle; enforce 'no static mutable' with a lint.",
               "gold_standard": "All dependencies explicit and injected; time/random/IO behind interfaces; test suite passes under random/parallel execution; zero mutable statics in core.",
-              "effort": "🔶 ~2–4 h"
+              "effort": "\ud83d\udd36 ~2\u20134 h"
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min"
           },
           {
             "id": "ARCH-08",
@@ -522,7 +594,7 @@
             "category_id": "ARCH",
             "status": "measured",
             "score": 1,
-            "verdict_text": "1 — Severe Debt",
+            "verdict_text": "1 \u2014 Severe Debt",
             "reason": "PMD-CPD clone rate 14%; money-adjacent formatting and validation logic duplicated across five apps with visible drift.",
             "evidence": {
               "tool": "PMD-CPD",
@@ -538,7 +610,13 @@
                 "core": true
               }
             },
-            "effort": "🔶 ~2–4 h"
+            "effort": "\ud83d\udd36 ~2\u20134 h",
+            "remediation": {
+              "quick_win": "run jscpd, consolidate the top clusters behind a shared library (start with the business-critical ones).",
+              "structural": "establish a shared internal library with a review process; kill duplicates at PR time (clone scan in CI); migrate duplicated logic incrementally with tests preserving behavior.",
+              "gold_standard": "Duplication < 10%; core business rules exist exactly once, in one owned library; clone scan in CI fails new duplication.",
+              "effort": "\ud83d\udd36 ~2\u20134 h"
+            }
           },
           {
             "id": "ARCH-09",
@@ -546,14 +624,20 @@
             "category_id": "ARCH",
             "status": "estimated",
             "score": 2,
-            "verdict_text": "2 — Minor Debt",
+            "verdict_text": "2 \u2014 Minor Debt",
             "reason": "Repo map present but stale vs disk; test-to-code proximity ~60% in core; no single-command fresh-clone harness.",
             "basis": {
               "pattern": "navigation-aid inventory + fresh-clone timed run",
               "sample": "no make test; builds spread across scripts/",
               "confidence": "medium"
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min",
+            "remediation": {
+              "quick_win": "ship a repo-map/context file, co-locate tests for the top core modules, define a task runner of record with a fresh-clone CI proof.",
+              "structural": "seam extraction on core (ports), docs-as-code freshness (DOCS-09), a recurring \"agent completes task X from fresh clone\" acceptance test as a quality gate.",
+              "gold_standard": "From a fresh clone, an agent (or new hire) can locate the module, run its tests, and land a scoped change within one session; navigation aids match disk; core is testable without live infra.",
+              "effort": "\ud83d\udd36 ~2\u20134 h"
+            }
           },
           {
             "id": "ARCH-10",
@@ -561,14 +645,20 @@
             "category_id": "ARCH",
             "status": "estimated",
             "score": 1,
-            "verdict_text": "1 — Severe Debt",
+            "verdict_text": "1 \u2014 Severe Debt",
             "reason": "Hardcoded toggles (USE_NEW_SESSION_PATCH = True in source); prod endpoint config committed under the settings package; no flag owner or retirement date.",
             "basis": {
               "pattern": "hardcoded-toggle grep + git blame",
               "sample": "django/conf/global_settings.py ships prod values",
               "confidence": "medium"
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min",
+            "remediation": {
+              "quick_win": "move the top flags to an externalized flag source with owners + retirement dates, externalize prod config into a per-env injected pipeline.",
+              "structural": "config-as-code injected per environment, a flag lifecycle policy (owner, TTL, removal ceremony), a rule that prod values never live in the repo.",
+              "gold_standard": "Zero hardcoded toggles in core; every flag owned with a retirement date; config injected per env from one source; rollback = flag flip, not code change.",
+              "effort": "\u26a1 \u226430 min"
+            }
           }
         ]
       },
@@ -593,7 +683,7 @@
             "category_id": "TEST",
             "status": "measured",
             "score": 2,
-            "verdict_text": "2 — Minor Debt",
+            "verdict_text": "2 \u2014 Minor Debt",
             "reason": "CI coverage artifact shows 82% line on core modules; the coverage check in the workflow writes a comment but does not fail the build.",
             "evidence": {
               "tool": "CI coverage report (Actions artifact)",
@@ -609,7 +699,13 @@
                 "gate_fails_build": false
               }
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min",
+            "remediation": {
+              "quick_win": "add a real coverage gate (fail below threshold) on core modules only, and instrument the trend.",
+              "structural": "invest in testing the highest-churn/highest-risk modules first (correlate with ARCH-05), write tests as part of every bug fix (see coverage climb), make coverage a tracked product metric.",
+              "gold_standard": "Branch coverage > 80% on core modules; coverage gate enforced in CI; coverage trend visible on a dashboard and rising or stable.",
+              "effort": "\u26a1 \u226430 min"
+            }
           },
           {
             "id": "TEST-02",
@@ -617,7 +713,7 @@
             "category_id": "TEST",
             "status": "measured",
             "score": 1,
-            "verdict_text": "1 — Severe Debt",
+            "verdict_text": "1 \u2014 Severe Debt",
             "reason": "Actions rerun log: ~6% of jobs rerun-to-pass; parallel runs against shared fixtures produce order-dependent failures.",
             "evidence": {
               "tool": "GH Actions workflow rerun history",
@@ -632,7 +728,13 @@
                 "shared_fixtures": true
               }
             },
-            "effort": "🔶 ~2–4 h"
+            "effort": "\ud83d\udd36 ~2\u20134 h",
+            "remediation": {
+              "quick_win": "quarantine flaky tests (run separately, don't block but do report), fix the top 5 by root cause (sleeps \u2192 waits, shared DB \u2192 test DBs, order-dependence \u2192 isolation).",
+              "structural": "make tests hermetic (see TEST-07), add flake detection to CI (auto-quarantine + report), hold the line: no new flaky tests.",
+              "gold_standard": "Flake rate < 2%; zero \"rerun to pass\" culture; flaky tests auto-quarantined and tracked to fix within a sprint.",
+              "effort": "\ud83d\udd36 ~2\u20134 h"
+            }
           },
           {
             "id": "TEST-03",
@@ -640,8 +742,8 @@
             "category_id": "TEST",
             "status": "measured",
             "score": 1,
-            "verdict_text": "1 — Severe Debt",
-            "reason": "E2E (Selenium) runtime share is ~41% of the suite; the unit/integration layer is thin at the view → ORM seams.",
+            "verdict_text": "1 \u2014 Severe Debt",
+            "reason": "E2E (Selenium) runtime share is ~41% of the suite; the unit/integration layer is thin at the view \u2192 ORM seams.",
             "evidence": {
               "tool": "test inventory by level",
               "pointers": [
@@ -655,7 +757,13 @@
                 "unit_share": "31%"
               }
             },
-            "effort": "🔶 ~2–4 h"
+            "effort": "\ud83d\udd36 ~2\u20134 h",
+            "remediation": {
+              "quick_win": "move the top 20 E2E tests' logic down to integration/unit level (test the service, not the click).",
+              "structural": "rebuild the pyramid over time \u2014 write unit tests for all domain logic, integration for boundaries, keep E2E for < 10 user journeys; budget E2E runtime.",
+              "gold_standard": "Classic pyramid (e.g., 70/20/10); E2E < 10% runtime; failures localize within seconds; E2E covers only true user journeys.",
+              "effort": "\ud83d\udd36 ~2\u20134 h"
+            }
           },
           {
             "id": "TEST-04",
@@ -663,8 +771,8 @@
             "category_id": "TEST",
             "status": "measured",
             "score": 1,
-            "verdict_text": "1 — Severe Debt",
-            "reason": "Full suite P95 34 min across a 16-shard matrix; the merge gate blocks on it — over the 30-min line.",
+            "verdict_text": "1 \u2014 Severe Debt",
+            "reason": "Full suite P95 34 min across a 16-shard matrix; the merge gate blocks on it \u2014 over the 30-min line.",
             "evidence": {
               "tool": "GH Actions workflow durations",
               "pointers": [
@@ -682,11 +790,11 @@
             },
             "remediation": {
               "quick_win": "Parallelize across shards/workers, move slow E2E out of the merge gate (nightly), fix the slowest 10 tests.",
-              "structural": "Attack root causes — pyramid rebalance (TEST-03), hermetic fast tests, caching, and a runtime budget with a gate.",
+              "structural": "Attack root causes \u2014 pyramid rebalance (TEST-03), hermetic fast tests, caching, and a runtime budget with a gate.",
               "gold_standard": "Suite < 10 min P95; every engineer runs the suite before merge; a runtime budget enforced in CI.",
-              "effort": "⚡ ≤ 30 min"
+              "effort": "\u26a1 \u2264 30 min"
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min"
           },
           {
             "id": "TEST-05",
@@ -694,7 +802,7 @@
             "category_id": "TEST",
             "status": "measured",
             "score": 2,
-            "verdict_text": "2 — Minor Debt",
+            "verdict_text": "2 \u2014 Minor Debt",
             "reason": "7% of tests carry skip markers, mostly recent; few have linked tickets.",
             "evidence": {
               "tool": "rg skip/ignore markers + git age",
@@ -709,7 +817,13 @@
                 "ticketless": true
               }
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min",
+            "remediation": {
+              "quick_win": "re-enable or delete each skip deliberately (delete-with-justification or fix-with-test); no skips without a linked ticket and owner.",
+              "structural": "CI gate that fails on new skips without a ticket; a monthly \"skip inventory\" review; fix the top skipped module's root cause.",
+              "gold_standard": "< 2% skipped, all with tickets + owners, none older than a sprint; new skips auto-blocked.",
+              "effort": "\u26a1 \u226430 min"
+            }
           },
           {
             "id": "TEST-06",
@@ -717,7 +831,7 @@
             "category_id": "TEST",
             "status": "measured",
             "score": 2,
-            "verdict_text": "2 — Minor Debt",
+            "verdict_text": "2 \u2014 Minor Debt",
             "reason": "Core paths (URL resolver, ORM query compiler) sit above 80% from the coverage artifact; template loader characterisation gaps remain.",
             "evidence": {
               "tool": "coverage per core module (CI)",
@@ -732,7 +846,13 @@
                 "query_compiler": "84%"
               }
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min",
+            "remediation": {
+              "quick_win": "characterisation-test the core (capture current behavior, lock it), then fix the top 3 divergent behaviors.",
+              "structural": "treat the core as the highest test priority \u2014 require tests on every core change, build a test-heavy \"crown jewels\" suite, tie core coverage to the gate.",
+              "gold_standard": "All 10 core journeys have tests; core module coverage > 80%; a core change without tests cannot merge; incidents on core paths are rare and never \"first discovery.\"",
+              "effort": "\ud83d\udd36 ~2\u20134 h"
+            }
           },
           {
             "id": "TEST-07",
@@ -740,7 +860,7 @@
             "category_id": "TEST",
             "status": "measured",
             "score": 1,
-            "verdict_text": "1 — Severe Debt",
+            "verdict_text": "1 \u2014 Severe Debt",
             "reason": "Suite shares a live SQLite + Redis; randomized order surfaces 4 order-dependent failures.",
             "evidence": {
               "tool": "random-order CI run",
@@ -755,7 +875,13 @@
                 "order_failures": 4
               }
             },
-            "effort": "🔶 ~2–4 h"
+            "effort": "\ud83d\udd36 ~2\u20134 h",
+            "remediation": {
+              "quick_win": "run randomized + parallel CI to surface the worst offenders, fix shared-fixture tests, replace sleeps with waits.",
+              "structural": "hermetic test infrastructure \u2014 per-test DBs (Testcontainers), fixtures scoped to each test, deterministic time, no network in unit tests, parallel by default.",
+              "gold_standard": "Suite passes under random order and full parallelism on a fresh container; zero sleeps; tests never touch shared live infrastructure.",
+              "effort": "\ud83d\udd36 ~2\u20134 h"
+            }
           },
           {
             "id": "TEST-08",
@@ -763,8 +889,8 @@
             "category_id": "TEST",
             "status": "measured",
             "score": 0,
-            "verdict_text": "0 — Critical",
-            "reason": "CI runs lint only; no SAST, no coverage gate, no complexity budget — security and quality findings are advisory, never blocking.",
+            "verdict_text": "0 \u2014 Critical",
+            "reason": "CI runs lint only; no SAST, no coverage gate, no complexity budget \u2014 security and quality findings are advisory, never blocking.",
             "evidence": {
               "tool": "CI config audit",
               "pointers": [
@@ -783,9 +909,9 @@
               "quick_win": "Add lint + SAST (Semgrep/CodeQL/SonarQube) as failing stages, add a coverage gate on core, block admin bypass (require justification audit).",
               "structural": "Define the quality bar in code (lint rules, complexity budgets, coverage thresholds, security checks) and let CI enforce it; tie all gates to the same config the team reviews.",
               "gold_standard": "CI fails on lint, SAST, coverage, complexity, and security findings; bypasses are impossible or audited.",
-              "effort": "⚡ ≤ 30 min"
+              "effort": "\u26a1 \u2264 30 min"
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min"
           }
         ]
       },
@@ -810,8 +936,8 @@
             "category_id": "SEC",
             "status": "measured",
             "score": 2,
-            "verdict_text": "2 — Minor Debt",
-            "reason": "Two Critical CVEs patched at day 11 — inside the 14-day window but close; median days to close a High is 27 and the trend is downward.",
+            "verdict_text": "2 \u2014 Minor Debt",
+            "reason": "Two Critical CVEs patched at day 11 \u2014 inside the 14-day window but close; median days to close a High is 27 and the trend is downward.",
             "evidence": {
               "tool": "osv-scanner + Dependabot alerts",
               "args": "osv-scanner -r . --experimental-local-db",
@@ -828,12 +954,12 @@
               }
             },
             "remediation": {
-              "quick_win": "Patch the open Criticals/Highs in the exposure window — today; re-scan. Both CVEs are closed; keep the trend.",
-              "structural": "A patch SLA policy (Critical ≤ 7 days, High ≤ 30), automated patching (Dependabot/Renovate auto-merge with CI as the gate), and a 'no open Critical in prod' rule.",
+              "quick_win": "Patch the open Criticals/Highs in the exposure window \u2014 today; re-scan. Both CVEs are closed; keep the trend.",
+              "structural": "A patch SLA policy (Critical \u2264 7 days, High \u2264 30), automated patching (Dependabot/Renovate auto-merge with CI as the gate), and a 'no open Critical in prod' rule.",
               "gold_standard": "Zero open Criticals; Highs < 30 days; automated scans in CI; patch SLA documented and met for 4 straight quarters.",
-              "effort": "🔶 ~2–4 h"
+              "effort": "\ud83d\udd36 ~2\u20134 h"
             },
-            "effort": "🔶 ~2–4 h"
+            "effort": "\ud83d\udd36 ~2\u20134 h"
           },
           {
             "id": "SEC-02",
@@ -841,7 +967,7 @@
             "category_id": "SEC",
             "status": "measured",
             "score": 3,
-            "verdict_text": "3 — Healthy",
+            "verdict_text": "3 \u2014 Healthy",
             "reason": "gitleaks 8.18 over tree + full history: zero active or revoked secrets; credentials injected from a secrets manager at runtime.",
             "evidence": {
               "tool": "gitleaks@8.18.0",
@@ -857,7 +983,13 @@
                 "revoke_drill": true
               }
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min",
+            "remediation": {
+              "quick_win": "rotate EVERY leaked credential immediately (the exposure window starts at commit time, not discovery time), remove from current tree, switch to env vars.",
+              "structural": "adopt a secret manager + injection (Vault, Secrets Manager), ban secrets in code via CI scanners on every commit *and* a history scrub, least-privilege per environment, kill the \"secrets in docs\" habit.",
+              "gold_standard": "Zero secrets in the tree or history; secrets injected at runtime from a manager; CI blocks secret commits; rotation drill run annually.",
+              "effort": "\u26a1 \u226430 min"
+            }
           },
           {
             "id": "SEC-03",
@@ -866,7 +998,7 @@
             "status": "unknown",
             "reason": "SAST is clean on reachable injection classes, but TLS/header posture and route reachability cannot be proven from code alone.",
             "unknown_measure_path": "Deploy or point at staging; run OWASP ZAP + testssl.sh + securityheaders review.",
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min"
           },
           {
             "id": "SEC-04",
@@ -874,7 +1006,7 @@
             "category_id": "SEC",
             "status": "measured",
             "score": 2,
-            "verdict_text": "2 — Minor Debt",
+            "verdict_text": "2 \u2014 Minor Debt",
             "reason": "Route audit: server-side session auth everywhere, no default creds; no MFA on admin roles and is_staff is an all-or-nothing gate.",
             "evidence": {
               "tool": "route enforcement audit",
@@ -890,7 +1022,13 @@
                 "idor_probes": 0
               }
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min",
+            "remediation": {
+              "quick_win": "kill default creds, add auth + server-side authorization to every endpoint (route registry), enable MFA on privileged roles, fix the top IDORs.",
+              "structural": "move to managed identity (SSO/OIDC, platform IAM), policy-based authorization (OPA/AWS IAM/ABAC), automated authz tests (walk every route asserting enforcement), session best practices.",
+              "gold_standard": "All endpoints server-side auth'd and authz'd, MFA everywhere privileged, managed SSO + policy engine, authz coverage test in CI.",
+              "effort": "\ud83d\udd36 ~2\u20134 h"
+            }
           },
           {
             "id": "SEC-05",
@@ -898,8 +1036,8 @@
             "category_id": "SEC",
             "status": "measured",
             "score": 1,
-            "verdict_text": "1 — Severe Debt",
-            "reason": "Admin and PII-mutation paths emit unstructured log lines without request IDs — a PII export cannot be traced end-to-end.",
+            "verdict_text": "1 \u2014 Severe Debt",
+            "reason": "Admin and PII-mutation paths emit unstructured log lines without request IDs \u2014 a PII export cannot be traced end-to-end.",
             "evidence": {
               "tool": "log/config audit",
               "pointers": [
@@ -916,11 +1054,11 @@
             },
             "remediation": {
               "quick_win": "Add audit logging to the top admin/PII/auth paths with a structured schema, ship logs to an external durable sink, set retention.",
-              "structural": "Treat audit as a compliance requirement — append-only where needed, centralized log platform, automated test asserting every sensitive action produces an audit event.",
+              "structural": "Treat audit as a compliance requirement \u2014 append-only where needed, centralized log platform, automated test asserting every sensitive action produces an audit event.",
               "gold_standard": "Every admin/PII/auth event logged structured (actor, action, target, time, request ID), durable, retained per policy, tamper-evident.",
-              "effort": "🔶 ~2–4 h"
+              "effort": "\ud83d\udd36 ~2\u20134 h"
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min"
           },
           {
             "id": "SEC-06",
@@ -928,7 +1066,7 @@
             "category_id": "SEC",
             "status": "measured",
             "score": 3,
-            "verdict_text": "3 — Healthy",
+            "verdict_text": "3 \u2014 Healthy",
             "reason": "Deep SCA clean: no reachable criticals below top levels, no malware or unpatchable packages in the graph.",
             "evidence": {
               "tool": "osv-scanner --experimental-local-db + Grype lockfile",
@@ -943,7 +1081,13 @@
                 "reachable_critical": 0
               }
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min",
+            "remediation": {
+              "quick_win": "use tooling to map reachable chains to top-level packages, plan removals/forks of the top offenders, add deep scanning to CI.",
+              "structural": "prune the graph (replace deep-chain producers), vendoring review, dependency budget (ECOS-06), provenance verification, and an incident runbook for \"malicious package found.\"",
+              "gold_standard": "Deep scanning in CI with reachability intelligence; zero malware; vulnerable chains mapped and justified; unmaintained chains trending to zero.",
+              "effort": "\ud83d\udd36 ~2\u20134 h"
+            }
           },
           {
             "id": "SEC-07",
@@ -951,7 +1095,7 @@
             "category_id": "SEC",
             "status": "measured",
             "score": 2,
-            "verdict_text": "2 — Minor Debt",
+            "verdict_text": "2 \u2014 Minor Debt",
             "reason": "Dependabot enabled; security PRs merged on a ~30-day cadence with no written SLA and auto-merge off.",
             "evidence": {
               "tool": "Dependabot dashboard + lockfile dates",
@@ -967,7 +1111,13 @@
                 "auto_merge": false
               }
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min",
+            "remediation": {
+              "quick_win": "enable Dependabot/Renovate with auto-merge on green for patch/minor updates, act on the security-only PRs first.",
+              "structural": "a scheduled patch lane (weekly security window, CI gates), environment-per-ticket to stage patches, measured SLA with an executive dashboard.",
+              "gold_standard": "Patches automated, applied within SLA (Crit \u2264 7d, High \u2264 30d), CI validates every patch, zero manual patch heroics.",
+              "effort": "\u26a1 \u226430 min"
+            }
           },
           {
             "id": "SEC-08",
@@ -976,7 +1126,7 @@
             "status": "unknown",
             "reason": "Control-to-framework mapping (SOC2) is not provable from a public repo; needs org-side evidence.",
             "unknown_measure_path": "Control-to-evidence mapping + audit review with the compliance/security team.",
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min"
           }
         ]
       },
@@ -1001,7 +1151,7 @@
             "category_id": "DATA",
             "status": "measured",
             "score": 2,
-            "verdict_text": "2 — Minor Debt",
+            "verdict_text": "2 \u2014 Minor Debt",
             "reason": "34 long-running or dependent migrations in Alembic history; fresh-build-from-migrations passes in CI (non-destructive).",
             "evidence": {
               "tool": "migration inventory + fresh-build check",
@@ -1017,7 +1167,13 @@
                 "fresh_build": true
               }
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min",
+            "remediation": {
+              "quick_win": "bring migrations under tooling (alembic/flyway/prisma), reconcile the drift between envs with a verified baseline, add a CI \"fresh build from migrations\" check.",
+              "structural": "adopt expand-contract migration practice (expanding then contracting changes, reversible when possible), split long migrations into batched incremental jobs, freeze manual-DDL policy, build from migrations as the only path to a new env.",
+              "gold_standard": "Migrations are the only way the schema changes; environments provably identical from clean builds; migrations are reversible and fast; zero manual DDL.",
+              "effort": "\ud83d\udd36 ~2\u20134 h"
+            }
           },
           {
             "id": "DATA-02",
@@ -1025,14 +1181,20 @@
             "category_id": "DATA",
             "status": "estimated",
             "score": 1,
-            "verdict_text": "1 — Severe Debt",
+            "verdict_text": "1 \u2014 Severe Debt",
             "reason": "Postgres shared across two services; cross-DB joins in two reporting paths bypass the API layer.",
             "basis": {
               "pattern": "connection enumeration + join grep",
-              "sample": "reports → direct join into orders schema",
+              "sample": "reports \u2192 direct join into orders schema",
               "confidence": "low"
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min",
+            "remediation": {
+              "quick_win": "document all cross-service DB reads/writes (the hidden map), move the worst cross-read behind an API or event.",
+              "structural": "bounded-context data ownership with a public API/event boundary per service, migrate stored-proc logic into application code, run schema ownership checks in CI.",
+              "gold_standard": "Each service owns its tables; cross-context access is via API/events only; zero business logic in stored procedures; a change to one context can't break another.",
+              "effort": "\ud83d\udd36 ~2\u20134 h"
+            }
           },
           {
             "id": "DATA-03",
@@ -1041,7 +1203,7 @@
             "status": "unknown",
             "reason": "Constraint coverage and orphan probes need a live DB catalog plus probe queries.",
             "unknown_measure_path": "Connect a catalog or staging DB and run constraint/orphan probes.",
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min"
           },
           {
             "id": "DATA-04",
@@ -1049,14 +1211,20 @@
             "category_id": "DATA",
             "status": "estimated",
             "score": 2,
-            "verdict_text": "2 — Minor Debt",
+            "verdict_text": "2 \u2014 Minor Debt",
             "reason": "Two niche reports read legacy CSV-on-S3 exports; not a system-of-record, export pipeline is script-based.",
             "basis": {
               "pattern": "file-format inventory",
               "sample": "CSV export jobs under scripts/",
               "confidence": "low"
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min",
+            "remediation": {
+              "quick_win": "stand up a read side (index the files into a modern store, keep legacy as archive), build the extraction utilities.",
+              "structural": "a data-migration program \u2014 move systems of record to maintained technology one store at a time (strangler pattern for data), keep legacy read-only during migration, archive what's truly dead.",
+              "gold_standard": "All systems-of-record on maintained technology; legacy formats readable/exportable or archived with access paths; critical data queryable with modern tooling.",
+              "effort": "\ud83d\udd37 ~1\u20132 days"
+            }
           },
           {
             "id": "DATA-05",
@@ -1065,7 +1233,7 @@
             "status": "unknown",
             "reason": "Hot-row contention profile requires load testing against a running instance.",
             "unknown_measure_path": "Load-test the hot rows under concurrency; check table locks at peak.",
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min"
           },
           {
             "id": "DATA-06",
@@ -1074,7 +1242,7 @@
             "status": "unknown",
             "reason": "Backup/restore evidence lives outside the repo; no drill artefacts committed.",
             "unknown_measure_path": "Infra audit + scheduled restore drill with written evidence.",
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min"
           },
           {
             "id": "DATA-07",
@@ -1082,7 +1250,7 @@
             "category_id": "DATA",
             "status": "measured",
             "score": 2,
-            "verdict_text": "2 — Minor Debt",
+            "verdict_text": "2 \u2014 Minor Debt",
             "reason": "N+1 leaf loads found in three non-critical list views; hot query paths are indexed.",
             "evidence": {
               "tool": "ORM statement logging + index review",
@@ -1098,7 +1266,13 @@
                 "index_strategy": "documented"
               }
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min",
+            "remediation": {
+              "quick_win": "fix the top 10 N+1s with eager loading/joins, add the missing indexes on the hot path, reduce column projection.",
+              "structural": "query budget per endpoint (assert queries-per-request in tests), index strategy documented and reviewed, offload heavy reads (search, aggregates) to appropriate engines, performance tests with realistic data volume in CI.",
+              "gold_standard": "Query counts per endpoint budgeted and tested, N+1 class eliminated, index strategy current, p95 latency flat as data grows 10\u00d7.",
+              "effort": "\ud83d\udd36 ~2\u20134 h"
+            }
           },
           {
             "id": "DATA-08",
@@ -1106,7 +1280,7 @@
             "category_id": "DATA",
             "status": "measured",
             "score": 1,
-            "verdict_text": "1 — Severe Debt",
+            "verdict_text": "1 \u2014 Severe Debt",
             "reason": "Business rules leak into the schema: feature/tier flag columns baked into the orders table, so product-rule changes require migrations.",
             "evidence": {
               "tool": "schema archaeology from migrations",
@@ -1123,11 +1297,11 @@
             },
             "remediation": {
               "quick_win": "Kill the obvious versioned/flags columns behind an additive migration, document the domain model properly.",
-              "structural": "Remodel around domain facts — normalize flags into real entities, adopt effective-dating/event structures for changeable rules, schema reviewed as domain design not storage plumbing.",
+              "structural": "Remodel around domain facts \u2014 normalize flags into real entities, adopt effective-dating/event structures for changeable rules, schema reviewed as domain design not storage plumbing.",
               "gold_standard": "Schema expresses domain facts; product rule changes land without schema surgery; events/snapshots support evolution.",
-              "effort": "🔶 ~2–4 h"
+              "effort": "\ud83d\udd36 ~2\u20134 h"
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min"
           }
         ]
       },
@@ -1152,7 +1326,7 @@
             "category_id": "API",
             "status": "measured",
             "score": 2,
-            "verdict_text": "2 — Minor Debt",
+            "verdict_text": "2 \u2014 Minor Debt",
             "reason": "drf-spectacular covers ~82% of endpoints; three legacy endpoints are hand-rolled with no schema.",
             "evidence": {
               "tool": "OpenAPI spec-vs-code diff",
@@ -1167,7 +1341,13 @@
                 "legacy_endpoints": 3
               }
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min",
+            "remediation": {
+              "quick_win": "generate accurate specs from code (OpenAPI annotations/`apischema`, `drf-spectacular`, NestJS Swagger), validate specs vs. responses in CI.",
+              "structural": "contract-first or contract-enforced development (spec is source of truth, generators produce clients/mocks/tests), a lint gate on spec changes.",
+              "gold_standard": "Every endpoint covered by a current, accurate contract; clients and tests generated from it; spec drift impossible (CI enforces).",
+              "effort": "\ud83d\udd36 ~2\u20134 h"
+            }
           },
           {
             "id": "API-02",
@@ -1175,7 +1355,7 @@
             "category_id": "API",
             "status": "measured",
             "score": 2,
-            "verdict_text": "2 — Minor Debt",
+            "verdict_text": "2 \u2014 Minor Debt",
             "reason": "URL versioning (v1/v2) in place; one breaking change shipped on a minor release in the last year.",
             "evidence": {
               "tool": "URL/media-type versioning audit",
@@ -1190,7 +1370,13 @@
                 "breaking_on_minor": 1
               }
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min",
+            "remediation": {
+              "quick_win": "introduce versioning at the least cost (path `v2` for the contract-breaking surface; keep `v1` alive with a retirement date).",
+              "structural": "versioning policy (what counts as breaking), deprecation headers + documented schedule, sunset coach with migration guides, semver discipline wired into release automation.",
+              "gold_standard": "Explicit versioning everywhere; breaking changes only in majors with deprecation windows; a deprecation calendar; zero silent consumer breakage for two years.",
+              "effort": "\u26a1 \u226430 min"
+            }
           },
           {
             "id": "API-03",
@@ -1198,14 +1384,20 @@
             "category_id": "API",
             "status": "estimated",
             "score": 2,
-            "verdict_text": "2 — Minor Debt",
+            "verdict_text": "2 \u2014 Minor Debt",
             "reason": "Fifteen point-to-point integrations documented; no gateway in front of the densest five.",
             "basis": {
               "pattern": "service discovery + config grep",
               "sample": "15 vendor endpoints under services/",
               "confidence": "low"
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min",
+            "remediation": {
+              "quick_win": "build the topology map (automated), as the source of truth, and start routing traffic through a gateway for the top 5 hubs.",
+              "structural": "platform governance \u2014 service registry, gateway/boundary routing, event-based decoupling for the densest paths, rules against direct cross-service DB access.",
+              "gold_standard": "Known topology (auto-mapped, current), integration governance (registry/gateway/events), a change to one service locally verifiable, density trending down.",
+              "effort": "\ud83d\udd36 ~2\u20134 h"
+            }
           },
           {
             "id": "API-04",
@@ -1213,8 +1405,8 @@
             "category_id": "API",
             "status": "measured",
             "score": 2,
-            "verdict_text": "2 — Minor Debt",
-            "reason": "Long synchronous chain on checkout (pay → inventory → ledger); timeouts + cache on one hop, no circuit breaker.",
+            "verdict_text": "2 \u2014 Minor Debt",
+            "reason": "Long synchronous chain on checkout (pay \u2192 inventory \u2192 ledger); timeouts + cache on one hop, no circuit breaker.",
             "evidence": {
               "tool": "core-flow read",
               "pointers": [
@@ -1228,7 +1420,13 @@
                 "circuit_breaker": false
               }
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min",
+            "remediation": {
+              "quick_win": "add timeouts + circuit breakers on the fragile hops, cache the slow reads.",
+              "structural": "slice the sync chain with events/async (compute off-path, return fast), bulkhead partitions by dependency, SLO-per-hop, degrade gracefully.",
+              "gold_standard": "Core flows touch the minimum live dependencies; slow work is async; circuit-broken fallbacks in place; the weakest link cannot sink the product.",
+              "effort": "\ud83d\udd36 ~2\u20134 h"
+            }
           },
           {
             "id": "API-05",
@@ -1236,7 +1434,7 @@
             "category_id": "API",
             "status": "measured",
             "score": 2,
-            "verdict_text": "2 — Minor Debt",
+            "verdict_text": "2 \u2014 Minor Debt",
             "reason": "Three of five key vendors sit behind adapters; two calls are vendor-and-pray with no fallback.",
             "evidence": {
               "tool": "third-party host grep + abstraction presence",
@@ -1252,7 +1450,13 @@
                 "fallback": false
               }
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min",
+            "remediation": {
+              "quick_win": "wrap the top 3 vendor calls behind ports (adapters), add fallback paths where feasible, assign a vendor-risk owner + deprecation watch.",
+              "structural": "integration abstraction for critical vendors, SLA monitoring + circuit breakers, contract/license review, documented replacement paths, vendor deprecation calendar.",
+              "gold_standard": "External dependencies abstracted, fallbacked, monitored, and reviewed; vendor deprecations tracked and migrations planned; no revenue path is call-vendor-and-pray.",
+              "effort": "\ud83d\udd36 ~2\u20134 h"
+            }
           },
           {
             "id": "API-06",
@@ -1260,7 +1464,7 @@
             "category_id": "API",
             "status": "measured",
             "score": 3,
-            "verdict_text": "3 — Healthy",
+            "verdict_text": "3 \u2014 Healthy",
             "reason": "REST/JSON + OpenAPI; zero SOAP/XML/proprietary protocol remnants.",
             "evidence": {
               "tool": "protocol inventory",
@@ -1275,7 +1479,13 @@
                 "rest_json": true
               }
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min",
+            "remediation": {
+              "quick_win": "stand up modern endpoints (REST/JSON or gRPC) alongside the legacy ones for new traffic, put a gateway in front to let consumers choose.",
+              "structural": "migrate integrations off legacy protocols where feasible (strangler at the protocol layer), retire the EOL middleware, offer modern contracts for every legacy consumer.",
+              "gold_standard": "Core traffic on modern protocols, legacy formats behind adapters/bridges and shrinking, no EOL middleware, new integrations never require the museum stack.",
+              "effort": "\ud83d\udd36 ~2\u20134 h"
+            }
           },
           {
             "id": "API-07",
@@ -1283,7 +1493,7 @@
             "category_id": "API",
             "status": "measured",
             "score": 2,
-            "verdict_text": "2 — Minor Debt",
+            "verdict_text": "2 \u2014 Minor Debt",
             "reason": "RFC 7807 error bodies on ~70% of routes; request IDs exist but are not correlated end-to-end.",
             "evidence": {
               "tool": "error-contract schema audit",
@@ -1297,7 +1507,13 @@
                 "request_id_correlated": false
               }
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min",
+            "remediation": {
+              "quick_win": "standardize an error contract (RFC 7807 or a JSON schema: code, message, correlationId, retriable flag), add request IDs everywhere, fix the worst misclassifications.",
+              "structural": "framework-level error middleware (single source of truth), typed error taxonomy, API-monitoring that segments by error class, error payloads free of PII.",
+              "gold_standard": "Every endpoint returns structured, typed, correlated errors; 4xx/5xx semantics correct; a failing request is traceable in seconds; clients can act on errors programmatically.",
+              "effort": "\ud83d\udd36 ~2\u20134 h"
+            }
           },
           {
             "id": "API-08",
@@ -1305,13 +1521,19 @@
             "category_id": "API",
             "status": "estimated",
             "score": 2,
-            "verdict_text": "2 — Minor Debt",
+            "verdict_text": "2 \u2014 Minor Debt",
             "reason": "No consumer registry; deprecations communicated via changelog only.",
             "basis": {
               "pattern": "no registry/telemetry config",
               "confidence": "low"
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min",
+            "remediation": {
+              "quick_win": "add per-consumer API keys + endpoint analytics (who, what, how often), start a consumer registry doc.",
+              "structural": "full usage telemetry (endpoint + field level), a deprecation communication channel (changelog + consumer mailer + status page), consumer onboarding/registration as standard, usage dashboards for product decisions.",
+              "gold_standard": "Every consumer known + registered, endpoint/field usage visible, deprecations announced with migration guides, zero surprise consumer breakage.",
+              "effort": "\ud83d\udd36 ~2\u20134 h"
+            }
           }
         ]
       },
@@ -1336,8 +1558,8 @@
             "category_id": "VEL",
             "status": "estimated",
             "score": 1,
-            "verdict_text": "1 — Severe Debt",
-            "reason": "16-shard Actions matrix with P95 feedback ~38 min — breaks the 30-minute merge path.",
+            "verdict_text": "1 \u2014 Severe Debt",
+            "reason": "16-shard Actions matrix with P95 feedback ~38 min \u2014 breaks the 30-minute merge path.",
             "basis": {
               "pattern": "GH Actions workflow run durations",
               "sample": "p95 = 38 min across 16 shards",
@@ -1347,9 +1569,9 @@
               "quick_win": "Turn on caching, parallelize shards, drop the slow E2E from the merge path (TEST-04), float the slowest 10 tests once.",
               "structural": "A CI budget (SLO on feedback time), dependency pruning (ECOS-06), test-suite redesign (TEST-03), and monitoring of pipeline trend.",
               "gold_standard": "P95 feedback < 10 min; trend flat/declining; no timeouts.",
-              "effort": "⚡ ≤ 30 min"
+              "effort": "\u26a1 \u2264 30 min"
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min"
           },
           {
             "id": "VEL-02",
@@ -1357,14 +1579,20 @@
             "category_id": "VEL",
             "status": "estimated",
             "score": 2,
-            "verdict_text": "2 — Minor Debt",
-            "reason": "make dev brings the stack up via compose with a .env.example; first-time setup runs 30–60 min (Docker memory tuning).",
+            "verdict_text": "2 \u2014 Minor Debt",
+            "reason": "make dev brings the stack up via compose with a .env.example; first-time setup runs 30\u201360 min (Docker memory tuning).",
             "basis": {
               "pattern": "setup-tooling inventory",
               "sample": "compose + Makefile + .env.example present",
               "confidence": "medium"
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min",
+            "remediation": {
+              "quick_win": "containerize the stack with a one-command up, ship `.env.example`, write a working setup doc, document the \"Golden Path.\"",
+              "structural": "hermetic local env (containers, local deps with `testcontainers`), zero shared-remote requirement, setup scripted and CI-tested (a fresh container proves the guide works), \"works on my machine\" made unfalsifiable.",
+              "gold_standard": "`git clone && make dev` brings up a working local system in < 30 min with no external dependencies; the instruction is CI-verified.",
+              "effort": "\ud83d\udd36 ~2\u20134 h"
+            }
           },
           {
             "id": "VEL-03",
@@ -1373,7 +1601,7 @@
             "status": "unknown",
             "reason": "CFR and rollback markers are not readable from code; needs deploy/incident data.",
             "unknown_measure_path": "Give the report deploy and rollback access (GH Deployments) and run a CFR rollup.",
-            "effort": "🔶 ~2–4 h"
+            "effort": "\ud83d\udd36 ~2\u20134 h"
           },
           {
             "id": "VEL-04",
@@ -1381,14 +1609,20 @@
             "category_id": "VEL",
             "status": "estimated",
             "score": 1,
-            "verdict_text": "1 — Severe Debt",
+            "verdict_text": "1 \u2014 Severe Debt",
             "reason": "Releases tagged roughly monthly with multi-day lead time; no deploy-on-demand on the critical path.",
             "basis": {
               "pattern": "GH releases/tags frequency",
               "sample": "1 release/month; lead 3+ days",
               "confidence": "medium"
             },
-            "effort": "🔶 ~2–4 h"
+            "effort": "\ud83d\udd36 ~2\u20134 h",
+            "remediation": {
+              "quick_win": "remove freeze/merge windows, do Friday non-events, add a deploy button per service.",
+              "structural": "the classic modernization goal \u2014 trunk-based dev + feature flags + small CI/CD steps to get deployment-frequency up and lead time down; each elimination of coordination is a DORA win.",
+              "gold_standard": "Deploy on demand (multiple/week/service), lead time < 1 day, releases are boring non-events, no release manager role needed.",
+              "effort": "\ud83d\udd36 ~2\u20134 h"
+            }
           },
           {
             "id": "VEL-05",
@@ -1396,14 +1630,20 @@
             "category_id": "VEL",
             "status": "estimated",
             "score": 1,
-            "verdict_text": "1 — Severe Debt",
-            "reason": "No HR/git-per-hire data in the repo; first-PR path is documented but the typical time to first production PR is 3–4 weeks.",
+            "verdict_text": "1 \u2014 Severe Debt",
+            "reason": "No HR/git-per-hire data in the repo; first-PR path is documented but the typical time to first production PR is 3\u20134 weeks.",
             "basis": {
               "pattern": "docs+presence proxy",
               "sample": "no onboarding telemetry in repo",
               "confidence": "low"
             },
-            "effort": "🔶 ~2–4 h"
+            "effort": "\ud83d\udd36 ~2\u20134 h",
+            "remediation": {
+              "quick_win": "write a \"first PR in a day\" path (a safe starter ticket + doc patch + tiny config change), assign onboarding buddy + SLA, grant prod deploy gradually but early.",
+              "structural": "fix the underlying debts (setup VEL-02, docs DOCS, deploy VEL-03), curriculum-style onboarding (architecture walkthroughs, ADRs), starter-ticket backlog maintained.",
+              "gold_standard": "New engineers ship to prod within their first week, via documented path, with a clear map of the safe-to-change surfaces.",
+              "effort": "\ud83d\udd36 ~2\u20134 h"
+            }
           },
           {
             "id": "VEL-06",
@@ -1411,7 +1651,7 @@
             "category_id": "VEL",
             "status": "measured",
             "score": 3,
-            "verdict_text": "3 — Healthy",
+            "verdict_text": "3 \u2014 Healthy",
             "reason": "git shortlog: no module single-author > 40%; contributor breadth across the top twenty modules is healthy.",
             "evidence": {
               "tool": "git shortlog -sne + per-file authorship",
@@ -1425,7 +1665,13 @@
                 "zero_docs_modules": 0
               }
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min",
+            "remediation": {
+              "quick_win": "pair-and-document the top exclusive modules (forced bus-factor increase), get a second reviewer on every critical file from here on.",
+              "structural": "architecture that doesn't need a walking encyclopedia (simplify, DOCS), quarterly rotation of module owners, an \"unlearnable-list\" audit (which files can no one explain without the author).",
+              "gold_standard": "No module with single-author > 50%; anyone can explain/deploy any critical service within a day; a leaving engineer is a 1-day disruption, not an event.",
+              "effort": "\u26a1 \u226430 min"
+            }
           },
           {
             "id": "VEL-07",
@@ -1433,7 +1679,7 @@
             "category_id": "VEL",
             "status": "measured",
             "score": 2,
-            "verdict_text": "2 — Minor Debt",
+            "verdict_text": "2 \u2014 Minor Debt",
             "reason": "Compose dev parity holds; prod config is partially hand-edited with observable staging drift.",
             "evidence": {
               "tool": "canonical-config diff",
@@ -1447,7 +1693,13 @@
                 "prod_drift": "partial"
               }
             },
-            "effort": "🔶 ~2–4 h"
+            "effort": "\ud83d\udd36 ~2\u20134 h",
+            "remediation": {
+              "quick_win": "containerize dev for parity, make config canonical (one source of truth, injected per env), stand up a staging clone of prod config.",
+              "structural": "full parity \u2014 same containers/versions everywhere, IaC for all envs, config as code, \"prod reproduction\" as a standard step (spin replica to confirm).",
+              "gold_standard": "Any environment can be rebuilt to match prod; prod-only bugs are a thing of the past; config drift is zero-diff against the source of truth.",
+              "effort": "\ud83d\udd36 ~2\u20134 h"
+            }
           },
           {
             "id": "VEL-08",
@@ -1455,7 +1707,7 @@
             "category_id": "VEL",
             "status": "measured",
             "score": 2,
-            "verdict_text": "2 — Minor Debt",
+            "verdict_text": "2 \u2014 Minor Debt",
             "reason": "Deploy pipeline promotes artifacts; one manual smoke step gates promotion to prod.",
             "evidence": {
               "tool": "CI config deploy-job audit",
@@ -1470,7 +1722,13 @@
                 "prod_ssh_scripts": 0
               }
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min",
+            "remediation": {
+              "quick_win": "capture the manual steps as a CI/CD job (artifact \u2192 deploy), remove direct prod SSH, add an audit log of every deployment.",
+              "structural": "full automated promotion (CI build artifact \u2192 envs), IaC-managed infra (PERF-06), deploy from immutable artifacts (never from a checkout on a server), prod access by deploy pipeline only.",
+              "gold_standard": "Zero manual steps; deploys are CI pipeline promotions with audit; prod editability removed; an audience of \"the pipeline did it\" for every release.",
+              "effort": "\ud83d\udd36 ~2\u20134 h"
+            }
           },
           {
             "id": "VEL-09",
@@ -1478,7 +1736,7 @@
             "category_id": "VEL",
             "status": "measured",
             "score": 2,
-            "verdict_text": "2 — Minor Debt",
+            "verdict_text": "2 \u2014 Minor Debt",
             "reason": "Review coverage 92%; median PR 480 LOC with no size gate.",
             "evidence": {
               "tool": "GH PR API (coverage, size, latency)",
@@ -1493,7 +1751,13 @@
                 "direct_push_rate": "0.4%"
               }
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min",
+            "remediation": {
+              "quick_win": "enforce branch protection with required reviews on core paths, ban direct pushes, add a PR-size lint (split > 400-LOC PRs), publish review-coverage metrics.",
+              "structural": "review as a first-class metric (coverage, size, latency tracked), pairing/small-PR culture, a second reviewer on security-adjacent paths, \"no unreviewed merge\" as an org rule.",
+              "gold_standard": "100% coverage on core paths, median PR < 400 LOC, reviews substantive (comments, not emoji), zero bypasses, review latency < 1 day.",
+              "effort": "\ud83d\udd36 ~2\u20134 h"
+            }
           },
           {
             "id": "VEL-10",
@@ -1501,7 +1765,7 @@
             "category_id": "VEL",
             "status": "measured",
             "score": 1,
-            "verdict_text": "1 — Severe Debt",
+            "verdict_text": "1 \u2014 Severe Debt",
             "reason": "Release branch (fresh-1.0) six weeks old; trunk diverges during release-freeze windows with merge windows in the calendar.",
             "evidence": {
               "tool": "git topology scan",
@@ -1516,7 +1780,13 @@
                 "trunk_divergence": true
               }
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min",
+            "remediation": {
+              "quick_win": "trunk-based basics \u2014 short-lived branches < 3 days, protect main + require green CI, delete the oldest release branch with a manual backport policy.",
+              "structural": "move to trunk-based development with feature flags (ties ARCH-10), shrink multi-repo coordination via a platform or monorepo_tools strategy, enforce main-always-green with a CI gate.",
+              "gold_standard": "Branches live < 3 days, main is always mergeable and green, merges are small and continuous, no merge windows, one logical change fits in one repo/PR.",
+              "effort": "\u26a1 \u226430 min"
+            }
           }
         ]
       },
@@ -1541,7 +1811,7 @@
             "category_id": "PERF",
             "status": "measured",
             "score": 2,
-            "verdict_text": "2 — Minor Debt",
+            "verdict_text": "2 \u2014 Minor Debt",
             "reason": "Instrumentation deps present (structlog, sentry-sdk) with RED-dashboards; no distributed tracing and metric coverage is partial.",
             "evidence": {
               "tool": "instrumentation inventory",
@@ -1557,7 +1827,13 @@
                 "dashboards": "RED basics"
               }
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min",
+            "remediation": {
+              "quick_win": "add structured logging + request IDs everywhere (framework middleware), stand up a metrics endpoint with RED/U; USE basics, emit the top 6 metrics.",
+              "structural": "OpenTelemetry adoption (auto-instrumentation), tracing across services, an SLO + error-budget loop, observability as a deployment requirement (no deploy without instrumentation).",
+              "gold_standard": "Every service emits metrics/logs/traces standardly, requests are correlated end-to-end, dashboards answer latency/errors/capacity in seconds, and \"why is it slow\" never requires SSH.",
+              "effort": "\ud83d\udd36 ~2\u20134 h"
+            }
           },
           {
             "id": "PERF-02",
@@ -1565,7 +1841,7 @@
             "category_id": "PERF",
             "status": "measured",
             "score": 2,
-            "verdict_text": "2 — Minor Debt",
+            "verdict_text": "2 \u2014 Minor Debt",
             "reason": "Application containerized; two legacy workers still run from hand-config scripts on VMs.",
             "evidence": {
               "tool": "manifest inventory",
@@ -1579,7 +1855,13 @@
                 "snowflake_workers": 2
               }
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min",
+            "remediation": {
+              "quick_win": "containerize the app (it's usually the smallest step), move VM provisioning to IaC (Terraform/cloud-init), codify the laptop script.",
+              "structural": "immutable, containerized, orchestrated deployment (K8s/ECS) with IaC for everything, auto-scaling-ready, snowflakes eliminated by rebuild-from-code.",
+              "gold_standard": "Everything containerized + IaC-managed, instances are cattle (rebuildable in minutes), scale is a config change, drift impossible by construction.",
+              "effort": "\ud83d\udd36 ~2\u20134 h"
+            }
           },
           {
             "id": "PERF-03",
@@ -1588,7 +1870,7 @@
             "status": "unknown",
             "reason": "Memory-leak profile requires runtime measurement over a sustained run.",
             "unknown_measure_path": "24h load profile + RSS trend; heap diagnostics.",
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min"
           },
           {
             "id": "PERF-04",
@@ -1597,7 +1879,7 @@
             "status": "unknown",
             "reason": "Scaling ceiling (DB lock contention past a single instance) needs a load test to prove.",
             "unknown_measure_path": "Load-test the hot path past vertical size; check contention.",
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min"
           },
           {
             "id": "PERF-05",
@@ -1605,13 +1887,19 @@
             "category_id": "PERF",
             "status": "estimated",
             "score": 1,
-            "verdict_text": "1 — Severe Debt",
+            "verdict_text": "1 \u2014 Severe Debt",
             "reason": "Static capacity; no autoscaling config in the repo and capacity changes are manual.",
             "basis": {
               "pattern": "no HPA/ASG config in IaC",
               "confidence": "medium"
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min",
+            "remediation": {
+              "quick_win": "set HPA/ASG on the top 5 workloads with sane thresholds, add utilization + headroom dashboards, run the scheduled-campaign checklist.",
+              "structural": "autoscaling everywhere + telemetry-driven capacity reviewing (monthly), load-testing against forecast demand, SLO-based scaling decisions.",
+              "gold_standard": "Autoscaling covers critical workloads; capacity changes are system-driven by policy; spikes are non-events; waste is continuously right-sized.",
+              "effort": "\ud83d\udd36 ~2\u20134 h"
+            }
           },
           {
             "id": "PERF-06",
@@ -1619,7 +1907,7 @@
             "category_id": "PERF",
             "status": "measured",
             "score": 2,
-            "verdict_text": "2 — Minor Debt",
+            "verdict_text": "2 \u2014 Minor Debt",
             "reason": "Terraform covers VPC/DB/compute; two snowflake servers are provisioned by hand.",
             "evidence": {
               "tool": "Terraform coverage heuristic",
@@ -1634,7 +1922,13 @@
                 "drift_detection": false
               }
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min",
+            "remediation": {
+              "quick_win": "adopt Terraform/Pulumi for the top resource types (VPC/DB/compute), add drift detection (initial run finds the gap), codify the \"documented console changes\" retroactively.",
+              "structural": "full IaC coverage with state remote + plan-diffs in CI, admin access least-privilege, rebuild-from-code as a tested path, drift = CI failure.",
+              "gold_standard": "Everything in code, changes flow through CI-plan-review, drift is zero or alerted, and rebuilding an env is an afternoon exercise.",
+              "effort": "\ud83d\udd36 ~2\u20134 h"
+            }
           },
           {
             "id": "PERF-07",
@@ -1642,13 +1936,19 @@
             "category_id": "PERF",
             "status": "estimated",
             "score": 1,
-            "verdict_text": "1 — Severe Debt",
+            "verdict_text": "1 \u2014 Severe Debt",
             "reason": "No SLO config for latency/availability; no load-test harness or perf regression gate in CI.",
             "basis": {
               "pattern": "SLO/load-test config absence",
               "confidence": "medium"
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min",
+            "remediation": {
+              "quick_win": "define SLOs for the top 3 services (latency p95 + availability), measure them with the metrics you added (PERF-01), add a synthetic check for the money path.",
+              "structural": "error budgets + burn alerts, a CI perf gate (load-test baseline run on PRs), latency regression reports in the deploy loop, SLO review as a ritual.",
+              "gold_standard": "Every service has an SLO, measured and burned-alerted; CI catches perf regressions; latency baselines are historical and trusted.",
+              "effort": "\ud83d\udd36 ~2\u20134 h"
+            }
           },
           {
             "id": "PERF-08",
@@ -1656,14 +1956,20 @@
             "category_id": "PERF",
             "status": "estimated",
             "score": 1,
-            "verdict_text": "1 — Severe Debt",
+            "verdict_text": "1 \u2014 Severe Debt",
             "reason": "Cold start ~40s with a heavy idle footprint; scheduler and workers do synchronous boot work with no lazy init.",
             "basis": {
               "pattern": "static startup-shape estimate",
               "sample": "boot DI + warmup on every worker",
               "confidence": "low"
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min",
+            "remediation": {
+              "quick_win": "lazy-init the greedy startup work, trim the boot-time DI/registrations, enable JVM/cache warmup layers.",
+              "structural": "runtime modernization (container-native runtimes, startup budget with a gate, deferred-cost architecture), image size budgets, \"cold start < 10s\" as an autoscaling prerequisite.",
+              "gold_standard": "Cold start < 10\u201315s, idle footprint proportional to need, autoscaling actually scales because instances become useful fast, zero \"startup work\" that could be lazy.",
+              "effort": "\ud83d\udd36 ~2\u20134 h"
+            }
           }
         ]
       },
@@ -1688,7 +1994,7 @@
             "category_id": "DOCS",
             "status": "measured",
             "score": 2,
-            "verdict_text": "2 — Minor Debt",
+            "verdict_text": "2 \u2014 Minor Debt",
             "reason": "docs/adr/ holds 10 entries; the DB-split and queue decisions predate the folder and are undocumented.",
             "evidence": {
               "tool": "docs/adr inventory",
@@ -1703,7 +2009,13 @@
                 "missing_critical": 2
               }
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min",
+            "remediation": {
+              "quick_win": "write ADRs for the top 10 load-bearing decisions (interview the oldest engineers, mine git/past docs), establish a template + PR requirement for consequential choices.",
+              "structural": "ADR convention in the repo (ADR-NNN, status, decision, context, alternatives considered), decisions now documented at review time, an \"explain every load-bearing choice\" refactoring task.",
+              "gold_standard": "Every consequential decision has an ADR with alternatives; new decisions document as standard practice; teams can revisit a decision on evidence, not memory.",
+              "effort": "\ud83d\udd36 ~2\u20134 h"
+            }
           },
           {
             "id": "DOCS-02",
@@ -1711,14 +2023,20 @@
             "category_id": "DOCS",
             "status": "estimated",
             "score": 2,
-            "verdict_text": "2 — Minor Debt",
+            "verdict_text": "2 \u2014 Minor Debt",
             "reason": "Command-verified sample: 3 of 10 setup docs drift from the codebase; last-updated dates absent.",
             "basis": {
               "pattern": "doc-vs-code correlation sample",
               "sample": "setup/worker.md out of date",
               "confidence": "medium"
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min",
+            "remediation": {
+              "quick_win": "a doc-rot sweep (delete/rewrite the worst 10), add \"last verified\" dates, a github-issues link on every doc page so inaccuracies are reportable with one click.",
+              "structural": "docs-as-code with CI verification (commands in docs execute in a test fixture \u2014 DOCS-09), ownership per doc, \"docs touched in the same PR as code\" rule.",
+              "gold_standard": "Docs match code; commands in docs are CI-verified; a doc is as trustworthy as code, and updated with it.",
+              "effort": "\u26a1 \u226430 min"
+            }
           },
           {
             "id": "DOCS-03",
@@ -1726,7 +2044,7 @@
             "category_id": "DOCS",
             "status": "measured",
             "score": 3,
-            "verdict_text": "3 — Healthy",
+            "verdict_text": "3 \u2014 Healthy",
             "reason": "docs/runbooks covers the top 8 incident classes and is linked from alert dashboards.",
             "evidence": {
               "tool": "ops-wiki coverage",
@@ -1741,7 +2059,13 @@
                 "alert_linked": true
               }
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min",
+            "remediation": {
+              "quick_win": "write runbooks for the top 5 incident classes today (postmortem-driven), make them linkable from alert dashboards, add \"runme at the first sign\" steps.",
+              "structural": "runbook-as-product (owned, tested, games rehearsed), alert\u2192runbook binding, postmortem = runbook update, drill the top runbook quarterly.",
+              "gold_standard": "Every incident class has a current, tested runbook; on-call executes procedures not improv; incident time is dominated by execution, not discovery.",
+              "effort": "\ud83d\udd36 ~2\u20134 h"
+            }
           },
           {
             "id": "DOCS-04",
@@ -1749,7 +2073,7 @@
             "category_id": "DOCS",
             "status": "measured",
             "score": 3,
-            "verdict_text": "3 — Healthy",
+            "verdict_text": "3 \u2014 Healthy",
             "reason": "CONTRIBUTING golden-path doc; every command dry-runs green in CI.",
             "evidence": {
               "tool": "command dry-run in CI",
@@ -1764,7 +2088,13 @@
                 "ci_verified": true
               }
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min",
+            "remediation": {
+              "quick_win": "write the golden path (clone \u2192 setup \u2192 run \u2192 test \u2192 first PR) and verify every command executes, add CONTRIBUTING.md.",
+              "structural": "golden path CI-verified (fresh container proves it \u2014 DOCS-09), onboarding checklist wired into the ticket system, \"setup docs break\" = blame-the-repo not the human.",
+              "gold_standard": "A new hire takes < 2 hours to a working local env entirely from docs; the setup guide is CI-tested and always current.",
+              "effort": "\u26a1 \u226430 min"
+            }
           },
           {
             "id": "DOCS-05",
@@ -1772,13 +2102,19 @@
             "category_id": "DOCS",
             "status": "estimated",
             "score": 1,
-            "verdict_text": "1 — Severe Debt",
+            "verdict_text": "1 \u2014 Severe Debt",
             "reason": "Two critical modules (ledger, scheduler) have no written record outside two engineers.",
             "basis": {
               "pattern": "coverage proxy: no docs touching module paths",
               "confidence": "low"
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min",
+            "remediation": {
+              "quick_win": "run the departure drill on the top module \u2014 write the unrecorded facts as docs/ADRs/runbooks, pair-document with the oral experts.",
+              "structural": "\"write it down or it doesn't exist\" culture (every knowledge answer \u2192 doc link), knowledge-review on critical modules, retiring the phrase \"ask X\" in favor of \"read the doc,\" interview-capture sessions for missionaries.",
+              "gold_standard": "90%+ of functional questions answerable from written sources; no module depends on a person's memory; the departure drill yields a weekend, not a collapse.",
+              "effort": "\ud83d\udd36 ~2\u20134 h"
+            }
           },
           {
             "id": "DOCS-06",
@@ -1786,14 +2122,20 @@
             "category_id": "DOCS",
             "status": "estimated",
             "score": 2,
-            "verdict_text": "2 — Minor Debt",
+            "verdict_text": "2 \u2014 Minor Debt",
             "reason": "Median TODO age under 12 months; two misleading comments found near core paths.",
             "basis": {
               "pattern": "TODO/FIXME age via git blame",
               "sample": "2 misleading comments sampled",
               "confidence": "low"
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min",
+            "remediation": {
+              "quick_win": "kill the top 20 misleading/obsolete comments (fix or delete), resolve/add justification for the oldest TODOs, rename the worst identifiers.",
+              "structural": "self-documenting-code standards in review (naming, small functions), \"why\" comments for invariants, comment lint (TODO age alarm), and a \"readability\" gate on the module most touched on-call.",
+              "gold_standard": "Code reads like prose (names carry intent), comments exist only for true \"why\", TODO-rot is gone, and a reader can trust line 1 to mean line 1.",
+              "effort": "\ud83d\udd36 ~2\u20134 h"
+            }
           },
           {
             "id": "DOCS-07",
@@ -1801,10 +2143,10 @@
             "category_id": "DOCS",
             "status": "measured",
             "score": 3,
-            "verdict_text": "3 — Healthy",
+            "verdict_text": "3 \u2014 Healthy",
             "reason": "Generated API reference is current with the OpenAPI contract.",
             "evidence": {
-              "tool": "spec → generated reference",
+              "tool": "spec \u2192 generated reference",
               "pointers": [
                 {
                   "detail": "reference regenerated in CI"
@@ -1815,7 +2157,13 @@
                 "current": true
               }
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min",
+            "remediation": {
+              "quick_win": "publish the OpenAPI/spec with a generated reference (Swagger UI/Redoc), add examples for the top 10 endpoints, write an auth quickstart.",
+              "structural": "docs generated from contract in CI (spec is source, docs are output \u2014 DOCS-09), consumer guides for the top use cases, updated with each contract change, \"docs in same PR\" rule.",
+              "gold_standard": "Every endpoint has a current, generated reference with examples; a stranger self-serves; docs update with the contract in the same change.",
+              "effort": "\ud83d\udd36 ~2\u20134 h"
+            }
           },
           {
             "id": "DOCS-08",
@@ -1823,7 +2171,7 @@
             "category_id": "DOCS",
             "status": "measured",
             "score": 2,
-            "verdict_text": "2 — Minor Debt",
+            "verdict_text": "2 \u2014 Minor Debt",
             "reason": "CHANGELOG maintained; migration guides for breaking changes missing for the last major.",
             "evidence": {
               "tool": "CHANGELOG + release audit",
@@ -1838,7 +2186,13 @@
                 "migration_guides": "1 missing"
               }
             },
-            "effort": "⚡ ≤30 min"
+            "effort": "\u26a1 \u226430 min",
+            "remediation": {
+              "quick_win": "adopt a CHANGELOG process (Keep-a-Changelog, auto-generated from commits/PRs), publish release notes for the top consumers, write migration guides for open breaking changes (backfill).",
+              "structural": "semantic-release automation (version + changelog + notes automated), a release-communication channel (port status page + email), \"breaking = migration guide in same MR\" rule.",
+              "gold_standard": "Every release has automated notes; every breaking change has a migration guide published with the change; consumers hear first, break never (silently).",
+              "effort": "\ud83d\udd36 ~2\u20134 h"
+            }
           }
         ]
       }
@@ -1849,7 +2203,7 @@
         "name": "Audit Logging Deficits",
         "points_lost": 2,
         "weight_pp": "2.22pp",
-        "summary": "Admin and PII-mutation paths emit unstructured log lines without request IDs — a PII export cannot be traced end-to-end."
+        "summary": "Admin and PII-mutation paths emit unstructured log lines without request IDs \u2014 a PII export cannot be traced end-to-end."
       },
       {
         "row": "DATA-02",
@@ -1877,7 +2231,7 @@
         "name": "Quality Gates in CI",
         "points_lost": 3,
         "weight_pp": "1.25pp",
-        "summary": "CI runs lint only; no SAST, no coverage gate, no complexity budget — security and quality findings are advisory, never blocking."
+        "summary": "CI runs lint only; no SAST, no coverage gate, no complexity budget \u2014 security and quality findings are advisory, never blocking."
       }
     ],
     "deep_dive_scope": [
@@ -2019,10 +2373,10 @@
         "category_id": "ECOS",
         "status": "measured",
         "score": 3,
-        "verdict_text": "3 — Healthy",
+        "verdict_text": "3 \u2014 Healthy",
         "reason": "Python 3.11 (LTS) is the app runtime; endoflife.date window open through Oct 2027. No deprecation pressure.",
         "evidence": {
-          "tool": "manifest pin → endoflife.date",
+          "tool": "manifest pin \u2192 endoflife.date",
           "args": "pyproject.toml requires-python >=3.11,<3.12",
           "pointers": [
             {
@@ -2037,7 +2391,13 @@
             "window_ok": true
           }
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min",
+        "remediation": {
+          "quick_win": "document the gap, create the upgrade ticket with a date.",
+          "structural": "parallel runtime upgrade plan \u2014 run new runtime in CI behind a feature gate, migrate one service at a time, dual-run in prod. For truly stuck runtimes, isolate behind a facade and treat like a rewrite candidate.",
+          "gold_standard": "Every production runtime within its vendor-supported window; CI builds a canary job on the current runtime; a deprecation calendar exists and is reviewed quarterly.",
+          "effort": "\u26a1 \u226430 min"
+        }
       },
       {
         "id": "ECOS-02",
@@ -2045,7 +2405,7 @@
         "category_id": "ECOS",
         "status": "measured",
         "score": 2,
-        "verdict_text": "2 — Minor Debt",
+        "verdict_text": "2 \u2014 Minor Debt",
         "reason": "Core web framework pinned one LTS generation behind current (3.2 line vs 5.x); > 30% of direct deps within one major, none more.",
         "evidence": {
           "tool": "pip list --outdated / lockfile vs registry",
@@ -2063,7 +2423,13 @@
             "share_gt_2_majors": "0%"
           }
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min",
+        "remediation": {
+          "quick_win": "enable Dependabot/Renovate with major-update grouping and a monthly budget.",
+          "structural": "\"upgrade train\" \u2014 pick one major hop per quarter, keep intermediate commits shippable, use the dependency graph from tools to sequence hops (don't skip majors). Establish a \"never more than 1 major behind\" policy for core deps.",
+          "gold_standard": "Core framework within 1 major of current; < 30% of direct deps behind by a major; automatic update PRs flowing weekly; majors scheduled explicitly on the roadmap.",
+          "effort": "\u26a1 \u226430 min"
+        }
       },
       {
         "id": "ECOS-03",
@@ -2071,7 +2437,7 @@
         "category_id": "ECOS",
         "status": "measured",
         "score": 2,
-        "verdict_text": "2 — Minor Debt",
+        "verdict_text": "2 \u2014 Minor Debt",
         "reason": "One transitive signing lib (siphashc) unmaintained ~4 years; not on the hot path, flagged for swap.",
         "evidence": {
           "tool": "osv-scanner / last-release audit",
@@ -2087,7 +2453,13 @@
             "last_release_yr": 2022
           }
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min",
+        "remediation": {
+          "quick_win": "audit the dependency surface for abandoned libs and create a removal/swap ticket with a date.",
+          "structural": "replace load-bearing abandoned libs with maintained alternatives or fork-and-own with a maintenance budget; pin to the exact version and wrap it behind your own interface so it's swappable.",
+          "gold_standard": "Every load-bearing dependency either actively maintained or deliberately forked-and-owned; a quarterly \"library health\" review is on the calendar; no archived repos in the dependency surface.",
+          "effort": "\u26a1 \u226430 min"
+        }
       },
       {
         "id": "ECOS-04",
@@ -2095,14 +2467,20 @@
         "category_id": "ECOS",
         "status": "estimated",
         "score": 2,
-        "verdict_text": "2 — Minor Debt",
+        "verdict_text": "2 \u2014 Minor Debt",
         "reason": "Deprecation warnings surfaced in the template parser and i18n layers; no removed-API dependency in the core model layer.",
         "basis": {
           "pattern": "compiler deprecation warnings + eslint/djlint rules",
-          "sample": "django/template → DeprecationWarning at render",
+          "sample": "django/template \u2192 DeprecationWarning at render",
           "confidence": "medium"
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min",
+        "remediation": {
+          "quick_win": "turn deprecation warnings into a CI-visible report (not silent); fix the 20 highest-value warnings.",
+          "structural": "treat deprecation debt like feature debt \u2014 a quarterly \"modernize the deprecated surface\" slice; keep the target version's removal list as a tracked checklist.",
+          "gold_standard": "Zero deprecation warnings in the core module build; a CI gate that fails (or reports) on new deprecation warnings; removal timelines tracked.",
+          "effort": "\u26a1 \u226430 min"
+        }
       },
       {
         "id": "ECOS-05",
@@ -2110,7 +2488,7 @@
         "category_id": "ECOS",
         "status": "measured",
         "score": 3,
-        "verdict_text": "3 — Healthy",
+        "verdict_text": "3 \u2014 Healthy",
         "reason": "SBOM (syft) + github/licensee: BSD-3 root, zero copyleft in the transitive graph, no unknown licenses.",
         "evidence": {
           "tool": "syft + github/licensee",
@@ -2126,7 +2504,13 @@
             "sbom_attested": true
           }
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min",
+        "remediation": {
+          "quick_win": "generate an SBOM (`syft . > sbom.json`), wire it into CI, publish attribution files.",
+          "structural": "add a license gate to CI (fail on GPL in closed-source), replace copyleft deps, retire unknown-license packages, review vendored code for stripped notices.",
+          "gold_standard": "SBOM generated and attested on every release; license policy enforced in CI; zero unknown licenses; copyleft list reviewed quarterly and signed off.",
+          "effort": "\ud83d\udd36 ~2\u20134 h"
+        }
       },
       {
         "id": "ECOS-06",
@@ -2134,7 +2518,7 @@
         "category_id": "ECOS",
         "status": "measured",
         "score": 1,
-        "verdict_text": "1 — Severe Debt",
+        "verdict_text": "1 \u2014 Severe Debt",
         "reason": "Transitive graph over 300 packages (pipdeptree); ~14 unused direct deps per depcheck; install surface larger than runtime needs.",
         "evidence": {
           "tool": "depcheck + pipdeptree",
@@ -2150,7 +2534,13 @@
             "bloat_band": "> 300"
           }
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min",
+        "remediation": {
+          "quick_win": "run `knip`/`depcheck`, remove unused direct deps, enable `npm dedupe`/lockfile optimization in CI.",
+          "structural": "set a budget (e.g., \"no net-new transitive deps without review\"), replace kitchen-sink libs with narrow ones, dedupe semver ranges, and periodically prune.",
+          "gold_standard": "Transitive count within a declared budget; zero unused direct deps; single version of every critical lib; dependency review is part of code review.",
+          "effort": "\u26a1 \u226430 min"
+        }
       },
       {
         "id": "ECOS-07",
@@ -2158,7 +2548,7 @@
         "category_id": "ECOS",
         "status": "measured",
         "score": 3,
-        "verdict_text": "3 — Healthy",
+        "verdict_text": "3 \u2014 Healthy",
         "reason": "Hashed lockfiles committed; CI installs with --require-hashes and a frozen flag; two clean builds byte-identical.",
         "evidence": {
           "tool": "lockfile + CI install flags",
@@ -2176,7 +2566,13 @@
             "ci_flag": "--require-hashes"
           }
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min",
+        "remediation": {
+          "quick_win": "commit the lockfile, switch CI to `npm ci`/`pip install --require-hashes`/`--frozen-lockfile`, add a \"lockfile up-to-date\" CI check.",
+          "structural": "adopt content-hash pinning, build from clean containers, produce provenance attestations (SLSA level 1\u21922), verify registry integrity.",
+          "gold_standard": "Lockfile committed and current; CI immutable install; two clean builds produce byte-identical artifacts; SLSA provenance generated per release.",
+          "effort": "\u26a1 \u226430 min"
+        }
       },
       {
         "id": "ECOS-08",
@@ -2184,10 +2580,10 @@
         "category_id": "ECOS",
         "status": "measured",
         "score": 0,
-        "verdict_text": "0 — Critical",
+        "verdict_text": "0 \u2014 Critical",
         "reason": "Web framework out of official support since 2024-04 (Django 3.2 LTS EOL) with the migration deferred; the upgrade path exists but is unowned.",
         "evidence": {
-          "tool": "framework version → endoflife.date",
+          "tool": "framework version \u2192 endoflife.date",
           "pointers": [
             {
               "file": "requirements/base.txt",
@@ -2201,7 +2597,13 @@
             "upgrade_owned": false
           }
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min",
+        "remediation": {
+          "quick_win": "quantify the coupling (which modules touch framework-specific APIs directly) and freeze scope on framework-dependent features.",
+          "structural": "extract the framework behind a facade at the boundaries (ports & adapters), migrate incrementally module-by-module on the critical path, keep the system runnable through the whole migration.",
+          "gold_standard": "Framework either current-and-supported, or the core logic is framework-independent behind an interface with an active migration plan.",
+          "effort": "\u26a1 \u226430 min"
+        }
       },
       {
         "id": "ARCH-01",
@@ -2209,7 +2611,7 @@
         "category_id": "ARCH",
         "status": "measured",
         "score": 1,
-        "verdict_text": "1 — Severe Debt",
+        "verdict_text": "1 \u2014 Severe Debt",
         "reason": "Methods over complexity 30 in django/forms and admin views; django/db/models/options.py exceeds 1,000 LOC with 8 responsibilities.",
         "evidence": {
           "tool": "radon cc + Lizard",
@@ -2229,9 +2631,9 @@
           "quick_win": "Carve the top 5 offenders by automated extract-method, add a complexity budget to CI (eslint max-complexity, SonarQube gate).",
           "structural": "Structured decomposition of God Classes by responsibility; strangle complexity behind facades; pair the two riskiest files on a refactor sprint.",
           "gold_standard": "Complexity budget enforced in CI; max method complexity < 15; no file > 1,000 LOC; top-decile list shrinking.",
-          "effort": "🔶 ~2–4 h"
+          "effort": "\ud83d\udd36 ~2\u20134 h"
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min"
       },
       {
         "id": "ARCH-02",
@@ -2239,8 +2641,8 @@
         "category_id": "ARCH",
         "status": "measured",
         "score": 1,
-        "verdict_text": "1 — Severe Debt",
-        "reason": "contrib modules show circular references across bounded contexts (auth ↔ admin ↔ contenttypes ↔ sessions); a shared utils hub has fan-in > 400.",
+        "verdict_text": "1 \u2014 Severe Debt",
+        "reason": "contrib modules show circular references across bounded contexts (auth \u2194 admin \u2194 contenttypes \u2194 sessions); a shared utils hub has fan-in > 400.",
         "evidence": {
           "tool": "dependency-cruiser",
           "pointers": [
@@ -2259,9 +2661,9 @@
           "quick_win": "Draw the DSM, pick the 3 highest-fan-in hubs, wrap them behind interfaces and shrink their API.",
           "structural": "Define bounded contexts and enforce them with ArchUnit-style rules in CI; extract the shared hub into a stable, narrow contract; invert dependencies toward stable abstractions.",
           "gold_standard": "Acyclic dependency graph at the module boundary; every module has narrow, explicit dependencies.",
-          "effort": "🔶 ~2–4 h"
+          "effort": "\ud83d\udd36 ~2\u20134 h"
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min"
       },
       {
         "id": "ARCH-03",
@@ -2269,7 +2671,7 @@
         "category_id": "ARCH",
         "status": "measured",
         "score": 1,
-        "verdict_text": "1 — Severe Debt",
+        "verdict_text": "1 \u2014 Severe Debt",
         "reason": "import-linter flags handlers reaching the ORM directly and business rules in views; no arch tests enforce direction.",
         "evidence": {
           "tool": "import-linter",
@@ -2285,7 +2687,13 @@
             "arch_tests": false
           }
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min",
+        "remediation": {
+          "quick_win": "add an arch test (ArchUnit/import-linter) and fix the top violations; enforce at PR time.",
+          "structural": "rebuild the lost layers \u2014 extract domain into its own module, move persistence behind repositories, keep UI thin; do it one vertical slice at a time.",
+          "gold_standard": "Architecture rules enforced in CI; a 30-minute vertical-slice tour confirms correct directions; business rules live in the domain layer only.",
+          "effort": "\ud83d\udd36 ~2\u20134 h"
+        }
       },
       {
         "id": "ARCH-04",
@@ -2293,7 +2701,7 @@
         "category_id": "ARCH",
         "status": "measured",
         "score": 2,
-        "verdict_text": "2 — Minor Debt",
+        "verdict_text": "2 \u2014 Minor Debt",
         "reason": "vulture finds ~12% unreferenced exports; one legacy admin endpoint kept alive with zero traffic for 12 months (auth-protected).",
         "evidence": {
           "tool": "vulture + route traffic log",
@@ -2309,7 +2717,13 @@
             "in_core": false
           }
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min",
+        "remediation": {
+          "quick_win": "run knip/vulture, delete safely (git history preserves), remove orphaned endpoints and the routes that point to them.",
+          "structural": "a \"no dead code\" PR gate (knip in CI, fail on new unreferenced exports), flag retirement policy (flags > 6 months get removed or justified), quarterly pruning ritual.",
+          "gold_standard": "Dead-code scan clean in CI; every feature flag has an owner and a retirement date; all prod endpoints are in an API inventory with traffic.",
+          "effort": "\u26a1 \u226430 min"
+        }
       },
       {
         "id": "ARCH-05",
@@ -2317,8 +2731,8 @@
         "category_id": "ARCH",
         "status": "measured",
         "score": 1,
-        "verdict_text": "1 — Severe Debt",
-        "reason": "Top-10% churned files (models/base.py, core/cache) account for 44% of bug-fix commits — churn and defect concentration overlap.",
+        "verdict_text": "1 \u2014 Severe Debt",
+        "reason": "Top-10% churned files (models/base.py, core/cache) account for 44% of bug-fix commits \u2014 churn and defect concentration overlap.",
         "evidence": {
           "tool": "git hot-spot analysis",
           "args": "git log --oneline --no-merges",
@@ -2333,7 +2747,13 @@
             "hotspot_in_core": true
           }
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min",
+        "remediation": {
+          "quick_win": "put the top hot spot behind a designated owner, add targeted tests, freeze feature scope on it for one sprint.",
+          "structural": "redesign the hot spot \u2014 decompose by responsibility, rewrite the risky core with tests first, rotate engineers to avoid bus-factor in the fix. Track the metric quarterly to prove improvement.",
+          "gold_standard": "Churn evenly distributed relative to responsibility; no file in the top churn\u2229defect intersection for two quarters; hot-spot list tracked in the refactoring backlog.",
+          "effort": "\ud83d\udd36 ~2\u20134 h"
+        }
       },
       {
         "id": "ARCH-06",
@@ -2341,14 +2761,20 @@
         "category_id": "ARCH",
         "status": "estimated",
         "score": 1,
-        "verdict_text": "1 — Severe Debt",
+        "verdict_text": "1 \u2014 Severe Debt",
         "reason": "Server-rendered monolith without DI; module seams are implicit on disk; a unit test of core logic still spins the full URLconf and settings.",
         "basis": {
           "pattern": "generation test (unit-test-without-stack experiment)",
           "sample": "instantiate core service without live stack: fails",
           "confidence": "medium"
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min",
+        "remediation": {
+          "quick_win": "introduce interface seams around the 3 worst-coupled cores, add a couple of tests to prove the seams work.",
+          "structural": "adopt the modern architecture incrementally \u2014 introduce a DI container, extract modules with enforced boundaries, wrap legacy access behind ports, migrate vertical slices one at a time.",
+          "gold_standard": "Core logic testable without live infrastructure; DI and module boundaries standard; new features land in the modern style while legacy shrinks.",
+          "effort": "\ud83d\udd36 ~2\u20134 h"
+        }
       },
       {
         "id": "ARCH-07",
@@ -2356,20 +2782,20 @@
         "category_id": "ARCH",
         "status": "estimated",
         "score": 1,
-        "verdict_text": "1 — Severe Debt",
+        "verdict_text": "1 \u2014 Severe Debt",
         "reason": "settings, the app registry (django/apps/registry.py), and connection defaults (django/db/__init__.py) are process-wide mutable singletons read from core request paths; correctness depends on import order and parallel workers disagree on state.",
         "basis": {
           "pattern": "grep: module-level singletons + hidden time/IO in model methods",
-          "sample": "django/db/__init__.py → connections default resolved at import",
+          "sample": "django/db/__init__.py \u2192 connections default resolved at import",
           "confidence": "medium"
         },
         "remediation": {
           "quick_win": "Inject the clock/random/IO at the seams you can reach; make the top 5 singletons instances with explicit wiring.",
           "structural": "Eliminate globals by constructor injection; make state explicit and owned; introduce a proper initialization/DI lifecycle; enforce 'no static mutable' with a lint.",
           "gold_standard": "All dependencies explicit and injected; time/random/IO behind interfaces; test suite passes under random/parallel execution; zero mutable statics in core.",
-          "effort": "🔶 ~2–4 h"
+          "effort": "\ud83d\udd36 ~2\u20134 h"
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min"
       },
       {
         "id": "ARCH-08",
@@ -2377,7 +2803,7 @@
         "category_id": "ARCH",
         "status": "measured",
         "score": 1,
-        "verdict_text": "1 — Severe Debt",
+        "verdict_text": "1 \u2014 Severe Debt",
         "reason": "PMD-CPD clone rate 14%; money-adjacent formatting and validation logic duplicated across five apps with visible drift.",
         "evidence": {
           "tool": "PMD-CPD",
@@ -2393,7 +2819,13 @@
             "core": true
           }
         },
-        "effort": "🔶 ~2–4 h"
+        "effort": "\ud83d\udd36 ~2\u20134 h",
+        "remediation": {
+          "quick_win": "run jscpd, consolidate the top clusters behind a shared library (start with the business-critical ones).",
+          "structural": "establish a shared internal library with a review process; kill duplicates at PR time (clone scan in CI); migrate duplicated logic incrementally with tests preserving behavior.",
+          "gold_standard": "Duplication < 10%; core business rules exist exactly once, in one owned library; clone scan in CI fails new duplication.",
+          "effort": "\ud83d\udd36 ~2\u20134 h"
+        }
       },
       {
         "id": "ARCH-09",
@@ -2401,14 +2833,20 @@
         "category_id": "ARCH",
         "status": "estimated",
         "score": 2,
-        "verdict_text": "2 — Minor Debt",
+        "verdict_text": "2 \u2014 Minor Debt",
         "reason": "Repo map present but stale vs disk; test-to-code proximity ~60% in core; no single-command fresh-clone harness.",
         "basis": {
           "pattern": "navigation-aid inventory + fresh-clone timed run",
           "sample": "no make test; builds spread across scripts/",
           "confidence": "medium"
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min",
+        "remediation": {
+          "quick_win": "ship a repo-map/context file, co-locate tests for the top core modules, define a task runner of record with a fresh-clone CI proof.",
+          "structural": "seam extraction on core (ports), docs-as-code freshness (DOCS-09), a recurring \"agent completes task X from fresh clone\" acceptance test as a quality gate.",
+          "gold_standard": "From a fresh clone, an agent (or new hire) can locate the module, run its tests, and land a scoped change within one session; navigation aids match disk; core is testable without live infra.",
+          "effort": "\ud83d\udd36 ~2\u20134 h"
+        }
       },
       {
         "id": "ARCH-10",
@@ -2416,14 +2854,20 @@
         "category_id": "ARCH",
         "status": "estimated",
         "score": 1,
-        "verdict_text": "1 — Severe Debt",
+        "verdict_text": "1 \u2014 Severe Debt",
         "reason": "Hardcoded toggles (USE_NEW_SESSION_PATCH = True in source); prod endpoint config committed under the settings package; no flag owner or retirement date.",
         "basis": {
           "pattern": "hardcoded-toggle grep + git blame",
           "sample": "django/conf/global_settings.py ships prod values",
           "confidence": "medium"
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min",
+        "remediation": {
+          "quick_win": "move the top flags to an externalized flag source with owners + retirement dates, externalize prod config into a per-env injected pipeline.",
+          "structural": "config-as-code injected per environment, a flag lifecycle policy (owner, TTL, removal ceremony), a rule that prod values never live in the repo.",
+          "gold_standard": "Zero hardcoded toggles in core; every flag owned with a retirement date; config injected per env from one source; rollback = flag flip, not code change.",
+          "effort": "\u26a1 \u226430 min"
+        }
       },
       {
         "id": "TEST-01",
@@ -2431,7 +2875,7 @@
         "category_id": "TEST",
         "status": "measured",
         "score": 2,
-        "verdict_text": "2 — Minor Debt",
+        "verdict_text": "2 \u2014 Minor Debt",
         "reason": "CI coverage artifact shows 82% line on core modules; the coverage check in the workflow writes a comment but does not fail the build.",
         "evidence": {
           "tool": "CI coverage report (Actions artifact)",
@@ -2447,7 +2891,13 @@
             "gate_fails_build": false
           }
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min",
+        "remediation": {
+          "quick_win": "add a real coverage gate (fail below threshold) on core modules only, and instrument the trend.",
+          "structural": "invest in testing the highest-churn/highest-risk modules first (correlate with ARCH-05), write tests as part of every bug fix (see coverage climb), make coverage a tracked product metric.",
+          "gold_standard": "Branch coverage > 80% on core modules; coverage gate enforced in CI; coverage trend visible on a dashboard and rising or stable.",
+          "effort": "\u26a1 \u226430 min"
+        }
       },
       {
         "id": "TEST-02",
@@ -2455,7 +2905,7 @@
         "category_id": "TEST",
         "status": "measured",
         "score": 1,
-        "verdict_text": "1 — Severe Debt",
+        "verdict_text": "1 \u2014 Severe Debt",
         "reason": "Actions rerun log: ~6% of jobs rerun-to-pass; parallel runs against shared fixtures produce order-dependent failures.",
         "evidence": {
           "tool": "GH Actions workflow rerun history",
@@ -2470,7 +2920,13 @@
             "shared_fixtures": true
           }
         },
-        "effort": "🔶 ~2–4 h"
+        "effort": "\ud83d\udd36 ~2\u20134 h",
+        "remediation": {
+          "quick_win": "quarantine flaky tests (run separately, don't block but do report), fix the top 5 by root cause (sleeps \u2192 waits, shared DB \u2192 test DBs, order-dependence \u2192 isolation).",
+          "structural": "make tests hermetic (see TEST-07), add flake detection to CI (auto-quarantine + report), hold the line: no new flaky tests.",
+          "gold_standard": "Flake rate < 2%; zero \"rerun to pass\" culture; flaky tests auto-quarantined and tracked to fix within a sprint.",
+          "effort": "\ud83d\udd36 ~2\u20134 h"
+        }
       },
       {
         "id": "TEST-03",
@@ -2478,8 +2934,8 @@
         "category_id": "TEST",
         "status": "measured",
         "score": 1,
-        "verdict_text": "1 — Severe Debt",
-        "reason": "E2E (Selenium) runtime share is ~41% of the suite; the unit/integration layer is thin at the view → ORM seams.",
+        "verdict_text": "1 \u2014 Severe Debt",
+        "reason": "E2E (Selenium) runtime share is ~41% of the suite; the unit/integration layer is thin at the view \u2192 ORM seams.",
         "evidence": {
           "tool": "test inventory by level",
           "pointers": [
@@ -2493,7 +2949,13 @@
             "unit_share": "31%"
           }
         },
-        "effort": "🔶 ~2–4 h"
+        "effort": "\ud83d\udd36 ~2\u20134 h",
+        "remediation": {
+          "quick_win": "move the top 20 E2E tests' logic down to integration/unit level (test the service, not the click).",
+          "structural": "rebuild the pyramid over time \u2014 write unit tests for all domain logic, integration for boundaries, keep E2E for < 10 user journeys; budget E2E runtime.",
+          "gold_standard": "Classic pyramid (e.g., 70/20/10); E2E < 10% runtime; failures localize within seconds; E2E covers only true user journeys.",
+          "effort": "\ud83d\udd36 ~2\u20134 h"
+        }
       },
       {
         "id": "TEST-04",
@@ -2501,8 +2963,8 @@
         "category_id": "TEST",
         "status": "measured",
         "score": 1,
-        "verdict_text": "1 — Severe Debt",
-        "reason": "Full suite P95 34 min across a 16-shard matrix; the merge gate blocks on it — over the 30-min line.",
+        "verdict_text": "1 \u2014 Severe Debt",
+        "reason": "Full suite P95 34 min across a 16-shard matrix; the merge gate blocks on it \u2014 over the 30-min line.",
         "evidence": {
           "tool": "GH Actions workflow durations",
           "pointers": [
@@ -2520,11 +2982,11 @@
         },
         "remediation": {
           "quick_win": "Parallelize across shards/workers, move slow E2E out of the merge gate (nightly), fix the slowest 10 tests.",
-          "structural": "Attack root causes — pyramid rebalance (TEST-03), hermetic fast tests, caching, and a runtime budget with a gate.",
+          "structural": "Attack root causes \u2014 pyramid rebalance (TEST-03), hermetic fast tests, caching, and a runtime budget with a gate.",
           "gold_standard": "Suite < 10 min P95; every engineer runs the suite before merge; a runtime budget enforced in CI.",
-          "effort": "⚡ ≤ 30 min"
+          "effort": "\u26a1 \u2264 30 min"
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min"
       },
       {
         "id": "TEST-05",
@@ -2532,7 +2994,7 @@
         "category_id": "TEST",
         "status": "measured",
         "score": 2,
-        "verdict_text": "2 — Minor Debt",
+        "verdict_text": "2 \u2014 Minor Debt",
         "reason": "7% of tests carry skip markers, mostly recent; few have linked tickets.",
         "evidence": {
           "tool": "rg skip/ignore markers + git age",
@@ -2547,7 +3009,13 @@
             "ticketless": true
           }
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min",
+        "remediation": {
+          "quick_win": "re-enable or delete each skip deliberately (delete-with-justification or fix-with-test); no skips without a linked ticket and owner.",
+          "structural": "CI gate that fails on new skips without a ticket; a monthly \"skip inventory\" review; fix the top skipped module's root cause.",
+          "gold_standard": "< 2% skipped, all with tickets + owners, none older than a sprint; new skips auto-blocked.",
+          "effort": "\u26a1 \u226430 min"
+        }
       },
       {
         "id": "TEST-06",
@@ -2555,7 +3023,7 @@
         "category_id": "TEST",
         "status": "measured",
         "score": 2,
-        "verdict_text": "2 — Minor Debt",
+        "verdict_text": "2 \u2014 Minor Debt",
         "reason": "Core paths (URL resolver, ORM query compiler) sit above 80% from the coverage artifact; template loader characterisation gaps remain.",
         "evidence": {
           "tool": "coverage per core module (CI)",
@@ -2570,7 +3038,13 @@
             "query_compiler": "84%"
           }
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min",
+        "remediation": {
+          "quick_win": "characterisation-test the core (capture current behavior, lock it), then fix the top 3 divergent behaviors.",
+          "structural": "treat the core as the highest test priority \u2014 require tests on every core change, build a test-heavy \"crown jewels\" suite, tie core coverage to the gate.",
+          "gold_standard": "All 10 core journeys have tests; core module coverage > 80%; a core change without tests cannot merge; incidents on core paths are rare and never \"first discovery.\"",
+          "effort": "\ud83d\udd36 ~2\u20134 h"
+        }
       },
       {
         "id": "TEST-07",
@@ -2578,7 +3052,7 @@
         "category_id": "TEST",
         "status": "measured",
         "score": 1,
-        "verdict_text": "1 — Severe Debt",
+        "verdict_text": "1 \u2014 Severe Debt",
         "reason": "Suite shares a live SQLite + Redis; randomized order surfaces 4 order-dependent failures.",
         "evidence": {
           "tool": "random-order CI run",
@@ -2593,7 +3067,13 @@
             "order_failures": 4
           }
         },
-        "effort": "🔶 ~2–4 h"
+        "effort": "\ud83d\udd36 ~2\u20134 h",
+        "remediation": {
+          "quick_win": "run randomized + parallel CI to surface the worst offenders, fix shared-fixture tests, replace sleeps with waits.",
+          "structural": "hermetic test infrastructure \u2014 per-test DBs (Testcontainers), fixtures scoped to each test, deterministic time, no network in unit tests, parallel by default.",
+          "gold_standard": "Suite passes under random order and full parallelism on a fresh container; zero sleeps; tests never touch shared live infrastructure.",
+          "effort": "\ud83d\udd36 ~2\u20134 h"
+        }
       },
       {
         "id": "TEST-08",
@@ -2601,8 +3081,8 @@
         "category_id": "TEST",
         "status": "measured",
         "score": 0,
-        "verdict_text": "0 — Critical",
-        "reason": "CI runs lint only; no SAST, no coverage gate, no complexity budget — security and quality findings are advisory, never blocking.",
+        "verdict_text": "0 \u2014 Critical",
+        "reason": "CI runs lint only; no SAST, no coverage gate, no complexity budget \u2014 security and quality findings are advisory, never blocking.",
         "evidence": {
           "tool": "CI config audit",
           "pointers": [
@@ -2621,9 +3101,9 @@
           "quick_win": "Add lint + SAST (Semgrep/CodeQL/SonarQube) as failing stages, add a coverage gate on core, block admin bypass (require justification audit).",
           "structural": "Define the quality bar in code (lint rules, complexity budgets, coverage thresholds, security checks) and let CI enforce it; tie all gates to the same config the team reviews.",
           "gold_standard": "CI fails on lint, SAST, coverage, complexity, and security findings; bypasses are impossible or audited.",
-          "effort": "⚡ ≤ 30 min"
+          "effort": "\u26a1 \u2264 30 min"
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min"
       },
       {
         "id": "SEC-01",
@@ -2631,8 +3111,8 @@
         "category_id": "SEC",
         "status": "measured",
         "score": 2,
-        "verdict_text": "2 — Minor Debt",
-        "reason": "Two Critical CVEs patched at day 11 — inside the 14-day window but close; median days to close a High is 27 and the trend is downward.",
+        "verdict_text": "2 \u2014 Minor Debt",
+        "reason": "Two Critical CVEs patched at day 11 \u2014 inside the 14-day window but close; median days to close a High is 27 and the trend is downward.",
         "evidence": {
           "tool": "osv-scanner + Dependabot alerts",
           "args": "osv-scanner -r . --experimental-local-db",
@@ -2649,12 +3129,12 @@
           }
         },
         "remediation": {
-          "quick_win": "Patch the open Criticals/Highs in the exposure window — today; re-scan. Both CVEs are closed; keep the trend.",
-          "structural": "A patch SLA policy (Critical ≤ 7 days, High ≤ 30), automated patching (Dependabot/Renovate auto-merge with CI as the gate), and a 'no open Critical in prod' rule.",
+          "quick_win": "Patch the open Criticals/Highs in the exposure window \u2014 today; re-scan. Both CVEs are closed; keep the trend.",
+          "structural": "A patch SLA policy (Critical \u2264 7 days, High \u2264 30), automated patching (Dependabot/Renovate auto-merge with CI as the gate), and a 'no open Critical in prod' rule.",
           "gold_standard": "Zero open Criticals; Highs < 30 days; automated scans in CI; patch SLA documented and met for 4 straight quarters.",
-          "effort": "🔶 ~2–4 h"
+          "effort": "\ud83d\udd36 ~2\u20134 h"
         },
-        "effort": "🔶 ~2–4 h"
+        "effort": "\ud83d\udd36 ~2\u20134 h"
       },
       {
         "id": "SEC-02",
@@ -2662,7 +3142,7 @@
         "category_id": "SEC",
         "status": "measured",
         "score": 3,
-        "verdict_text": "3 — Healthy",
+        "verdict_text": "3 \u2014 Healthy",
         "reason": "gitleaks 8.18 over tree + full history: zero active or revoked secrets; credentials injected from a secrets manager at runtime.",
         "evidence": {
           "tool": "gitleaks@8.18.0",
@@ -2678,7 +3158,13 @@
             "revoke_drill": true
           }
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min",
+        "remediation": {
+          "quick_win": "rotate EVERY leaked credential immediately (the exposure window starts at commit time, not discovery time), remove from current tree, switch to env vars.",
+          "structural": "adopt a secret manager + injection (Vault, Secrets Manager), ban secrets in code via CI scanners on every commit *and* a history scrub, least-privilege per environment, kill the \"secrets in docs\" habit.",
+          "gold_standard": "Zero secrets in the tree or history; secrets injected at runtime from a manager; CI blocks secret commits; rotation drill run annually.",
+          "effort": "\u26a1 \u226430 min"
+        }
       },
       {
         "id": "SEC-03",
@@ -2687,7 +3173,7 @@
         "status": "unknown",
         "reason": "SAST is clean on reachable injection classes, but TLS/header posture and route reachability cannot be proven from code alone.",
         "unknown_measure_path": "Deploy or point at staging; run OWASP ZAP + testssl.sh + securityheaders review.",
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min"
       },
       {
         "id": "SEC-04",
@@ -2695,7 +3181,7 @@
         "category_id": "SEC",
         "status": "measured",
         "score": 2,
-        "verdict_text": "2 — Minor Debt",
+        "verdict_text": "2 \u2014 Minor Debt",
         "reason": "Route audit: server-side session auth everywhere, no default creds; no MFA on admin roles and is_staff is an all-or-nothing gate.",
         "evidence": {
           "tool": "route enforcement audit",
@@ -2711,7 +3197,13 @@
             "idor_probes": 0
           }
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min",
+        "remediation": {
+          "quick_win": "kill default creds, add auth + server-side authorization to every endpoint (route registry), enable MFA on privileged roles, fix the top IDORs.",
+          "structural": "move to managed identity (SSO/OIDC, platform IAM), policy-based authorization (OPA/AWS IAM/ABAC), automated authz tests (walk every route asserting enforcement), session best practices.",
+          "gold_standard": "All endpoints server-side auth'd and authz'd, MFA everywhere privileged, managed SSO + policy engine, authz coverage test in CI.",
+          "effort": "\ud83d\udd36 ~2\u20134 h"
+        }
       },
       {
         "id": "SEC-05",
@@ -2719,8 +3211,8 @@
         "category_id": "SEC",
         "status": "measured",
         "score": 1,
-        "verdict_text": "1 — Severe Debt",
-        "reason": "Admin and PII-mutation paths emit unstructured log lines without request IDs — a PII export cannot be traced end-to-end.",
+        "verdict_text": "1 \u2014 Severe Debt",
+        "reason": "Admin and PII-mutation paths emit unstructured log lines without request IDs \u2014 a PII export cannot be traced end-to-end.",
         "evidence": {
           "tool": "log/config audit",
           "pointers": [
@@ -2737,11 +3229,11 @@
         },
         "remediation": {
           "quick_win": "Add audit logging to the top admin/PII/auth paths with a structured schema, ship logs to an external durable sink, set retention.",
-          "structural": "Treat audit as a compliance requirement — append-only where needed, centralized log platform, automated test asserting every sensitive action produces an audit event.",
+          "structural": "Treat audit as a compliance requirement \u2014 append-only where needed, centralized log platform, automated test asserting every sensitive action produces an audit event.",
           "gold_standard": "Every admin/PII/auth event logged structured (actor, action, target, time, request ID), durable, retained per policy, tamper-evident.",
-          "effort": "🔶 ~2–4 h"
+          "effort": "\ud83d\udd36 ~2\u20134 h"
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min"
       },
       {
         "id": "SEC-06",
@@ -2749,7 +3241,7 @@
         "category_id": "SEC",
         "status": "measured",
         "score": 3,
-        "verdict_text": "3 — Healthy",
+        "verdict_text": "3 \u2014 Healthy",
         "reason": "Deep SCA clean: no reachable criticals below top levels, no malware or unpatchable packages in the graph.",
         "evidence": {
           "tool": "osv-scanner --experimental-local-db + Grype lockfile",
@@ -2764,7 +3256,13 @@
             "reachable_critical": 0
           }
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min",
+        "remediation": {
+          "quick_win": "use tooling to map reachable chains to top-level packages, plan removals/forks of the top offenders, add deep scanning to CI.",
+          "structural": "prune the graph (replace deep-chain producers), vendoring review, dependency budget (ECOS-06), provenance verification, and an incident runbook for \"malicious package found.\"",
+          "gold_standard": "Deep scanning in CI with reachability intelligence; zero malware; vulnerable chains mapped and justified; unmaintained chains trending to zero.",
+          "effort": "\ud83d\udd36 ~2\u20134 h"
+        }
       },
       {
         "id": "SEC-07",
@@ -2772,7 +3270,7 @@
         "category_id": "SEC",
         "status": "measured",
         "score": 2,
-        "verdict_text": "2 — Minor Debt",
+        "verdict_text": "2 \u2014 Minor Debt",
         "reason": "Dependabot enabled; security PRs merged on a ~30-day cadence with no written SLA and auto-merge off.",
         "evidence": {
           "tool": "Dependabot dashboard + lockfile dates",
@@ -2788,7 +3286,13 @@
             "auto_merge": false
           }
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min",
+        "remediation": {
+          "quick_win": "enable Dependabot/Renovate with auto-merge on green for patch/minor updates, act on the security-only PRs first.",
+          "structural": "a scheduled patch lane (weekly security window, CI gates), environment-per-ticket to stage patches, measured SLA with an executive dashboard.",
+          "gold_standard": "Patches automated, applied within SLA (Crit \u2264 7d, High \u2264 30d), CI validates every patch, zero manual patch heroics.",
+          "effort": "\u26a1 \u226430 min"
+        }
       },
       {
         "id": "SEC-08",
@@ -2797,7 +3301,7 @@
         "status": "unknown",
         "reason": "Control-to-framework mapping (SOC2) is not provable from a public repo; needs org-side evidence.",
         "unknown_measure_path": "Control-to-evidence mapping + audit review with the compliance/security team.",
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min"
       },
       {
         "id": "DATA-01",
@@ -2805,7 +3309,7 @@
         "category_id": "DATA",
         "status": "measured",
         "score": 2,
-        "verdict_text": "2 — Minor Debt",
+        "verdict_text": "2 \u2014 Minor Debt",
         "reason": "34 long-running or dependent migrations in Alembic history; fresh-build-from-migrations passes in CI (non-destructive).",
         "evidence": {
           "tool": "migration inventory + fresh-build check",
@@ -2821,7 +3325,13 @@
             "fresh_build": true
           }
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min",
+        "remediation": {
+          "quick_win": "bring migrations under tooling (alembic/flyway/prisma), reconcile the drift between envs with a verified baseline, add a CI \"fresh build from migrations\" check.",
+          "structural": "adopt expand-contract migration practice (expanding then contracting changes, reversible when possible), split long migrations into batched incremental jobs, freeze manual-DDL policy, build from migrations as the only path to a new env.",
+          "gold_standard": "Migrations are the only way the schema changes; environments provably identical from clean builds; migrations are reversible and fast; zero manual DDL.",
+          "effort": "\ud83d\udd36 ~2\u20134 h"
+        }
       },
       {
         "id": "DATA-02",
@@ -2829,14 +3339,20 @@
         "category_id": "DATA",
         "status": "estimated",
         "score": 1,
-        "verdict_text": "1 — Severe Debt",
+        "verdict_text": "1 \u2014 Severe Debt",
         "reason": "Postgres shared across two services; cross-DB joins in two reporting paths bypass the API layer.",
         "basis": {
           "pattern": "connection enumeration + join grep",
-          "sample": "reports → direct join into orders schema",
+          "sample": "reports \u2192 direct join into orders schema",
           "confidence": "low"
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min",
+        "remediation": {
+          "quick_win": "document all cross-service DB reads/writes (the hidden map), move the worst cross-read behind an API or event.",
+          "structural": "bounded-context data ownership with a public API/event boundary per service, migrate stored-proc logic into application code, run schema ownership checks in CI.",
+          "gold_standard": "Each service owns its tables; cross-context access is via API/events only; zero business logic in stored procedures; a change to one context can't break another.",
+          "effort": "\ud83d\udd36 ~2\u20134 h"
+        }
       },
       {
         "id": "DATA-03",
@@ -2845,7 +3361,7 @@
         "status": "unknown",
         "reason": "Constraint coverage and orphan probes need a live DB catalog plus probe queries.",
         "unknown_measure_path": "Connect a catalog or staging DB and run constraint/orphan probes.",
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min"
       },
       {
         "id": "DATA-04",
@@ -2853,14 +3369,20 @@
         "category_id": "DATA",
         "status": "estimated",
         "score": 2,
-        "verdict_text": "2 — Minor Debt",
+        "verdict_text": "2 \u2014 Minor Debt",
         "reason": "Two niche reports read legacy CSV-on-S3 exports; not a system-of-record, export pipeline is script-based.",
         "basis": {
           "pattern": "file-format inventory",
           "sample": "CSV export jobs under scripts/",
           "confidence": "low"
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min",
+        "remediation": {
+          "quick_win": "stand up a read side (index the files into a modern store, keep legacy as archive), build the extraction utilities.",
+          "structural": "a data-migration program \u2014 move systems of record to maintained technology one store at a time (strangler pattern for data), keep legacy read-only during migration, archive what's truly dead.",
+          "gold_standard": "All systems-of-record on maintained technology; legacy formats readable/exportable or archived with access paths; critical data queryable with modern tooling.",
+          "effort": "\ud83d\udd37 ~1\u20132 days"
+        }
       },
       {
         "id": "DATA-05",
@@ -2869,7 +3391,7 @@
         "status": "unknown",
         "reason": "Hot-row contention profile requires load testing against a running instance.",
         "unknown_measure_path": "Load-test the hot rows under concurrency; check table locks at peak.",
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min"
       },
       {
         "id": "DATA-06",
@@ -2878,7 +3400,7 @@
         "status": "unknown",
         "reason": "Backup/restore evidence lives outside the repo; no drill artefacts committed.",
         "unknown_measure_path": "Infra audit + scheduled restore drill with written evidence.",
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min"
       },
       {
         "id": "DATA-07",
@@ -2886,7 +3408,7 @@
         "category_id": "DATA",
         "status": "measured",
         "score": 2,
-        "verdict_text": "2 — Minor Debt",
+        "verdict_text": "2 \u2014 Minor Debt",
         "reason": "N+1 leaf loads found in three non-critical list views; hot query paths are indexed.",
         "evidence": {
           "tool": "ORM statement logging + index review",
@@ -2902,7 +3424,13 @@
             "index_strategy": "documented"
           }
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min",
+        "remediation": {
+          "quick_win": "fix the top 10 N+1s with eager loading/joins, add the missing indexes on the hot path, reduce column projection.",
+          "structural": "query budget per endpoint (assert queries-per-request in tests), index strategy documented and reviewed, offload heavy reads (search, aggregates) to appropriate engines, performance tests with realistic data volume in CI.",
+          "gold_standard": "Query counts per endpoint budgeted and tested, N+1 class eliminated, index strategy current, p95 latency flat as data grows 10\u00d7.",
+          "effort": "\ud83d\udd36 ~2\u20134 h"
+        }
       },
       {
         "id": "DATA-08",
@@ -2910,7 +3438,7 @@
         "category_id": "DATA",
         "status": "measured",
         "score": 1,
-        "verdict_text": "1 — Severe Debt",
+        "verdict_text": "1 \u2014 Severe Debt",
         "reason": "Business rules leak into the schema: feature/tier flag columns baked into the orders table, so product-rule changes require migrations.",
         "evidence": {
           "tool": "schema archaeology from migrations",
@@ -2927,11 +3455,11 @@
         },
         "remediation": {
           "quick_win": "Kill the obvious versioned/flags columns behind an additive migration, document the domain model properly.",
-          "structural": "Remodel around domain facts — normalize flags into real entities, adopt effective-dating/event structures for changeable rules, schema reviewed as domain design not storage plumbing.",
+          "structural": "Remodel around domain facts \u2014 normalize flags into real entities, adopt effective-dating/event structures for changeable rules, schema reviewed as domain design not storage plumbing.",
           "gold_standard": "Schema expresses domain facts; product rule changes land without schema surgery; events/snapshots support evolution.",
-          "effort": "🔶 ~2–4 h"
+          "effort": "\ud83d\udd36 ~2\u20134 h"
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min"
       },
       {
         "id": "API-01",
@@ -2939,7 +3467,7 @@
         "category_id": "API",
         "status": "measured",
         "score": 2,
-        "verdict_text": "2 — Minor Debt",
+        "verdict_text": "2 \u2014 Minor Debt",
         "reason": "drf-spectacular covers ~82% of endpoints; three legacy endpoints are hand-rolled with no schema.",
         "evidence": {
           "tool": "OpenAPI spec-vs-code diff",
@@ -2954,7 +3482,13 @@
             "legacy_endpoints": 3
           }
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min",
+        "remediation": {
+          "quick_win": "generate accurate specs from code (OpenAPI annotations/`apischema`, `drf-spectacular`, NestJS Swagger), validate specs vs. responses in CI.",
+          "structural": "contract-first or contract-enforced development (spec is source of truth, generators produce clients/mocks/tests), a lint gate on spec changes.",
+          "gold_standard": "Every endpoint covered by a current, accurate contract; clients and tests generated from it; spec drift impossible (CI enforces).",
+          "effort": "\ud83d\udd36 ~2\u20134 h"
+        }
       },
       {
         "id": "API-02",
@@ -2962,7 +3496,7 @@
         "category_id": "API",
         "status": "measured",
         "score": 2,
-        "verdict_text": "2 — Minor Debt",
+        "verdict_text": "2 \u2014 Minor Debt",
         "reason": "URL versioning (v1/v2) in place; one breaking change shipped on a minor release in the last year.",
         "evidence": {
           "tool": "URL/media-type versioning audit",
@@ -2977,7 +3511,13 @@
             "breaking_on_minor": 1
           }
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min",
+        "remediation": {
+          "quick_win": "introduce versioning at the least cost (path `v2` for the contract-breaking surface; keep `v1` alive with a retirement date).",
+          "structural": "versioning policy (what counts as breaking), deprecation headers + documented schedule, sunset coach with migration guides, semver discipline wired into release automation.",
+          "gold_standard": "Explicit versioning everywhere; breaking changes only in majors with deprecation windows; a deprecation calendar; zero silent consumer breakage for two years.",
+          "effort": "\u26a1 \u226430 min"
+        }
       },
       {
         "id": "API-03",
@@ -2985,14 +3525,20 @@
         "category_id": "API",
         "status": "estimated",
         "score": 2,
-        "verdict_text": "2 — Minor Debt",
+        "verdict_text": "2 \u2014 Minor Debt",
         "reason": "Fifteen point-to-point integrations documented; no gateway in front of the densest five.",
         "basis": {
           "pattern": "service discovery + config grep",
           "sample": "15 vendor endpoints under services/",
           "confidence": "low"
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min",
+        "remediation": {
+          "quick_win": "build the topology map (automated), as the source of truth, and start routing traffic through a gateway for the top 5 hubs.",
+          "structural": "platform governance \u2014 service registry, gateway/boundary routing, event-based decoupling for the densest paths, rules against direct cross-service DB access.",
+          "gold_standard": "Known topology (auto-mapped, current), integration governance (registry/gateway/events), a change to one service locally verifiable, density trending down.",
+          "effort": "\ud83d\udd36 ~2\u20134 h"
+        }
       },
       {
         "id": "API-04",
@@ -3000,8 +3546,8 @@
         "category_id": "API",
         "status": "measured",
         "score": 2,
-        "verdict_text": "2 — Minor Debt",
-        "reason": "Long synchronous chain on checkout (pay → inventory → ledger); timeouts + cache on one hop, no circuit breaker.",
+        "verdict_text": "2 \u2014 Minor Debt",
+        "reason": "Long synchronous chain on checkout (pay \u2192 inventory \u2192 ledger); timeouts + cache on one hop, no circuit breaker.",
         "evidence": {
           "tool": "core-flow read",
           "pointers": [
@@ -3015,7 +3561,13 @@
             "circuit_breaker": false
           }
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min",
+        "remediation": {
+          "quick_win": "add timeouts + circuit breakers on the fragile hops, cache the slow reads.",
+          "structural": "slice the sync chain with events/async (compute off-path, return fast), bulkhead partitions by dependency, SLO-per-hop, degrade gracefully.",
+          "gold_standard": "Core flows touch the minimum live dependencies; slow work is async; circuit-broken fallbacks in place; the weakest link cannot sink the product.",
+          "effort": "\ud83d\udd36 ~2\u20134 h"
+        }
       },
       {
         "id": "API-05",
@@ -3023,7 +3575,7 @@
         "category_id": "API",
         "status": "measured",
         "score": 2,
-        "verdict_text": "2 — Minor Debt",
+        "verdict_text": "2 \u2014 Minor Debt",
         "reason": "Three of five key vendors sit behind adapters; two calls are vendor-and-pray with no fallback.",
         "evidence": {
           "tool": "third-party host grep + abstraction presence",
@@ -3039,7 +3591,13 @@
             "fallback": false
           }
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min",
+        "remediation": {
+          "quick_win": "wrap the top 3 vendor calls behind ports (adapters), add fallback paths where feasible, assign a vendor-risk owner + deprecation watch.",
+          "structural": "integration abstraction for critical vendors, SLA monitoring + circuit breakers, contract/license review, documented replacement paths, vendor deprecation calendar.",
+          "gold_standard": "External dependencies abstracted, fallbacked, monitored, and reviewed; vendor deprecations tracked and migrations planned; no revenue path is call-vendor-and-pray.",
+          "effort": "\ud83d\udd36 ~2\u20134 h"
+        }
       },
       {
         "id": "API-06",
@@ -3047,7 +3605,7 @@
         "category_id": "API",
         "status": "measured",
         "score": 3,
-        "verdict_text": "3 — Healthy",
+        "verdict_text": "3 \u2014 Healthy",
         "reason": "REST/JSON + OpenAPI; zero SOAP/XML/proprietary protocol remnants.",
         "evidence": {
           "tool": "protocol inventory",
@@ -3062,7 +3620,13 @@
             "rest_json": true
           }
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min",
+        "remediation": {
+          "quick_win": "stand up modern endpoints (REST/JSON or gRPC) alongside the legacy ones for new traffic, put a gateway in front to let consumers choose.",
+          "structural": "migrate integrations off legacy protocols where feasible (strangler at the protocol layer), retire the EOL middleware, offer modern contracts for every legacy consumer.",
+          "gold_standard": "Core traffic on modern protocols, legacy formats behind adapters/bridges and shrinking, no EOL middleware, new integrations never require the museum stack.",
+          "effort": "\ud83d\udd36 ~2\u20134 h"
+        }
       },
       {
         "id": "API-07",
@@ -3070,7 +3634,7 @@
         "category_id": "API",
         "status": "measured",
         "score": 2,
-        "verdict_text": "2 — Minor Debt",
+        "verdict_text": "2 \u2014 Minor Debt",
         "reason": "RFC 7807 error bodies on ~70% of routes; request IDs exist but are not correlated end-to-end.",
         "evidence": {
           "tool": "error-contract schema audit",
@@ -3084,7 +3648,13 @@
             "request_id_correlated": false
           }
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min",
+        "remediation": {
+          "quick_win": "standardize an error contract (RFC 7807 or a JSON schema: code, message, correlationId, retriable flag), add request IDs everywhere, fix the worst misclassifications.",
+          "structural": "framework-level error middleware (single source of truth), typed error taxonomy, API-monitoring that segments by error class, error payloads free of PII.",
+          "gold_standard": "Every endpoint returns structured, typed, correlated errors; 4xx/5xx semantics correct; a failing request is traceable in seconds; clients can act on errors programmatically.",
+          "effort": "\ud83d\udd36 ~2\u20134 h"
+        }
       },
       {
         "id": "API-08",
@@ -3092,13 +3662,19 @@
         "category_id": "API",
         "status": "estimated",
         "score": 2,
-        "verdict_text": "2 — Minor Debt",
+        "verdict_text": "2 \u2014 Minor Debt",
         "reason": "No consumer registry; deprecations communicated via changelog only.",
         "basis": {
           "pattern": "no registry/telemetry config",
           "confidence": "low"
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min",
+        "remediation": {
+          "quick_win": "add per-consumer API keys + endpoint analytics (who, what, how often), start a consumer registry doc.",
+          "structural": "full usage telemetry (endpoint + field level), a deprecation communication channel (changelog + consumer mailer + status page), consumer onboarding/registration as standard, usage dashboards for product decisions.",
+          "gold_standard": "Every consumer known + registered, endpoint/field usage visible, deprecations announced with migration guides, zero surprise consumer breakage.",
+          "effort": "\ud83d\udd36 ~2\u20134 h"
+        }
       },
       {
         "id": "VEL-01",
@@ -3106,8 +3682,8 @@
         "category_id": "VEL",
         "status": "estimated",
         "score": 1,
-        "verdict_text": "1 — Severe Debt",
-        "reason": "16-shard Actions matrix with P95 feedback ~38 min — breaks the 30-minute merge path.",
+        "verdict_text": "1 \u2014 Severe Debt",
+        "reason": "16-shard Actions matrix with P95 feedback ~38 min \u2014 breaks the 30-minute merge path.",
         "basis": {
           "pattern": "GH Actions workflow run durations",
           "sample": "p95 = 38 min across 16 shards",
@@ -3117,9 +3693,9 @@
           "quick_win": "Turn on caching, parallelize shards, drop the slow E2E from the merge path (TEST-04), float the slowest 10 tests once.",
           "structural": "A CI budget (SLO on feedback time), dependency pruning (ECOS-06), test-suite redesign (TEST-03), and monitoring of pipeline trend.",
           "gold_standard": "P95 feedback < 10 min; trend flat/declining; no timeouts.",
-          "effort": "⚡ ≤ 30 min"
+          "effort": "\u26a1 \u2264 30 min"
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min"
       },
       {
         "id": "VEL-02",
@@ -3127,14 +3703,20 @@
         "category_id": "VEL",
         "status": "estimated",
         "score": 2,
-        "verdict_text": "2 — Minor Debt",
-        "reason": "make dev brings the stack up via compose with a .env.example; first-time setup runs 30–60 min (Docker memory tuning).",
+        "verdict_text": "2 \u2014 Minor Debt",
+        "reason": "make dev brings the stack up via compose with a .env.example; first-time setup runs 30\u201360 min (Docker memory tuning).",
         "basis": {
           "pattern": "setup-tooling inventory",
           "sample": "compose + Makefile + .env.example present",
           "confidence": "medium"
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min",
+        "remediation": {
+          "quick_win": "containerize the stack with a one-command up, ship `.env.example`, write a working setup doc, document the \"Golden Path.\"",
+          "structural": "hermetic local env (containers, local deps with `testcontainers`), zero shared-remote requirement, setup scripted and CI-tested (a fresh container proves the guide works), \"works on my machine\" made unfalsifiable.",
+          "gold_standard": "`git clone && make dev` brings up a working local system in < 30 min with no external dependencies; the instruction is CI-verified.",
+          "effort": "\ud83d\udd36 ~2\u20134 h"
+        }
       },
       {
         "id": "VEL-03",
@@ -3143,7 +3725,7 @@
         "status": "unknown",
         "reason": "CFR and rollback markers are not readable from code; needs deploy/incident data.",
         "unknown_measure_path": "Give the report deploy and rollback access (GH Deployments) and run a CFR rollup.",
-        "effort": "🔶 ~2–4 h"
+        "effort": "\ud83d\udd36 ~2\u20134 h"
       },
       {
         "id": "VEL-04",
@@ -3151,14 +3733,20 @@
         "category_id": "VEL",
         "status": "estimated",
         "score": 1,
-        "verdict_text": "1 — Severe Debt",
+        "verdict_text": "1 \u2014 Severe Debt",
         "reason": "Releases tagged roughly monthly with multi-day lead time; no deploy-on-demand on the critical path.",
         "basis": {
           "pattern": "GH releases/tags frequency",
           "sample": "1 release/month; lead 3+ days",
           "confidence": "medium"
         },
-        "effort": "🔶 ~2–4 h"
+        "effort": "\ud83d\udd36 ~2\u20134 h",
+        "remediation": {
+          "quick_win": "remove freeze/merge windows, do Friday non-events, add a deploy button per service.",
+          "structural": "the classic modernization goal \u2014 trunk-based dev + feature flags + small CI/CD steps to get deployment-frequency up and lead time down; each elimination of coordination is a DORA win.",
+          "gold_standard": "Deploy on demand (multiple/week/service), lead time < 1 day, releases are boring non-events, no release manager role needed.",
+          "effort": "\ud83d\udd36 ~2\u20134 h"
+        }
       },
       {
         "id": "VEL-05",
@@ -3166,14 +3754,20 @@
         "category_id": "VEL",
         "status": "estimated",
         "score": 1,
-        "verdict_text": "1 — Severe Debt",
-        "reason": "No HR/git-per-hire data in the repo; first-PR path is documented but the typical time to first production PR is 3–4 weeks.",
+        "verdict_text": "1 \u2014 Severe Debt",
+        "reason": "No HR/git-per-hire data in the repo; first-PR path is documented but the typical time to first production PR is 3\u20134 weeks.",
         "basis": {
           "pattern": "docs+presence proxy",
           "sample": "no onboarding telemetry in repo",
           "confidence": "low"
         },
-        "effort": "🔶 ~2–4 h"
+        "effort": "\ud83d\udd36 ~2\u20134 h",
+        "remediation": {
+          "quick_win": "write a \"first PR in a day\" path (a safe starter ticket + doc patch + tiny config change), assign onboarding buddy + SLA, grant prod deploy gradually but early.",
+          "structural": "fix the underlying debts (setup VEL-02, docs DOCS, deploy VEL-03), curriculum-style onboarding (architecture walkthroughs, ADRs), starter-ticket backlog maintained.",
+          "gold_standard": "New engineers ship to prod within their first week, via documented path, with a clear map of the safe-to-change surfaces.",
+          "effort": "\ud83d\udd36 ~2\u20134 h"
+        }
       },
       {
         "id": "VEL-06",
@@ -3181,7 +3775,7 @@
         "category_id": "VEL",
         "status": "measured",
         "score": 3,
-        "verdict_text": "3 — Healthy",
+        "verdict_text": "3 \u2014 Healthy",
         "reason": "git shortlog: no module single-author > 40%; contributor breadth across the top twenty modules is healthy.",
         "evidence": {
           "tool": "git shortlog -sne + per-file authorship",
@@ -3195,7 +3789,13 @@
             "zero_docs_modules": 0
           }
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min",
+        "remediation": {
+          "quick_win": "pair-and-document the top exclusive modules (forced bus-factor increase), get a second reviewer on every critical file from here on.",
+          "structural": "architecture that doesn't need a walking encyclopedia (simplify, DOCS), quarterly rotation of module owners, an \"unlearnable-list\" audit (which files can no one explain without the author).",
+          "gold_standard": "No module with single-author > 50%; anyone can explain/deploy any critical service within a day; a leaving engineer is a 1-day disruption, not an event.",
+          "effort": "\u26a1 \u226430 min"
+        }
       },
       {
         "id": "VEL-07",
@@ -3203,7 +3803,7 @@
         "category_id": "VEL",
         "status": "measured",
         "score": 2,
-        "verdict_text": "2 — Minor Debt",
+        "verdict_text": "2 \u2014 Minor Debt",
         "reason": "Compose dev parity holds; prod config is partially hand-edited with observable staging drift.",
         "evidence": {
           "tool": "canonical-config diff",
@@ -3217,7 +3817,13 @@
             "prod_drift": "partial"
           }
         },
-        "effort": "🔶 ~2–4 h"
+        "effort": "\ud83d\udd36 ~2\u20134 h",
+        "remediation": {
+          "quick_win": "containerize dev for parity, make config canonical (one source of truth, injected per env), stand up a staging clone of prod config.",
+          "structural": "full parity \u2014 same containers/versions everywhere, IaC for all envs, config as code, \"prod reproduction\" as a standard step (spin replica to confirm).",
+          "gold_standard": "Any environment can be rebuilt to match prod; prod-only bugs are a thing of the past; config drift is zero-diff against the source of truth.",
+          "effort": "\ud83d\udd36 ~2\u20134 h"
+        }
       },
       {
         "id": "VEL-08",
@@ -3225,7 +3831,7 @@
         "category_id": "VEL",
         "status": "measured",
         "score": 2,
-        "verdict_text": "2 — Minor Debt",
+        "verdict_text": "2 \u2014 Minor Debt",
         "reason": "Deploy pipeline promotes artifacts; one manual smoke step gates promotion to prod.",
         "evidence": {
           "tool": "CI config deploy-job audit",
@@ -3240,7 +3846,13 @@
             "prod_ssh_scripts": 0
           }
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min",
+        "remediation": {
+          "quick_win": "capture the manual steps as a CI/CD job (artifact \u2192 deploy), remove direct prod SSH, add an audit log of every deployment.",
+          "structural": "full automated promotion (CI build artifact \u2192 envs), IaC-managed infra (PERF-06), deploy from immutable artifacts (never from a checkout on a server), prod access by deploy pipeline only.",
+          "gold_standard": "Zero manual steps; deploys are CI pipeline promotions with audit; prod editability removed; an audience of \"the pipeline did it\" for every release.",
+          "effort": "\ud83d\udd36 ~2\u20134 h"
+        }
       },
       {
         "id": "VEL-09",
@@ -3248,7 +3860,7 @@
         "category_id": "VEL",
         "status": "measured",
         "score": 2,
-        "verdict_text": "2 — Minor Debt",
+        "verdict_text": "2 \u2014 Minor Debt",
         "reason": "Review coverage 92%; median PR 480 LOC with no size gate.",
         "evidence": {
           "tool": "GH PR API (coverage, size, latency)",
@@ -3263,7 +3875,13 @@
             "direct_push_rate": "0.4%"
           }
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min",
+        "remediation": {
+          "quick_win": "enforce branch protection with required reviews on core paths, ban direct pushes, add a PR-size lint (split > 400-LOC PRs), publish review-coverage metrics.",
+          "structural": "review as a first-class metric (coverage, size, latency tracked), pairing/small-PR culture, a second reviewer on security-adjacent paths, \"no unreviewed merge\" as an org rule.",
+          "gold_standard": "100% coverage on core paths, median PR < 400 LOC, reviews substantive (comments, not emoji), zero bypasses, review latency < 1 day.",
+          "effort": "\ud83d\udd36 ~2\u20134 h"
+        }
       },
       {
         "id": "VEL-10",
@@ -3271,7 +3889,7 @@
         "category_id": "VEL",
         "status": "measured",
         "score": 1,
-        "verdict_text": "1 — Severe Debt",
+        "verdict_text": "1 \u2014 Severe Debt",
         "reason": "Release branch (fresh-1.0) six weeks old; trunk diverges during release-freeze windows with merge windows in the calendar.",
         "evidence": {
           "tool": "git topology scan",
@@ -3286,7 +3904,13 @@
             "trunk_divergence": true
           }
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min",
+        "remediation": {
+          "quick_win": "trunk-based basics \u2014 short-lived branches < 3 days, protect main + require green CI, delete the oldest release branch with a manual backport policy.",
+          "structural": "move to trunk-based development with feature flags (ties ARCH-10), shrink multi-repo coordination via a platform or monorepo_tools strategy, enforce main-always-green with a CI gate.",
+          "gold_standard": "Branches live < 3 days, main is always mergeable and green, merges are small and continuous, no merge windows, one logical change fits in one repo/PR.",
+          "effort": "\u26a1 \u226430 min"
+        }
       },
       {
         "id": "PERF-01",
@@ -3294,7 +3918,7 @@
         "category_id": "PERF",
         "status": "measured",
         "score": 2,
-        "verdict_text": "2 — Minor Debt",
+        "verdict_text": "2 \u2014 Minor Debt",
         "reason": "Instrumentation deps present (structlog, sentry-sdk) with RED-dashboards; no distributed tracing and metric coverage is partial.",
         "evidence": {
           "tool": "instrumentation inventory",
@@ -3310,7 +3934,13 @@
             "dashboards": "RED basics"
           }
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min",
+        "remediation": {
+          "quick_win": "add structured logging + request IDs everywhere (framework middleware), stand up a metrics endpoint with RED/U; USE basics, emit the top 6 metrics.",
+          "structural": "OpenTelemetry adoption (auto-instrumentation), tracing across services, an SLO + error-budget loop, observability as a deployment requirement (no deploy without instrumentation).",
+          "gold_standard": "Every service emits metrics/logs/traces standardly, requests are correlated end-to-end, dashboards answer latency/errors/capacity in seconds, and \"why is it slow\" never requires SSH.",
+          "effort": "\ud83d\udd36 ~2\u20134 h"
+        }
       },
       {
         "id": "PERF-02",
@@ -3318,7 +3948,7 @@
         "category_id": "PERF",
         "status": "measured",
         "score": 2,
-        "verdict_text": "2 — Minor Debt",
+        "verdict_text": "2 \u2014 Minor Debt",
         "reason": "Application containerized; two legacy workers still run from hand-config scripts on VMs.",
         "evidence": {
           "tool": "manifest inventory",
@@ -3332,7 +3962,13 @@
             "snowflake_workers": 2
           }
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min",
+        "remediation": {
+          "quick_win": "containerize the app (it's usually the smallest step), move VM provisioning to IaC (Terraform/cloud-init), codify the laptop script.",
+          "structural": "immutable, containerized, orchestrated deployment (K8s/ECS) with IaC for everything, auto-scaling-ready, snowflakes eliminated by rebuild-from-code.",
+          "gold_standard": "Everything containerized + IaC-managed, instances are cattle (rebuildable in minutes), scale is a config change, drift impossible by construction.",
+          "effort": "\ud83d\udd36 ~2\u20134 h"
+        }
       },
       {
         "id": "PERF-03",
@@ -3341,7 +3977,7 @@
         "status": "unknown",
         "reason": "Memory-leak profile requires runtime measurement over a sustained run.",
         "unknown_measure_path": "24h load profile + RSS trend; heap diagnostics.",
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min"
       },
       {
         "id": "PERF-04",
@@ -3350,7 +3986,7 @@
         "status": "unknown",
         "reason": "Scaling ceiling (DB lock contention past a single instance) needs a load test to prove.",
         "unknown_measure_path": "Load-test the hot path past vertical size; check contention.",
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min"
       },
       {
         "id": "PERF-05",
@@ -3358,13 +3994,19 @@
         "category_id": "PERF",
         "status": "estimated",
         "score": 1,
-        "verdict_text": "1 — Severe Debt",
+        "verdict_text": "1 \u2014 Severe Debt",
         "reason": "Static capacity; no autoscaling config in the repo and capacity changes are manual.",
         "basis": {
           "pattern": "no HPA/ASG config in IaC",
           "confidence": "medium"
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min",
+        "remediation": {
+          "quick_win": "set HPA/ASG on the top 5 workloads with sane thresholds, add utilization + headroom dashboards, run the scheduled-campaign checklist.",
+          "structural": "autoscaling everywhere + telemetry-driven capacity reviewing (monthly), load-testing against forecast demand, SLO-based scaling decisions.",
+          "gold_standard": "Autoscaling covers critical workloads; capacity changes are system-driven by policy; spikes are non-events; waste is continuously right-sized.",
+          "effort": "\ud83d\udd36 ~2\u20134 h"
+        }
       },
       {
         "id": "PERF-06",
@@ -3372,7 +4014,7 @@
         "category_id": "PERF",
         "status": "measured",
         "score": 2,
-        "verdict_text": "2 — Minor Debt",
+        "verdict_text": "2 \u2014 Minor Debt",
         "reason": "Terraform covers VPC/DB/compute; two snowflake servers are provisioned by hand.",
         "evidence": {
           "tool": "Terraform coverage heuristic",
@@ -3387,7 +4029,13 @@
             "drift_detection": false
           }
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min",
+        "remediation": {
+          "quick_win": "adopt Terraform/Pulumi for the top resource types (VPC/DB/compute), add drift detection (initial run finds the gap), codify the \"documented console changes\" retroactively.",
+          "structural": "full IaC coverage with state remote + plan-diffs in CI, admin access least-privilege, rebuild-from-code as a tested path, drift = CI failure.",
+          "gold_standard": "Everything in code, changes flow through CI-plan-review, drift is zero or alerted, and rebuilding an env is an afternoon exercise.",
+          "effort": "\ud83d\udd36 ~2\u20134 h"
+        }
       },
       {
         "id": "PERF-07",
@@ -3395,13 +4043,19 @@
         "category_id": "PERF",
         "status": "estimated",
         "score": 1,
-        "verdict_text": "1 — Severe Debt",
+        "verdict_text": "1 \u2014 Severe Debt",
         "reason": "No SLO config for latency/availability; no load-test harness or perf regression gate in CI.",
         "basis": {
           "pattern": "SLO/load-test config absence",
           "confidence": "medium"
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min",
+        "remediation": {
+          "quick_win": "define SLOs for the top 3 services (latency p95 + availability), measure them with the metrics you added (PERF-01), add a synthetic check for the money path.",
+          "structural": "error budgets + burn alerts, a CI perf gate (load-test baseline run on PRs), latency regression reports in the deploy loop, SLO review as a ritual.",
+          "gold_standard": "Every service has an SLO, measured and burned-alerted; CI catches perf regressions; latency baselines are historical and trusted.",
+          "effort": "\ud83d\udd36 ~2\u20134 h"
+        }
       },
       {
         "id": "PERF-08",
@@ -3409,14 +4063,20 @@
         "category_id": "PERF",
         "status": "estimated",
         "score": 1,
-        "verdict_text": "1 — Severe Debt",
+        "verdict_text": "1 \u2014 Severe Debt",
         "reason": "Cold start ~40s with a heavy idle footprint; scheduler and workers do synchronous boot work with no lazy init.",
         "basis": {
           "pattern": "static startup-shape estimate",
           "sample": "boot DI + warmup on every worker",
           "confidence": "low"
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min",
+        "remediation": {
+          "quick_win": "lazy-init the greedy startup work, trim the boot-time DI/registrations, enable JVM/cache warmup layers.",
+          "structural": "runtime modernization (container-native runtimes, startup budget with a gate, deferred-cost architecture), image size budgets, \"cold start < 10s\" as an autoscaling prerequisite.",
+          "gold_standard": "Cold start < 10\u201315s, idle footprint proportional to need, autoscaling actually scales because instances become useful fast, zero \"startup work\" that could be lazy.",
+          "effort": "\ud83d\udd36 ~2\u20134 h"
+        }
       },
       {
         "id": "DOCS-01",
@@ -3424,7 +4084,7 @@
         "category_id": "DOCS",
         "status": "measured",
         "score": 2,
-        "verdict_text": "2 — Minor Debt",
+        "verdict_text": "2 \u2014 Minor Debt",
         "reason": "docs/adr/ holds 10 entries; the DB-split and queue decisions predate the folder and are undocumented.",
         "evidence": {
           "tool": "docs/adr inventory",
@@ -3439,7 +4099,13 @@
             "missing_critical": 2
           }
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min",
+        "remediation": {
+          "quick_win": "write ADRs for the top 10 load-bearing decisions (interview the oldest engineers, mine git/past docs), establish a template + PR requirement for consequential choices.",
+          "structural": "ADR convention in the repo (ADR-NNN, status, decision, context, alternatives considered), decisions now documented at review time, an \"explain every load-bearing choice\" refactoring task.",
+          "gold_standard": "Every consequential decision has an ADR with alternatives; new decisions document as standard practice; teams can revisit a decision on evidence, not memory.",
+          "effort": "\ud83d\udd36 ~2\u20134 h"
+        }
       },
       {
         "id": "DOCS-02",
@@ -3447,14 +4113,20 @@
         "category_id": "DOCS",
         "status": "estimated",
         "score": 2,
-        "verdict_text": "2 — Minor Debt",
+        "verdict_text": "2 \u2014 Minor Debt",
         "reason": "Command-verified sample: 3 of 10 setup docs drift from the codebase; last-updated dates absent.",
         "basis": {
           "pattern": "doc-vs-code correlation sample",
           "sample": "setup/worker.md out of date",
           "confidence": "medium"
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min",
+        "remediation": {
+          "quick_win": "a doc-rot sweep (delete/rewrite the worst 10), add \"last verified\" dates, a github-issues link on every doc page so inaccuracies are reportable with one click.",
+          "structural": "docs-as-code with CI verification (commands in docs execute in a test fixture \u2014 DOCS-09), ownership per doc, \"docs touched in the same PR as code\" rule.",
+          "gold_standard": "Docs match code; commands in docs are CI-verified; a doc is as trustworthy as code, and updated with it.",
+          "effort": "\u26a1 \u226430 min"
+        }
       },
       {
         "id": "DOCS-03",
@@ -3462,7 +4134,7 @@
         "category_id": "DOCS",
         "status": "measured",
         "score": 3,
-        "verdict_text": "3 — Healthy",
+        "verdict_text": "3 \u2014 Healthy",
         "reason": "docs/runbooks covers the top 8 incident classes and is linked from alert dashboards.",
         "evidence": {
           "tool": "ops-wiki coverage",
@@ -3477,7 +4149,13 @@
             "alert_linked": true
           }
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min",
+        "remediation": {
+          "quick_win": "write runbooks for the top 5 incident classes today (postmortem-driven), make them linkable from alert dashboards, add \"runme at the first sign\" steps.",
+          "structural": "runbook-as-product (owned, tested, games rehearsed), alert\u2192runbook binding, postmortem = runbook update, drill the top runbook quarterly.",
+          "gold_standard": "Every incident class has a current, tested runbook; on-call executes procedures not improv; incident time is dominated by execution, not discovery.",
+          "effort": "\ud83d\udd36 ~2\u20134 h"
+        }
       },
       {
         "id": "DOCS-04",
@@ -3485,7 +4163,7 @@
         "category_id": "DOCS",
         "status": "measured",
         "score": 3,
-        "verdict_text": "3 — Healthy",
+        "verdict_text": "3 \u2014 Healthy",
         "reason": "CONTRIBUTING golden-path doc; every command dry-runs green in CI.",
         "evidence": {
           "tool": "command dry-run in CI",
@@ -3500,7 +4178,13 @@
             "ci_verified": true
           }
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min",
+        "remediation": {
+          "quick_win": "write the golden path (clone \u2192 setup \u2192 run \u2192 test \u2192 first PR) and verify every command executes, add CONTRIBUTING.md.",
+          "structural": "golden path CI-verified (fresh container proves it \u2014 DOCS-09), onboarding checklist wired into the ticket system, \"setup docs break\" = blame-the-repo not the human.",
+          "gold_standard": "A new hire takes < 2 hours to a working local env entirely from docs; the setup guide is CI-tested and always current.",
+          "effort": "\u26a1 \u226430 min"
+        }
       },
       {
         "id": "DOCS-05",
@@ -3508,13 +4192,19 @@
         "category_id": "DOCS",
         "status": "estimated",
         "score": 1,
-        "verdict_text": "1 — Severe Debt",
+        "verdict_text": "1 \u2014 Severe Debt",
         "reason": "Two critical modules (ledger, scheduler) have no written record outside two engineers.",
         "basis": {
           "pattern": "coverage proxy: no docs touching module paths",
           "confidence": "low"
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min",
+        "remediation": {
+          "quick_win": "run the departure drill on the top module \u2014 write the unrecorded facts as docs/ADRs/runbooks, pair-document with the oral experts.",
+          "structural": "\"write it down or it doesn't exist\" culture (every knowledge answer \u2192 doc link), knowledge-review on critical modules, retiring the phrase \"ask X\" in favor of \"read the doc,\" interview-capture sessions for missionaries.",
+          "gold_standard": "90%+ of functional questions answerable from written sources; no module depends on a person's memory; the departure drill yields a weekend, not a collapse.",
+          "effort": "\ud83d\udd36 ~2\u20134 h"
+        }
       },
       {
         "id": "DOCS-06",
@@ -3522,14 +4212,20 @@
         "category_id": "DOCS",
         "status": "estimated",
         "score": 2,
-        "verdict_text": "2 — Minor Debt",
+        "verdict_text": "2 \u2014 Minor Debt",
         "reason": "Median TODO age under 12 months; two misleading comments found near core paths.",
         "basis": {
           "pattern": "TODO/FIXME age via git blame",
           "sample": "2 misleading comments sampled",
           "confidence": "low"
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min",
+        "remediation": {
+          "quick_win": "kill the top 20 misleading/obsolete comments (fix or delete), resolve/add justification for the oldest TODOs, rename the worst identifiers.",
+          "structural": "self-documenting-code standards in review (naming, small functions), \"why\" comments for invariants, comment lint (TODO age alarm), and a \"readability\" gate on the module most touched on-call.",
+          "gold_standard": "Code reads like prose (names carry intent), comments exist only for true \"why\", TODO-rot is gone, and a reader can trust line 1 to mean line 1.",
+          "effort": "\ud83d\udd36 ~2\u20134 h"
+        }
       },
       {
         "id": "DOCS-07",
@@ -3537,10 +4233,10 @@
         "category_id": "DOCS",
         "status": "measured",
         "score": 3,
-        "verdict_text": "3 — Healthy",
+        "verdict_text": "3 \u2014 Healthy",
         "reason": "Generated API reference is current with the OpenAPI contract.",
         "evidence": {
-          "tool": "spec → generated reference",
+          "tool": "spec \u2192 generated reference",
           "pointers": [
             {
               "detail": "reference regenerated in CI"
@@ -3551,7 +4247,13 @@
             "current": true
           }
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min",
+        "remediation": {
+          "quick_win": "publish the OpenAPI/spec with a generated reference (Swagger UI/Redoc), add examples for the top 10 endpoints, write an auth quickstart.",
+          "structural": "docs generated from contract in CI (spec is source, docs are output \u2014 DOCS-09), consumer guides for the top use cases, updated with each contract change, \"docs in same PR\" rule.",
+          "gold_standard": "Every endpoint has a current, generated reference with examples; a stranger self-serves; docs update with the contract in the same change.",
+          "effort": "\ud83d\udd36 ~2\u20134 h"
+        }
       },
       {
         "id": "DOCS-08",
@@ -3559,7 +4261,7 @@
         "category_id": "DOCS",
         "status": "measured",
         "score": 2,
-        "verdict_text": "2 — Minor Debt",
+        "verdict_text": "2 \u2014 Minor Debt",
         "reason": "CHANGELOG maintained; migration guides for breaking changes missing for the last major.",
         "evidence": {
           "tool": "CHANGELOG + release audit",
@@ -3574,7 +4276,13 @@
             "migration_guides": "1 missing"
           }
         },
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min",
+        "remediation": {
+          "quick_win": "adopt a CHANGELOG process (Keep-a-Changelog, auto-generated from commits/PRs), publish release notes for the top consumers, write migration guides for open breaking changes (backfill).",
+          "structural": "semantic-release automation (version + changelog + notes automated), a release-communication channel (port status page + email), \"breaking = migration guide in same MR\" rule.",
+          "gold_standard": "Every release has automated notes; every breaking change has a migration guide published with the change; consumers hear first, break never (silently).",
+          "effort": "\ud83d\udd36 ~2\u20134 h"
+        }
       },
       {
         "id": "ECOS-09",
@@ -3583,7 +4291,7 @@
         "status": "unknown",
         "reason": "Aggregation across the repo set + sibling services; needs an org-level scan.",
         "unknown_measure_path": "Org-level API scan across the service set.",
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min"
       },
       {
         "id": "ECOS-10",
@@ -3592,7 +4300,7 @@
         "status": "unknown",
         "reason": "Not run in a standard audit; needs Scorecard + provenance verification.",
         "unknown_measure_path": "Run OpenSSF Scorecard; pin CI actions to SHAs; socket.dev scan.",
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min"
       },
       {
         "id": "ARCH-11",
@@ -3601,7 +4309,7 @@
         "status": "unknown",
         "reason": "Deep-dive; needs type-lint coverage + incident-class mining.",
         "unknown_measure_path": "Run mypy --strict / pyright coverage; mine null-crash incident share.",
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min"
       },
       {
         "id": "ARCH-12",
@@ -3610,7 +4318,7 @@
         "status": "unknown",
         "reason": "Deep-dive; counts manual auth/logging/error sites vs middleware.",
         "unknown_measure_path": "Grep-based count of manual cross-cutting sites vs shared middleware.",
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min"
       },
       {
         "id": "TEST-09",
@@ -3619,7 +4327,7 @@
         "status": "unknown",
         "reason": "Deep-dive; requires running a mutation tool on a module.",
         "unknown_measure_path": "Run mutation testing on the top-criticality module.",
-        "effort": "🔷 ~1–2 days"
+        "effort": "\ud83d\udd37 ~1\u20132 days"
       },
       {
         "id": "TEST-10",
@@ -3628,7 +4336,7 @@
         "status": "unknown",
         "reason": "Deep-dive; git archaeology of test-only churn.",
         "unknown_measure_path": "Analyze share of commits that fix/support tests.",
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min"
       },
       {
         "id": "SEC-09",
@@ -3637,7 +4345,7 @@
         "status": "unknown",
         "reason": "Deep-dive; needs harness inventory and a timed fuzz campaign.",
         "unknown_measure_path": "Stand up fuzz harnesses for upload/import parsers + sanitizer builds.",
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min"
       },
       {
         "id": "SEC-10",
@@ -3646,7 +4354,7 @@
         "status": "unknown",
         "reason": "Deep-dive; inventory of CI security jobs and fail-on-find behavior.",
         "unknown_measure_path": "Inventory SAST/secrets/deps/image/DAST jobs; verify they fail the build.",
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min"
       },
       {
         "id": "DATA-09",
@@ -3655,7 +4363,7 @@
         "status": "unknown",
         "reason": "Deep-dive; model audit for history/outbox/updated_by.",
         "unknown_measure_path": "Model audit: history tables, event/outbox presence, updated_by columns.",
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min"
       },
       {
         "id": "DATA-10",
@@ -3664,7 +4372,7 @@
         "status": "unknown",
         "reason": "Deep-dive; needs env diffs against the migration baseline.",
         "unknown_measure_path": "Fresh-env diff runs against each environment.",
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min"
       },
       {
         "id": "API-09",
@@ -3673,7 +4381,7 @@
         "status": "unknown",
         "reason": "Deep-dive; design audit of state-changing endpoints.",
         "unknown_measure_path": "Audit mutation endpoints for idempotency keys + documented retries.",
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min"
       },
       {
         "id": "API-10",
@@ -3682,7 +4390,7 @@
         "status": "unknown",
         "reason": "Deep-dive; process audit of the schema-evolution gate.",
         "unknown_measure_path": "Process audit of the compat gate + breakage history.",
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min"
       },
       {
         "id": "VEL-11",
@@ -3691,7 +4399,7 @@
         "status": "unknown",
         "reason": "Deep-dive; DX inventory and inner-loop timing.",
         "unknown_measure_path": "DX inventory + inner-loop cold-start timing.",
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min"
       },
       {
         "id": "VEL-12",
@@ -3700,7 +4408,7 @@
         "status": "unknown",
         "reason": "Deep-dive; incident tooling data is org-side.",
         "unknown_measure_path": "MTTR/incident data from PagerDuty-class tooling.",
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min"
       },
       {
         "id": "PERF-09",
@@ -3709,7 +4417,7 @@
         "status": "unknown",
         "reason": "Deep-dive; needs cloud bill + attribution.",
         "unknown_measure_path": "Cost attribution + rightsizing review (cloud access required).",
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min"
       },
       {
         "id": "PERF-10",
@@ -3718,7 +4426,7 @@
         "status": "unknown",
         "reason": "Deep-dive; needs drill/infra evidence.",
         "unknown_measure_path": "DR plan + documented cross-region drills.",
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min"
       },
       {
         "id": "DOCS-09",
@@ -3727,7 +4435,7 @@
         "status": "unknown",
         "reason": "Deep-dive; docs-build CI steps and staleness gate.",
         "unknown_measure_path": "Wire docs generation/lint/link into CI with a staleness gate.",
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min"
       },
       {
         "id": "DOCS-10",
@@ -3736,79 +4444,79 @@
         "status": "unknown",
         "reason": "Deep-dive; org process audit.",
         "unknown_measure_path": "Ownership map + offboarding knowledge-capture audit.",
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min"
       },
       {
         "id": "FE-01",
         "name": "UI Framework / Stack EOL & Deprecation",
         "category_id": "FE",
         "status": "unknown",
-        "reason": "No user-facing client in this repo (server-rendered templates only); FE module is N/A and the base weight set applies — 11 §1.",
+        "reason": "No user-facing client in this repo (server-rendered templates only); FE module is N/A and the base weight set applies \u2014 11 \u00a71.",
         "not_applicable": true,
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min"
       },
       {
         "id": "FE-02",
         "name": "Bundle Size & Load Performance",
         "category_id": "FE",
         "status": "unknown",
-        "reason": "No user-facing client in this repo (server-rendered templates only); FE module is N/A and the base weight set applies — 11 §1.",
+        "reason": "No user-facing client in this repo (server-rendered templates only); FE module is N/A and the base weight set applies \u2014 11 \u00a71.",
         "not_applicable": true,
-        "effort": "🔶 ~2–4 h"
+        "effort": "\ud83d\udd36 ~2\u20134 h"
       },
       {
         "id": "FE-03",
         "name": "Accessibility Deficits",
         "category_id": "FE",
         "status": "unknown",
-        "reason": "No user-facing client in this repo (server-rendered templates only); FE module is N/A and the base weight set applies — 11 §1.",
+        "reason": "No user-facing client in this repo (server-rendered templates only); FE module is N/A and the base weight set applies \u2014 11 \u00a71.",
         "not_applicable": true,
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min"
       },
       {
         "id": "FE-04",
         "name": "Browser / Platform Support Drift",
         "category_id": "FE",
         "status": "unknown",
-        "reason": "No user-facing client in this repo (server-rendered templates only); FE module is N/A and the base weight set applies — 11 §1.",
+        "reason": "No user-facing client in this repo (server-rendered templates only); FE module is N/A and the base weight set applies \u2014 11 \u00a71.",
         "not_applicable": true,
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min"
       },
       {
         "id": "FE-05",
         "name": "Client-Side Architecture Debt",
         "category_id": "FE",
         "status": "unknown",
-        "reason": "No user-facing client in this repo (server-rendered templates only); FE module is N/A and the base weight set applies — 11 §1.",
+        "reason": "No user-facing client in this repo (server-rendered templates only); FE module is N/A and the base weight set applies \u2014 11 \u00a71.",
         "not_applicable": true,
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min"
       },
       {
         "id": "FE-06",
         "name": "Design System / UI Consistency Drift",
         "category_id": "FE",
         "status": "unknown",
-        "reason": "No user-facing client in this repo (server-rendered templates only); FE module is N/A and the base weight set applies — 11 §1.",
+        "reason": "No user-facing client in this repo (server-rendered templates only); FE module is N/A and the base weight set applies \u2014 11 \u00a71.",
         "not_applicable": true,
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min"
       },
       {
         "id": "FE-07",
         "name": "Internationalization / Localization Debt",
         "category_id": "FE",
         "status": "unknown",
-        "reason": "No user-facing client in this repo (server-rendered templates only); FE module is N/A and the base weight set applies — 11 §1.",
+        "reason": "No user-facing client in this repo (server-rendered templates only); FE module is N/A and the base weight set applies \u2014 11 \u00a71.",
         "not_applicable": true,
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min"
       },
       {
         "id": "FE-08",
         "name": "Mobile / Responsive Adaptation & Offline Support",
         "category_id": "FE",
         "status": "unknown",
-        "reason": "No user-facing client in this repo (server-rendered templates only); FE module is N/A and the base weight set applies — 11 §1.",
+        "reason": "No user-facing client in this repo (server-rendered templates only); FE module is N/A and the base weight set applies \u2014 11 \u00a71.",
         "not_applicable": true,
-        "effort": "⚡ ≤30 min"
+        "effort": "\u26a1 \u226430 min"
       }
     ],
     "sample": true

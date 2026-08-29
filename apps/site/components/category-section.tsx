@@ -239,15 +239,23 @@ function RowDetail({ r }: { r: IndicatorRow }) {
 
       {r.remediation && (
         <div className="rounded border border-hairline p-2">
-          <div className="text-faint">Remediation</div>
+          <div className="flex items-center gap-2 text-faint">
+            <span>Remediation</span>
+            {r.status === "estimated" ? (
+              <span className="rounded border border-hairline bg-panel-raised px-1 py-0 text-[10px] text-faint">estimated</span>
+            ) : null}
+            <span className="text-[11px] text-faint">{r.remediation.effort}</span>
+          </div>
           <div className="mt-1 text-muted">
             <span className="text-ink">Quick win.</span>{" "}
             {r.remediation.quick_win}
           </div>
-          <div className="mt-1 text-muted">
-            <span className="text-ink">Structural.</span>{" "}
-            {r.remediation.structural}
-          </div>
+          {r.remediation.structural ? (
+            <div className="mt-1 text-muted">
+              <span className="text-ink">Structural.</span>{" "}
+              {r.remediation.structural}
+            </div>
+          ) : null}
           <div className="mt-1 text-muted">
             <span className="text-ink">Gold standard.</span>{" "}
             {r.remediation.gold_standard}
@@ -268,7 +276,7 @@ function displayName(r: IndicatorRow): string {
 
 function Row({ r }: { r: IndicatorRow }) {
   return (
-    <div className="border-b border-hairline last:border-0">
+    <div id={`row-${r.id}`} className="border-b border-hairline last:border-0 scroll-mt-16">
       <Accordion>
         <AccordionItem value={r.id} className="border-0">
           <AccordionTrigger className="gap-3 px-3 py-2.5 hover:no-underline">

@@ -1,4 +1,10 @@
 import type { FactRecord } from '../facts';
+import rubricData from '../rubric.json' with { type: 'json' };
+
+const RUBRIC_REMEDIATION: Record<string, { quick_win: string; structural: string; gold_standard: string; effort: string }> = Object.fromEntries(
+  ((rubricData as unknown as { indicators: Array<{ id: string; remediation: { quick_win: string; structural: string; gold_standard: string; effort: string } }> }).indicators ?? []).map(i => [i.id, i.remediation ?? { quick_win: '', structural: '', gold_standard: '', effort: '⚡ ≤30 min' }])
+);
+function lookupRemediation(id: string) { return RUBRIC_REMEDIATION[id] ?? { quick_win: '', structural: '', gold_standard: '', effort: '⚡ ≤30 min' }; }
 
 export type Phase1Row = {
   id: string;
@@ -11,6 +17,7 @@ export type Phase1Row = {
   unknown_measure_path?: string;
   not_applicable?: boolean;
   effort: string;
+  remediation?: { quick_win: string; structural: string; gold_standard: string; effort: string };
 };
 
 // Simple score predicates matching encyclopedia Y/R bands loosely — enough for Phase 1 hero dial
@@ -183,6 +190,7 @@ export function factsToRows(facts: FactRecord[]): Phase1Row[] {
       reason: reasonFor(d.id, score, flat),
       evidence: { tool: f.provenance.tool, pointers: f.evidencePointers as unknown as Array<Record<string, string | number>>, facts: flat },
       effort: d.effort,
+      remediation: lookupRemediation(d.id),
     };
   });
 }

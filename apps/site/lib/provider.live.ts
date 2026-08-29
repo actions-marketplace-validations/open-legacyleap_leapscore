@@ -6,7 +6,7 @@
 
 import type { Report, ReportQuery, CategoryScore, IndicatorRow, Gate } from '@/lib/types';
 import { BASE_WEIGHTS, tierForScore, buildDeepDiveScope, coverageCounts, scoreSystem } from '@/lib/scoring';
-import { INDICATOR_REGISTRY, getIndicatorName, getIndicatorEffort } from '@/lib/generated/rubric';
+import { INDICATOR_REGISTRY, getIndicatorName, getIndicatorEffort, getIndicatorRemediation } from '@/lib/generated/rubric';
 
 // Reuse phase-1 scorer types by duplicating minimal mapping (avoids cross-package import in Next bundle)
 // For testability, GH fetch is injected; live path uses engine's orchestrator via dynamic import.
@@ -40,24 +40,27 @@ export class LiveReportProvider {
       facts: Array<{ detectorId: string; facts: Record<string, unknown>; evidencePointers: Array<{ endpoint?: string; detail?: string }>; provenance: { tool: string; version: string; flags: string[]; durationMs: number } }>;
     };
 
-    // Build IndicatorRows for the 6 Phase-1 indicators from facts — normalize to registry titles
+    // Build IndicatorRows for the 6 Phase-1 indicators from facts — normalize to registry titles + attach remediation
     const rawRows: IndicatorRow[] = phase1.categories.flatMap((c) => c.indicator_rows);
     // Normalize engine rows to registry (engine may emit short/legacy names for GH-only scan)
     const rows: IndicatorRow[] = rawRows.map((r) => {
       const reg = INDICATOR_REGISTRY[r.id];
       if (!reg) { console.warn(`Unknown indicator ${r.id}`); return { ...r, name: `Unknown indicator (${r.id})` }; }
-      return { ...r, name: reg.name, effort: reg.effort, category_id: reg.category };
+      const remediation = (r as IndicatorRow).remediation ?? (r.status !== 'unknown' && !r.not_applicable ? (getIndicatorRemediation(r.id) as unknown as IndicatorRow['remediation']) : undefined);
+      return { ...r, name: reg.name, effort: reg.effort, category_id: reg.category, ...(remediation ? { remediation } : {}) };
     });
     // Build full_table: phase-1 rows + 96 unknown placeholders for remaining indicators
     const fullTable = this.buildFullTable(rows);
 
-    // Build categories for site's scoring (reuse engine's categories but ensure shape matches site types + normalize row names)
+    // Build categories for site's scoring (reuse engine's categories but ensure shape matches site types + normalize row names + attach remediation)
     const categories = (phase1.categories as unknown as CategoryScore[]).map((c) => ({
       ...c,
       indicator_rows: c.indicator_rows.map((r) => {
         const reg = INDICATOR_REGISTRY[r.id];
         if (!reg) return { ...r, name: `Unknown indicator (${r.id})` } as IndicatorRow;
-        return { ...r, name: reg.name, effort: reg.effort, category_id: reg.category } as IndicatorRow;
+        const existing = (r as IndicatorRow).remediation;
+        const remediation = existing ?? (r.status !== 'unknown' && !(r as IndicatorRow).not_applicable ? (getIndicatorRemediation(r.id) as unknown as IndicatorRow['remediation']) : undefined);
+        return { ...r, name: reg.name, effort: reg.effort, category_id: reg.category, ...(remediation ? { remediation } : {}) } as IndicatorRow;
       }),
     }));
     const topBlockers = this.deriveTopBlockers(categories);
@@ -151,14 +154,16 @@ export class LiveReportProvider {
         effort: getIndicatorEffort(meta.id),
         not_applicable: meta.id.startsWith('FE-') ? true : undefined,
       }));
-    // Normalize known rows to registry names/effort as well (fact-passthrough may carry stale/short names)
+    // Normalize known rows to registry names/effort + remediation (fact-passthrough may carry stale/short names)
     const normalizedKnown: IndicatorRow[] = phase1Rows.map((r) => {
       const reg = INDICATOR_REGISTRY[r.id];
       if (!reg) {
         console.warn(`Unknown indicator ${r.id}`);
         return { ...r, name: `Unknown indicator (${r.id})` };
       }
-      return { ...r, name: reg.name, effort: reg.effort, category_id: reg.category };
+      const existing = (r as IndicatorRow).remediation;
+      const remediation = existing ?? (r.status !== 'unknown' && !(r as IndicatorRow).not_applicable ? (getIndicatorRemediation(r.id) as unknown as IndicatorRow['remediation']) : undefined);
+      return { ...r, name: reg.name, effort: reg.effort, category_id: reg.category, ...(remediation ? { remediation } : {}) };
     });
     return [...normalizedKnown, ...placeholders];
   }

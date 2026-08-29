@@ -1,4 +1,11 @@
 import type { DeepDiveScopeEntry, TopBlocker } from "@/lib/types";
+import { INDICATOR_REGISTRY } from "@/lib/generated/rubric";
+
+function truncateQuickWin(s: string, n = 110): string {
+  if (!s) return "";
+  if (s.length <= n) return s;
+  return s.slice(0, n).trimEnd() + "…";
+}
 
 export function TopBlockers({ blockers }: { blockers?: TopBlocker[] }) {
   const safe = blockers ?? [];
@@ -12,23 +19,35 @@ export function TopBlockers({ blockers }: { blockers?: TopBlocker[] }) {
       <ul className="mt-3 space-y-2.5">
         {safe.map((b) => {
           const pp = parseFloat(b.weight_pp);
+          const reg = INDICATOR_REGISTRY[b.row];
+          const effort = reg?.effort ?? "⚡ ≤30 min";
+          const quickWin = (reg?.remediation?.quick_win ?? "").trim();
+          const excerpt = truncateQuickWin(quickWin);
           return (
             <li key={b.row}>
-              <div className="flex items-baseline justify-between gap-3">
-                <span className="truncate font-mono text-xs text-muted">
-                  <span className="text-faint">{b.row}</span> · {b.name}
-                </span>
-                <span className="shrink-0 font-mono text-xs text-tier-moderate">
-                  +{b.weight_pp}
-                </span>
-              </div>
-              <div className="mt-1 h-1 overflow-hidden rounded-full bg-panel-raised">
-                <div
-                  className="h-full rounded-full bg-tier-moderate"
-                  style={{ width: `${(pp / maxPp) * 100}%` }}
-                />
-              </div>
-              <p className="mt-0.5 truncate text-xs text-faint">{b.summary}</p>
+              <a href={`#row-${b.row}`} className="block rounded p-1 -m-1 hover:bg-panel-raised/50 focus-visible:outline focus-visible:outline-1 focus-visible:outline-foreground/30">
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="truncate font-mono text-xs text-muted">
+                    <span className="text-faint">{b.row}</span> · {b.name}
+                  </span>
+                  <span className="flex shrink-0 items-center gap-1.5">
+                    <span className="rounded border border-hairline bg-panel-raised px-1 py-0 text-[10px] text-faint">{effort}</span>
+                    <span className="font-mono text-xs text-tier-moderate">+{b.weight_pp}</span>
+                  </span>
+                </div>
+                <div className="mt-1 h-1 overflow-hidden rounded-full bg-panel-raised">
+                  <div
+                    className="h-full rounded-full bg-tier-moderate"
+                    style={{ width: `${(pp / maxPp) * 100}%` }}
+                  />
+                </div>
+                <p className="mt-0.5 truncate text-xs text-faint">{b.summary}</p>
+                {excerpt ? (
+                  <p className="mt-1 line-clamp-2 text-[11px] leading-snug text-muted">
+                    <span className="text-faint">↳</span> {excerpt}
+                  </p>
+                ) : null}
+              </a>
             </li>
           );
         })}

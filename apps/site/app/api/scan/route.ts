@@ -156,6 +156,40 @@ export async function GET(req: NextRequest) {
         const repoSha = (snapSha && snapSha !== 'unknown' ? snapSha : (factSha as unknown as { commitSha?: string } | undefined)?.commitSha) ?? 'unknown';
         const normalizedRepo = String((rawSnapshot as { repo?: string }).repo ?? repo);
         const scannedAt = String((rawSnapshot as { scanned_at?: string }).scanned_at ?? new Date().toISOString());
+        // Derive top restore levers (recoverable headline points) and deep-dive scope from scored categories/rows
+        const deriveTopBlockers = (cats: typeof mvp.categories) => {
+          const out: Array<{ row: string; name: string; points_lost: number; weight_pp: string; summary: string }> = [];
+          for (const c of cats as unknown as Array<{ id: string; name: string; weight: number; applicable: number; indicator_rows: Array<{ id: string; name: string; status: string; not_applicable?: boolean; score?: number; reason?: string }> }>) {
+            if (!c.applicable) continue;
+            const pointValue = (100 * c.weight) / (3 * c.applicable) / 100;
+            for (const r of c.indicator_rows) {
+              if (r.status === 'unknown' || r.not_applicable || r.score == null) continue;
+              const lost = 3 - r.score;
+              if (lost <= 0) continue;
+              out.push({ row: r.id, name: r.name, points_lost: lost, weight_pp: `${(lost * pointValue).toFixed(2)}pp`, summary: r.reason ?? '' });
+            }
+          }
+          out.sort((a, b) => parseFloat(b.weight_pp) - parseFloat(a.weight_pp));
+          return out.slice(0, 5);
+        };
+        const topBlockers = deriveTopBlockers(mvp.categories);
+        // Deep-dive: indicators not in the paid set are the remainder of the 102
+        // For MVP/tranche the rows are the measured set; unknown for deep-dive is the complement.
+        // Build from rubric registry if available, otherwise from mvp rows unknown.
+        let deepDiveScope: Array<{ row: string; name: string; what_it_takes: string }> = [];
+        try {
+          const rubricMod = await import("../../../../../packages/engine/rubric.json", { with: { type: "json" } });
+          const rubric = rubricMod.default as { indicators: Array<{ id: string; name: string }> };
+          const known = new Set((mvp.rows as Array<{ id: string }>).map(r => r.id));
+          const unknownIndicators = rubric.indicators.filter(i => !known.has(i.id));
+          // Map to deep-dive scope using a minimal what-it-takes (unknown measure path already on placeholder would be ideal, but use generic)
+          deepDiveScope = unknownIndicators.slice(0, 18).map(i => ({ row: i.id, name: i.name, what_it_takes: "Not run in this scan — deep-dive row" }));
+          // Prefer any unknown rows that already carry unknown_measure_path (if any)
+          const unknownRows = (mvp.rows as Array<{ id: string; name: string; status: string; unknown_measure_path?: string }>).filter(r => r.status === 'unknown');
+          if (unknownRows.length) {
+            deepDiveScope = unknownRows.slice(0, 18).map(r => ({ row: r.id, name: r.name, what_it_takes: r.unknown_measure_path ?? "Not run" }));
+          }
+        } catch {}
         const finalReport: Record<string, unknown> & { headline: { score: number; tier: string; ci_band: string }; snapshot: Record<string, unknown> } = {
           id: scanId ?? `ls_${Date.now().toString(36)}`,
           snapshot: { ...rawSnapshot, scanned_commit: repoSha, repo: normalizedRepo, scanned_at: scannedAt },
@@ -165,8 +199,8 @@ export async function GET(req: NextRequest) {
           status: mvp.status,
           gates: mvp.gates,
           provenance: { tool_manifest: [] },
-          top_blockers: [],
-          deep_dive_scope: [],
+          top_blockers: topBlockers,
+          deep_dive_scope: deepDiveScope,
           full_table: mvp.rows,
           report_schema: "1",
           sample: true,

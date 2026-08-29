@@ -290,8 +290,8 @@ const MVP_IDS = ['VEL-06','VEL-09','VEL-08','VEL-10','SEC-07','TEST-08','ECOS-01
 export const TRANCHE_A_IDS = ['DOCS-01','DOCS-03','DOCS-04','DOCS-08','DOCS-09','PERF-02','PERF-06','DATA-01','ECOS-06','ECOS-08','SEC-09','SEC-10'];
 export const ALL_MEASURED_IDS = [...MVP_IDS, ...TRANCHE_A_IDS];
 
-const RUBRIC_REGISTRY: Record<string, { name: string; category: string; effort: string }> = Object.fromEntries(
-  ((rubricData as unknown as { indicators: Array<{ id: string; category: string; name: string; effort: string }> }).indicators ?? []).map(i => [i.id, { name: i.name, category: i.category, effort: i.effort }])
+const RUBRIC_REGISTRY: Record<string, { name: string; category: string; effort: string; remediation: { quick_win: string; structural: string; gold_standard: string; effort: string } }> = Object.fromEntries(
+  ((rubricData as unknown as { indicators: Array<{ id: string; category: string; name: string; effort: string; remediation: { quick_win: string; structural: string; gold_standard: string; effort: string } }> }).indicators ?? []).map(i => [i.id, { name: i.name, category: i.category, effort: i.effort, remediation: i.remediation }])
 );
 function lookupName(id: string): string {
   const e = RUBRIC_REGISTRY[id];
@@ -300,11 +300,13 @@ function lookupName(id: string): string {
 }
 function lookupEffort(id: string): string { return RUBRIC_REGISTRY[id]?.effort ?? '⚡ ≤30 min'; }
 function lookupCategory(id: string): string { return RUBRIC_REGISTRY[id]?.category ?? id.split('-')[0]; }
+function lookupRemediation(id: string) { return RUBRIC_REGISTRY[id]?.remediation ?? { quick_win: '', structural: '', gold_standard: '', effort: '⚡ ≤30 min' }; }
 
 export function scoreMvp(facts: FactRecord[]) {
   // Reuse phase1 rows for first 6, then map remaining via simple measured mapping; supports both 19 and 31
   const byId = new Map(facts.map(f => [f.detectorId, f]));
-  const phase1 = phase1Rows(facts.filter(f => ['VEL-06','VEL-09','VEL-08','VEL-10','SEC-07','TEST-08'].includes(f.detectorId)));
+  const rawPhase1 = phase1Rows(facts.filter(f => ['VEL-06','VEL-09','VEL-08','VEL-10','SEC-07','TEST-08'].includes(f.detectorId)));
+  const phase1 = rawPhase1.map(r => r.status === 'measured' ? { ...r, remediation: lookupRemediation(r.id) } as unknown as typeof r : r);
   // For remaining, create measured rows if fact exists and no error — include tranche A (31 total); tranche rows become unknown placeholders when not requested
   const extraIds = [...MVP_IDS.slice(6), ...TRANCHE_A_IDS];
   const extraRows: ReturnType<typeof phase1Rows> = [];
@@ -321,7 +323,8 @@ export function scoreMvp(facts: FactRecord[]) {
       const reasonFn = TRANCHE_REASONS[id];
       const score = scorer ? scorer(flat) : 2;
       const reason = reasonFn ? reasonFn(score, flat) : `${name} — evidence via ${f.provenance.tool} — score ${score}.`;
-      extraRows.push({ id, name, category_id: cat, status: 'measured', score, reason, evidence: { tool: f.provenance.tool, pointers: f.evidencePointers as unknown as [], facts: flat }, effort } as unknown as ReturnType<typeof phase1Rows>[number]);
+      const remediation = lookupRemediation(id);
+      extraRows.push({ id, name, category_id: cat, status: 'measured', score, reason, evidence: { tool: f.provenance.tool, pointers: f.evidencePointers as unknown as [], facts: flat }, effort, remediation } as unknown as ReturnType<typeof phase1Rows>[number]);
     }
   }
   const allRows = [...phase1, ...extraRows];

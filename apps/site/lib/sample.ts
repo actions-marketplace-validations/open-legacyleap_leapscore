@@ -7,7 +7,7 @@
  */
 
 import type { Gate, IndicatorRow } from "@/lib/types";
-import { INDICATOR_REGISTRY } from "@/lib/generated/rubric";
+import { INDICATOR_REGISTRY, getIndicatorRemediation } from "@/lib/generated/rubric";
 
 type V = IndicatorRow["verdict_text"];
 
@@ -48,6 +48,9 @@ function row(s: RowSeed): IndicatorRow {
     // Do not throw — sample is illustrative but must track rubric
   }
   const canonicalEffort = reg?.effort ?? s.effort;
+  const derivedRemediation = s.status === "unknown" || s.not_applicable
+    ? undefined
+    : (s.remediation ?? (reg?.remediation as unknown as IndicatorRow["remediation"] | undefined) ?? (getIndicatorRemediation(s.id) as unknown as IndicatorRow["remediation"]));
   return {
     id: s.id,
     name: canonicalName,
@@ -60,7 +63,7 @@ function row(s: RowSeed): IndicatorRow {
     basis: s.status === "estimated" ? s.basis : undefined,
     unknown_measure_path:
       s.status === "unknown" ? s.unknown_measure_path : undefined,
-    remediation: s.remediation,
+    remediation: derivedRemediation && (derivedRemediation.quick_win || derivedRemediation.gold_standard) ? derivedRemediation : undefined,
     not_applicable: s.not_applicable,
     effort: canonicalEffort,
   };
@@ -263,15 +266,6 @@ export const ARCH_ROWS: IndicatorRow[] = [
       facts: { max_cc: 52, god_classes: 4, files_gt_2k_loc: 1 },
     },
     effort: EFFORT.m,
-    remediation: {
-      quick_win:
-        "Carve the top 5 offenders by automated extract-method, add a complexity budget to CI (eslint max-complexity, SonarQube gate).",
-      structural:
-        "Structured decomposition of God Classes by responsibility; strangle complexity behind facades; pair the two riskiest files on a refactor sprint.",
-      gold_standard:
-        "Complexity budget enforced in CI; max method complexity < 15; no file > 1,000 LOC; top-decile list shrinking.",
-      effort: "🔶 ~2–4 h",
-    },
   }),
   row({
     id: "ARCH-02",
@@ -292,15 +286,6 @@ export const ARCH_ROWS: IndicatorRow[] = [
       facts: { cycles: 3, hub_fan_in: 427, utils_hub: "django/utils/*" },
     },
     effort: EFFORT.m,
-    remediation: {
-      quick_win:
-        "Draw the DSM, pick the 3 highest-fan-in hubs, wrap them behind interfaces and shrink their API.",
-      structural:
-        "Define bounded contexts and enforce them with ArchUnit-style rules in CI; extract the shared hub into a stable, narrow contract; invert dependencies toward stable abstractions.",
-      gold_standard:
-        "Acyclic dependency graph at the module boundary; every module has narrow, explicit dependencies.",
-      effort: "🔶 ~2–4 h",
-    },
   }),
   row({
     id: "ARCH-03",
@@ -391,15 +376,6 @@ export const ARCH_ROWS: IndicatorRow[] = [
       confidence: "medium",
     },
     effort: EFFORT.m,
-    remediation: {
-      quick_win:
-        "Inject the clock/random/IO at the seams you can reach; make the top 5 singletons instances with explicit wiring.",
-      structural:
-        "Eliminate globals by constructor injection; make state explicit and owned; introduce a proper initialization/DI lifecycle; enforce 'no static mutable' with a lint.",
-      gold_standard:
-        "All dependencies explicit and injected; time/random/IO behind interfaces; test suite passes under random/parallel execution; zero mutable statics in core.",
-      effort: "🔶 ~2–4 h",
-    },
   }),
   row({
     id: "ARCH-08",
@@ -520,15 +496,6 @@ export const TEST_ROWS: IndicatorRow[] = [
       facts: { p95_min: 34, shards: 16, over_30min: true },
     },
     effort: EFFORT.s,
-    remediation: {
-      quick_win:
-        "Parallelize across shards/workers, move slow E2E out of the merge gate (nightly), fix the slowest 10 tests.",
-      structural:
-        "Attack root causes — pyramid rebalance (TEST-03), hermetic fast tests, caching, and a runtime budget with a gate.",
-      gold_standard:
-        "Suite < 10 min P95; every engineer runs the suite before merge; a runtime budget enforced in CI.",
-      effort: "⚡ ≤ 30 min",
-    },
   }),
   row({
     id: "TEST-05",
@@ -591,15 +558,6 @@ export const TEST_ROWS: IndicatorRow[] = [
       facts: { sast: false, coverage_gate: false, complexity_gate: false },
     },
     effort: EFFORT.s,
-    remediation: {
-      quick_win:
-        "Add lint + SAST (Semgrep/CodeQL/SonarQube) as failing stages, add a coverage gate on core, block admin bypass (require justification audit).",
-      structural:
-        "Define the quality bar in code (lint rules, complexity budgets, coverage thresholds, security checks) and let CI enforce it; tie all gates to the same config the team reviews.",
-      gold_standard:
-        "CI fails on lint, SAST, coverage, complexity, and security findings; bypasses are impossible or audited.",
-      effort: "⚡ ≤ 30 min",
-    },
   }),
 ];
 
@@ -623,15 +581,6 @@ export const SEC_ROWS: IndicatorRow[] = [
       },
     },
     effort: EFFORT.m,
-    remediation: {
-      quick_win:
-        "Patch the open Criticals/Highs in the exposure window — today; re-scan. Both CVEs are closed; keep the trend.",
-      structural:
-        "A patch SLA policy (Critical ≤ 7 days, High ≤ 30), automated patching (Dependabot/Renovate auto-merge with CI as the gate), and a 'no open Critical in prod' rule.",
-      gold_standard:
-        "Zero open Criticals; Highs < 30 days; automated scans in CI; patch SLA documented and met for 4 straight quarters.",
-      effort: "🔶 ~2–4 h",
-    },
   }),
   row({
     id: "SEC-02",
@@ -703,15 +652,6 @@ export const SEC_ROWS: IndicatorRow[] = [
       },
     },
     effort: EFFORT.m,
-    remediation: {
-      quick_win:
-        "Add audit logging to the top admin/PII/auth paths with a structured schema, ship logs to an external durable sink, set retention.",
-      structural:
-        "Treat audit as a compliance requirement — append-only where needed, centralized log platform, automated test asserting every sensitive action produces an audit event.",
-      gold_standard:
-        "Every admin/PII/auth event logged structured (actor, action, target, time, request ID), durable, retained per policy, tamper-evident.",
-      effort: "🔶 ~2–4 h",
-    },
   }),
   row({
     id: "SEC-06",
@@ -870,15 +810,6 @@ export const DATA_ROWS: IndicatorRow[] = [
       facts: { versioned_columns: 6, domain_normalized: false },
     },
     effort: EFFORT.m,
-    remediation: {
-      quick_win:
-        "Kill the obvious versioned/flags columns behind an additive migration, document the domain model properly.",
-      structural:
-        "Remodel around domain facts — normalize flags into real entities, adopt effective-dating/event structures for changeable rules, schema reviewed as domain design not storage plumbing.",
-      gold_standard:
-        "Schema expresses domain facts; product rule changes land without schema surgery; events/snapshots support evolution.",
-      effort: "🔶 ~2–4 h",
-    },
   }),
 ];
 
@@ -1019,15 +950,6 @@ export const VEL_ROWS: IndicatorRow[] = [
       confidence: "medium",
     },
     effort: EFFORT.s,
-    remediation: {
-      quick_win:
-        "Turn on caching, parallelize shards, drop the slow E2E from the merge path (TEST-04), float the slowest 10 tests once.",
-      structural:
-        "A CI budget (SLO on feedback time), dependency pruning (ECOS-06), test-suite redesign (TEST-03), and monitoring of pipeline trend.",
-      gold_standard:
-        "P95 feedback < 10 min; trend flat/declining; no timeouts.",
-      effort: "⚡ ≤ 30 min",
-    },
   }),
   row({
     id: "VEL-02",
