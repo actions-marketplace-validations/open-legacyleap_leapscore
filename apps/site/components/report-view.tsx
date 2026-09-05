@@ -127,8 +127,8 @@ export function ReportView({
             <span className="rounded bg-panel px-2 py-1 font-mono text-xs text-muted">Detected: {archetype} <span className="text-faint">({archetypeConf ?? 'low'})</span></span>
             {perRoot && perRoot.length > 0 ? (
               <span className="flex flex-wrap items-center gap-1.5">
-                {perRoot.slice(0,4).map((r) => (
-                  <span key={r.root} className="rounded bg-zinc-900 px-1.5 py-0.5 font-mono text-xs text-muted">
+                {perRoot.slice(0,4).map((r, i) => (
+                  <span key={`${r.root}-${r.archetype}-${i}`} className="rounded bg-zinc-900 px-1.5 py-0.5 font-mono text-xs text-muted">
                     {r.root === '.' ? 'root' : r.root}: {r.archetype}
                   </span>
                 ))}

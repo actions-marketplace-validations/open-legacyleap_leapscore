@@ -120,7 +120,9 @@ Per `11` §4: pre-v1 spot-check deferred (Option A). Ship on encyclopedia-assert
 
 ---
 
-## 9. Build order (backlog — code will evolve following this slice)
+## 9. Build order (backlog — status: built, then superseded)
+
+> **Status note:** this backlog is complete — Phase 1, Phase 2, and the report shipped (`packages/engine/orchestrator.phase1.ts`, `packages/engine/orchestrator.ts`, `apps/site/app/api/scan/route.ts`). The unified budget (`budgetForIndicators`, clamp 10s–240s) replaced the "Phase 1 <10s + Phase 2 4-min" split (see `openspec/changes/archive/2026-08-29-unified-scan-progress`), and tranche-a expanded coverage 19 → 31 detectors (`openspec/changes/expand-coverage-tranche-a`). This slice is now a **subset** of what ships, not the build plan.
 
 1. **Spec freeze** — this doc + D9 entry.
 2. **Scaffold** — `packages/engine/` (orchestrator, manifest sniff, GH API client, tool adapters), `packages/engine/report` schema from `docs/plans/06_DATA_MODEL_API.md`, `apps/site/` provider seam (was `mvp/engine`, `mvp/report`, `mvp/site`).

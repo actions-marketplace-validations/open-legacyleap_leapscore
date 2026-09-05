@@ -257,14 +257,23 @@ export async function classifyArchetypePerRoot(
     return classifyArchetype(clonePath, readFile, manifests);
   }
   const perRoot: ArchetypeResult['perRoot'] = [];
+  // Group manifests by root — one entry per root (same root can carry
+  // multiple ecosystems, e.g. py + js at '.'; classifying per manifest
+  // would emit duplicate root keys downstream).
+  const byRoot = new Map<string, Array<{ root: string; ecosystem: string }>>();
   for (const m of manifests) {
+    const list = byRoot.get(m.root) ?? [];
+    list.push(m);
+    byRoot.set(m.root, list);
+  }
+  for (const [root, rootManifests] of byRoot) {
     // For per-root, create a scoped readFile
-    const scopedRead = async (p: string) => readFile(m.root === '.' ? p : `${m.root}/${p}`);
-    const scopedPath = m.root === '.' ? clonePath : join(clonePath, m.root);
+    const scopedRead = async (p: string) => readFile(root === '.' ? p : `${root}/${p}`);
+    const scopedPath = root === '.' ? clonePath : join(clonePath, root);
     // check if path exists
     if (!(await exists(scopedPath))) continue;
-    const res = await classifyArchetype(scopedPath, scopedRead, [m]);
-    perRoot.push({ root: m.root, archetype: res.archetype, confidence: res.confidence, planeInventory: res.planeInventory, evidencePointers: res.evidencePointers });
+    const res = await classifyArchetype(scopedPath, scopedRead, rootManifests);
+    perRoot.push({ root, archetype: res.archetype, confidence: res.confidence, planeInventory: res.planeInventory, evidencePointers: res.evidencePointers });
   }
   // mixed if distinct archetypes
   const distinct = new Set(perRoot.map(r => r.archetype));

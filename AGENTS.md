@@ -1,21 +1,30 @@
 # AGENTS.md
 
-**LeapScore** — monorepo. Scoring engine turns a GitHub URL into a legacy/maintainability score. Planning docs + implementation now co-exist.
+**LeapScore** — monorepo. Scoring engine turns a GitHub URL into a legacy/maintainability score. Planning docs + implementation co-exist; **the implementation is live** (unified GH-API + clone scan, persisted reports, rubric browser). Docs that still say "planning only" are stale — see "Implementation status" below.
 
 ## Layout (monorepo)
 
 ```
 docs/rubric/         rubric (canonical) — 102 indicators + 11_WEIGHTS… (was CODEDEBT_AUDIT_RUBRIC)
 docs/specs/          per-indicator impl specs (F1) — 102 files + README (was SPECS)
-docs/plans/          product/engine specs (00 indexes, 01→10 + 13 MVP slice; was PLANS)
-apps/site/           Next.js site (was /site)
-packages/engine/     scorer, orchestrator, registry, budget, store, rubric.json (was /engine)
-packages/detectors/  102 detector folders — manifest.json + schema.json (was /detectors)
-tooling/checks/      rubric-consistency, detector-isolation, schemas (was /checks)
-tooling/scripts/     compile-rubric (was /scripts)
+docs/plans/          product/engine specs (00 indexes, 01→13 incl. website/GitHub-surface/MVP slice; was PLANS)
+openspec/            live change specs — specs/ is current truth for scan/report behavior; changes/archive/* is history
+apps/site/           Next.js site — marketing + sample report + live scan (/live) + persisted reports (/reports/[runId]) + rubric browser (/rubric)
+packages/engine/     scorer, orchestrator (+ orchestrator.phase1), registry, budget, archetype, clone, gh, ingest, queue, runner, scheduler, store, detectors/*, scorer/*, rubric.json (was /engine)
+packages/detectors/  102 detector folders — manifest.json + schema.json each; 3 with standalone detector.ts (arch-09, sec-02, sec-03); engine-native detectors live in packages/engine/detectors/* (31 indicators)
+tooling/checks/      detector-isolation (enforced), rubric-consistency + schemas (stubs — real check is compile-rubric --check)
+tooling/scripts/     compile-rubric (canonical → rubric.json + generated rubric.ts; --check is the CI gate)
+out/                 local architecture-diagram artifacts (not source)
 ```
 
-Root `package.json` workspaces: `apps/*`, `packages/*`. Run `npm run compile:rubric` / `check:rubric-consistency` from root.
+Root `package.json` workspaces: `apps/*`, `packages/*`. Run `npm run compile:rubric` / `npm run check:rubric-consistency` / `npm run check:detector-isolation` from root.
+
+## Implementation status (read this before "planning only" notes elsewhere)
+
+- **Engine live:** `packages/engine/orchestrator.ts` (`runUnifiedScan`) — single indicator-count-driven budget (`budgetForIndicators`, clamp 10s–240s), GH-API + shallow-clone (`--filter=blob:none`) under one deadline, archetype classification (`archetype.ts`), 5-state applicability (`scorer/applicability.ts`), rollup with renormalized + canonical headlines (`scorer/rollup.ts`). `orchestrator.phase1.ts` (`runPhase1Scan`) is the GH-API-only path.
+- **Coverage live:** 31 engine-native detectors (`packages/engine/detectors/*.ts`); `/api/scan` streams NDJSON (`meta → progress → report`) with single-flight coalescing. MVP slice (`docs/plans/13`, 19 rows) is therefore a **subset** of what ships — see tranche-a openspec change.
+- **Site live:** `/live` (live scan UI), `/report/live`, `/reports` + `/reports/[runId]` (persisted runs via `lib/reports.ts`), `/rubric` (compiled-registry browser), `/api/reports/[runId]`. `LiveReportProvider` (`lib/provider.live.ts`) maps engine facts → report; `provider.ts` is the sample seam.
+- **Decisions live in two places:** `docs/plans/00_MASTER_INDEX.md` (D1–D9, A1–F1, W1–W14) for product/rubric history **plus** `openspec/changes/*` + `openspec/specs/*` for everything built after the MVP (unified budget, persisted runs, trace, remedies, tranche-a, archetype/applicability). Check openspec first for scan/report behavior; plans docs are the parent rationale.
 
 ## Three doc trees, different rules
 
@@ -30,7 +39,7 @@ The catalog is single-sourced (decisions D1/D3/F1):
 - **Canonical — implementation** (edit here): `docs/specs/<NN_CATEGORY>/<ID>_*.md` — inputs, detection recipes, fact schemas, statusing predicates, score-mapping predicates, gate hooks, failure/budget semantics. Specs **reference** encyclopedia thresholds by ID; they never restate numbers.
 - **Derived** (never hand-edit a number; match to canonical instead): `00_EXECUTIVE_RUBRIC.md`, `templates/*` score sheets, the category-weight tables in each encyclopedia `01`-`10` header, and `docs/plans/03_ENGINEERABILITY_MATRIX.md`.
 
-Consequences: changing an indicator's thresholds/status → edit the encyclopedia row *and* the matching row in `00_EXECUTIVE_RUBRIC.md` Part 2 *and* the spec's §0/§4/§5 if detectability or predicates change. Changing weights/FE-active logic → edit only `11` §1 and propagate. The "consistency check" (a **lint to keep every derived view in sync**) is described in the README but does **not exist as a script** — grep `git ls-files` will confirm; sync it by hand.
+Consequences: changing an indicator's thresholds/status → edit the encyclopedia row *and* the matching row in `00_EXECUTIVE_RUBRIC.md` Part 2 *and* the spec's §0/§4/§5 if detectability or predicates change. Changing weights/FE-active logic → edit only `11` §1 and propagate. The consistency check is `npm run check:rubric-consistency` (= `compile-rubric.ts --check`: asserts `packages/engine/rubric.json` + `apps/site/lib/generated/rubric.ts` match the encyclopedia — IDs, names, effort tags, remediation coverage). Run `npm run compile:rubric` to regenerate; never hand-edit the generated files.
 
 ## Conventions for editing the rubric
 
@@ -54,9 +63,9 @@ Consequences: changing an indicator's thresholds/status → edit the encyclopedi
 
 ## Decisions & governance
 
-- `docs/plans/00_MASTER_INDEX.md` holds the Decisions Log (D1–D8 for the product, A1–E1 for the rubric redesign, F1 for the implementation specs) and Open Questions. New decisions get appended there with `# · Decision · Rationale · Status`; agreed ones become the format `**AGREED**`.
+- `docs/plans/00_MASTER_INDEX.md` holds the Decisions Log (D1–D9 for the product, A1–F1 for the rubric redesign, W1–W14 for the website) and Open Questions. Post-MVP build decisions live in `openspec/changes/*` + `openspec/specs/*` (unified budget, persisted runs, trace, remedies, tranche-a, archetype/applicability). New decisions get appended with `# · Decision · Rationale · Status`; agreed ones become the format `**AGREED**`.
 - Threshold/weight adjustments are logged in `11` §5 (calibration log) with date, ID, field, old/new, evidence. Don't silently tweak a number.
-- Product status: **planning only — no implementation until the catalog is agreed** (`docs/plans/00` line 5). Don't start writing the engine code; if asked, the blueprint is `docs/plans/05_DETECTION_ENGINE_BLUEPRINT.md`.
+- Product status: **implementation live** — engine (`packages/engine`), site (`apps/site`), detectors (`packages/detectors`, `packages/engine/detectors`). `docs/plans/05_DETECTION_ENGINE_BLUEPRINT.md` is the parent blueprint; `openspec/specs/*` is current truth for scan/report behavior.
 
 ## Style
 

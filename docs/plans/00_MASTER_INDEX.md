@@ -2,7 +2,7 @@
 
 > **Project:** LeapScore — a scoring engine that takes a repository (minimum: a GitHub URL) and returns a legacy/maintainability score, the reason behind every point of that score, and remediation recommendations to raise it.
 > **Base knowledge base:** `../rubric/` (102 indicators: 76 standard + 18 deep-dive + 8 frontend annex).
-> **Status:** Planning only. No implementation until this catalog is agreed.
+> **Status:** Implementation live. Planning docs below are the parent rationale; current scan/report behavior is specified in `openspec/specs/*` (see "Implementation status").
 
 ---
 
@@ -26,6 +26,21 @@
 | 13 | [`13_MVP_SLICE.md`](13_MVP_SLICE.md) | Lean MVP cut — 19 indicators, dual headline, two-phase scan (was `mvp/README.md`) |
 
 **Order of dependency:** you cannot read 04 (v1 scope) without 03 (what's measurable); you cannot read 05 without 04; 06–09 all depend on 04/05. 10 is a summary of the rest.
+
+---
+
+## Implementation status (what actually ships — read alongside the plans)
+
+| Layer | Location | Truth |
+|-------|----------|-------|
+| Engine | `packages/engine/` (`orchestrator.ts` `runUnifiedScan`, `orchestrator.phase1.ts` `runPhase1Scan`, `budget.ts`, `archetype.ts`, `scorer/rollup.ts`, `scorer/applicability.ts`, `detectors/*` ×31) | 31 indicators live; single indicator-count-driven budget (clamp 10s–240s); GH-API + shallow clone under one deadline; archetype + 5-state applicability; renormalized + canonical headlines |
+| Detectors registry | `packages/detectors/` (102 folders, manifest+schema; `detector.ts` in arch-09/sec-02/sec-03) + `packages/engine/rubric.json` (compiled) | Engine-native detectors are the live path; `packages/detectors/*/detector.ts` is the future per-indicator home (isolation enforced) |
+| Site | `apps/site/` (`/live`, `/report/live`, `/reports`, `/reports/[runId]`, `/rubric`, `/api/scan`, `/api/reports/[runId]`, `lib/provider.live.ts`, `lib/reports.ts`) | Live scan streams NDJSON with single-flight coalescing; runs persist as one JSON envelope (report + meta + trace) |
+| Live specs | `openspec/specs/` (`scan-phase-1`, `scan-phase-2`, `report-rendering`, `reports/persisted-runs`, `reports/run-history-ui`, `scan-trace`, `site-shell`, `indicator-applicability`) | **Current truth** for scan/report behavior — supersedes the "future work" notes in 04/05/11/13 |
+| Change history | `openspec/changes/archive/*` + active `expand-coverage-tranche-a`, `hide-empty-categories`, `improve-report-gates-and-scan-timeline` | Post-MVP build log (unified budget, persisted runs, trace, remedies, tranche-a 19→31, archetype/applicability, gates cockpit) |
+| Checks | `npm run check:rubric-consistency` (= `tooling/scripts/compile-rubric.ts --check`), `npm run check:detector-isolation` | Both enforced; generated files (`rubric.json`, `lib/generated/rubric.ts`) are never hand-edited |
+
+`13_MVP_SLICE.md` (19 rows) is a **subset** of what ships (31 rows via tranche-a). `05_DETECTION_ENGINE_BLUEPRINT.md` remains the parent architecture; the unified budget replaces its two-phase budget split.
 
 ---
 
@@ -99,7 +114,29 @@ Format: `#` · Decision · Rationale · Status · Source (grill Q)
 
 - W-OPEN-1: Waitlist mechanics (email capture → where it lands; newsletter tool).
 - W-OPEN-2: Exact seeded indicator rows for the Django sample (top blockers + remediation text pulled from rubric encyclopedias).
-- W-OPEN-3: `apps/site/` bootstrap — repo-local page/component tree, lint/format setup to match repo conventions (none exist yet; site establishes them).
+- ~~W-OPEN-3~~ **DONE:** `apps/site/` bootstrapped (App Router + TS + Tailwind + shadcn/ui); lint/format/vitest established; live scan, persisted reports, and rubric browser shipped (see "Implementation status").
+
+---
+
+## Post-MVP build decisions (openspec — not re-logged here)
+
+Product/rubric history stays in the logs above. Everything built after the MVP slice is decided and specified in `openspec/` — read it as the continuation of this log:
+
+| Change | What it decided |
+|--------|-----------------|
+| `unified-scan-progress` | Single indicator-count-driven budget replaces the Phase-1/Phase-2 budget split; one progress bar; no phase leak to UI/API |
+| `phase-2-clone-scan` | Clone path: shallow `--filter=blob:none`, manifest sniff, read-only detector surface, no repo-code execution |
+| `fix-indicator-titles-and-mvp-gates` | Registry single-source for indicator titles; MVP gate proving rules |
+| `persisted-reports` | One JSON envelope per run (report + meta + trace); history UI |
+| `bookmarkable-live-trace` | Exhaustive live trace; bookmarkable `/reports/[runId]` |
+| `fix-evidence-reasoning` | Flattened facts, human reasons with rationale, evidence popups |
+| `remedies-top-levers` | Rubric playbooks harvested to every row; top levers with effort + quick-win |
+| `applicable-indicator-selection` | Repo archetype + 5-state indicator lifecycle (N/A only via structural gate or exhaustive proof) |
+| `expand-coverage-tranche-a` (active) | 19 → 31 detectors; 13_MVP_SLICE is now a subset |
+| `hide-empty-categories` (active) | Categories with zero applicable rows omitted/dimmed as N/A |
+| `improve-report-gates-and-scan-timeline` (active) | Collapsed gates cockpit + scan timeline with reveal |
+
+New build work gets an openspec change (proposal → design → tasks → archive); only product/rubric-level reversals come back here as D_/W_ rows.
 
 ---
 
@@ -117,7 +154,7 @@ Format: `#` · Decision · Rationale · Status · Source (grill Q)
 
 - OQ1: Headline number format — single 0–100, banded tier (Healthy/Moderate/High/Critical), or radar? (Tied to D3/D4; unresolved.)
 - OQ2: Whether `estimated` affects the M&A verdict or is excluded entirely from gated B2B reports. (M&A buyers may want `measured`-only tallies.)
-- OQ3: Report delivery form — web app, API, PDF, HTML packet? (Blocked on product spec review.)
+- OQ3: Report delivery form — web app, API, PDF, HTML packet? (Blocked on product spec review.) **Partial:** web app + persisted JSON envelopes + NDJSON scan stream ship (`/reports/[runId]`, `/api/scan`); PDF/packet still open.
 - OQ4: Cost-per-scan budget target for the freemium tier (affects which indicators stay in the free path). (Fee link to 04/09.)
 - OQ5: ~~Where `frontend annex` (FE-01…07) lands~~ **RESOLVED** in rubric redesign (C1): when a client exists, FE-01…07 + FE-08 deep-dive get a separate 10% and the other nine categories scale ×0.9; when no client exists, FE is skipped entirely.
 - OQ6: Coverage-display rounding. W12 fixes the canonical counts 49 measured / 19 estimated / 8 unknown over 76 rows; exact-to-nearest display is 64/25/11, but W12 text says "65/25/10". Counts are canonical and asserted in `apps/site/lib/score.consistency.test.ts`; the site displays the computed rounded values (64/25/11). Decide whether to adopt the computed rounding or legislate a display convention so text and render can't diverge again.

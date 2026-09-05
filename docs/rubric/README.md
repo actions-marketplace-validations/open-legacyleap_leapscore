@@ -94,4 +94,4 @@ Every encyclopedia entry also carries the automation taxonomy absorbed from the 
 
 ## Consistency check
 
-The catalog is single-sourced: encyclopedia + config canonical, executive rubric + sheets derived. A small markdown checker verifies on every change that: all IDs exist across files, names match, thresholds in the executive rubric match the encyclopedia, weights in the sheets match the config, and verify-effort tags are consistent.
+The catalog is single-sourced: encyclopedia + config canonical, executive rubric + sheets derived. The enforced check is `npm run check:rubric-consistency` from the repo root (= `tooling/scripts/compile-rubric.ts --check`): it asserts `packages/engine/rubric.json` + `apps/site/lib/generated/rubric.ts` match the encyclopedia (IDs, names, effort tags, remediation coverage). Regenerate with `npm run compile:rubric`; never hand-edit the generated files. Detector isolation (`npm run check:detector-isolation`) additionally bans raw `fetch`/`fs`/`child_process` in detectors. (`tooling/checks/rubric-consistency.ts` and `tooling/checks/schemas.ts` are stubs; the live checks are the two npm scripts above.)
