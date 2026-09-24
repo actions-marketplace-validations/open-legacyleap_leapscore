@@ -2,6 +2,9 @@
   "private": true,
   "name": "leapscore",
   "version": "0.1.0",
+  "bin": {
+    "leapscore-scan": "./packages/engine/bin/scan.ts"
+  },
   "workspaces": [
     "apps/*",
     "packages/*"

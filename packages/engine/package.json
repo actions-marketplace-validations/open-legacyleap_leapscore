@@ -4,6 +4,12 @@
   "private": true,
   "type": "module",
   "main": "./rubric.json",
+  "bin": {
+    "leapscore-scan": "./bin/scan.ts"
+  },
+  "dependencies": {
+    "tsx": "^4.19.0"
+  },
   "scripts": {
     "test": "vitest run",
     "lint": "tsc --noEmit"

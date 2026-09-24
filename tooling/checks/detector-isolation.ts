@@ -16,6 +16,8 @@ const ALLOWED_FS_FILES = new Set([
   'packages/engine/facts.ts',
   'packages/engine/registry.ts',
   'packages/engine/scorer/rollup.ts',
+  'packages/engine/seal.ts',
+  'packages/engine/bin/scan.ts',
 ]);
 
 function* walk(dir: string): Generator<string> {

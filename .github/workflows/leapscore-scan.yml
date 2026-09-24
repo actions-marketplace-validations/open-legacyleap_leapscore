@@ -1,0 +1,42 @@
+# LeapScore workflow scan v1 — execution-only (self or public target).
+# No checkout: the engine clones the target internally from URL.
+# No surfacing: no check runs, issues, or comments (see docs/plans/12_GITHUB_SURFACE_PLAN.md).
+# Bump LEAPSCORE_ENGINE_REF to the newest engine commit when the scan logic changes.
+name: LeapScore scan
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_repo:
+        description: 'owner/repo to scan (default: self)'
+        required: false
+        default: ''
+      sha:
+        description: 'reserved — non-empty is rejected in v1'
+        required: false
+        default: ''
+
+env:
+  # Pinned engine ref — also passed as --engine-ref so meta.engineSha7 is truthful.
+  LEAPSCORE_ENGINE_REF: 10bf5a5a97750a0dd69eb1b54e3c27d167fa4ee8
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Scan with LeapScore
+        run: npx -p "github:legacyleap/leapscore#${LEAPSCORE_ENGINE_REF}" leapscore-scan --repo "${{ inputs.target_repo || github.repository }}" --sha "${{ inputs.sha }}" --out leapscore-report.json --engine-ref "${LEAPSCORE_ENGINE_REF}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: leapscore-${{ github.run_number }}
+          path: leapscore-report.json
+          retention-days: 30

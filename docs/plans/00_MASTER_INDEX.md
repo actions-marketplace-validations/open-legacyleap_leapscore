@@ -24,6 +24,7 @@
 | 11 | [`11_WEBSITE_SPEC.md`](11_WEBSITE_SPEC.md) | Marketing/demo website (B→A): routes, anatomy, copy, demo data governance |
 | 12 | [`12_GITHUB_SURFACE_PLAN.md`](12_GITHUB_SURFACE_PLAN.md) | GitHub check/PR surface for reports (check run, PR comment, badge) |
 | 13 | [`13_MVP_SLICE.md`](13_MVP_SLICE.md) | Lean MVP cut — 19 indicators, dual headline, two-phase scan (was `mvp/README.md`) |
+| 14 | [`14_WORKFLOW_SCAN_V1.md`](14_WORKFLOW_SCAN_V1.md) | Workflow scan v1 — self/target dispatch-only execution via thin CLI + artifact; no in-repo surfacing |
 
 **Order of dependency:** you cannot read 04 (v1 scope) without 03 (what's measurable); you cannot read 05 without 04; 06–09 all depend on 04/05. 10 is a summary of the rest.
 
@@ -118,6 +119,23 @@ Format: `#` · Decision · Rationale · Status · Source (grill Q)
 
 ---
 
+## Decisions Log — workflow scan v1 (grill R1–R8)
+
+Spec: `docs/plans/14_WORKFLOW_SCAN_V1.md`. Execution-only; no in-repo surfacing (stays in `12`).
+
+| # | Decision | Rationale | Status |
+|---|----------|-----------|--------|
+| R1 | One workflow, optional `target_repo` defaulting to `github.repository` (self zero-config; target = parameterization) | Single code path for self/target; no second workflow to maintain | **AGREED** (grill v2-Q1) |
+| R2 | Public targets need no PAT (`GITHUB_TOKEN` passthrough); private targets require PAT/App token with `contents:read`, else loud fail | Clone is anon-capable; GH API auth only lifts quota (`gh.ts:118`); `GITHUB_TOKEN` from runner A cannot read private T (engine refuses `private_requires_app`) | **AGREED** (grill v2-Q2) |
+| R3 | No `actions/checkout` of T — engine clones internally from URL; local-path `runLocalScan` dropped | Engine entry is `runUnifiedScan(repoUrl)` + internal shallow clone; avoids a second engine input contract for v1 | **AGREED** (grill v2-Q3 revert) |
+| R4 | Thin CLI `packages/engine/bin/scan.ts` (`--repo … --out leapscore-report.json`, reusing `runUnifiedScan` + `scoreMvp`) + 3-step workflow (setup-node → npx scan → upload-artifact) | No CLI/action/package exists today; CLI-first keeps website (`/api/scan`) and Actions sharing one scorer; no Docker/reusable-workflow latency | **AGREED** (grill v2-Q4) |
+| R5 | `workflow_dispatch`-only; two optional inputs (`target_repo` default self, `sha` default empty); no schedule, no push/PR | Engine scans HEAD at trigger time; per-commit scanning is the rejected `12` §9 territory and the 10s–240s budget doesn't belong on the critical path | **AGREED** (grill v2-Q5) |
+| R6 | Empty `sha` = default-branch HEAD; non-empty `--sha` fails loudly (`exit 2`), pinning deferred (`clone.ts` fetch-pinned + `gh.ts` `ref` plumbing) | No hardcoded `main` (`master` repos exist); `shallowClone` is HEAD-only today so pinning has nothing to bind to — honest reject per the `12` §7 rule | **AGREED** (grill v2-Q6) |
+| R7 | Report seals (any score, gates fired or not) → exit 0; no report → non-zero (`1` crash, `2` refused/unsupported-input) | v1 is an audit instrument, not a quality gate; no team consent to break builds; `12` §4 fail-on-gate belongs to the surfacing world | **AGREED** (grill v2-Q7) |
+| R8 | Artifact `leapscore-report.json` (`{ report, meta, trace }` envelope mirroring website, schema `"1"`); per-run name, `retention-days: 30`, `if: always()`; perms `contents: read` | Parallel dispatches must not collide; machine file + human stdout; minimal blast radius | **AGREED** (grill v2-Q8) |
+
+---
+
 ## Post-MVP build decisions (openspec — not re-logged here)
 
 Product/rubric history stays in the logs above. Everything built after the MVP slice is decided and specified in `openspec/` — read it as the continuation of this log:
@@ -135,6 +153,7 @@ Product/rubric history stays in the logs above. Everything built after the MVP s
 | `expand-coverage-tranche-a` (active) | 19 → 31 detectors; 13_MVP_SLICE is now a subset |
 | `hide-empty-categories` (active) | Categories with zero applicable rows omitted/dimmed as N/A |
 | `improve-report-gates-and-scan-timeline` (active) | Collapsed gates cockpit + scan timeline with reveal |
+| `workflow-scan-v1` | Workflow scan v1 (shipped): shared seal composer, thin `bin/scan` CLI, `workflow_dispatch` runner workflow, exit-code map |
 
 New build work gets an openspec change (proposal → design → tasks → archive); only product/rubric-level reversals come back here as D_/W_ rows.
 

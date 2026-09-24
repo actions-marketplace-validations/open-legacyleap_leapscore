@@ -147,107 +147,27 @@ export async function GET(req: NextRequest) {
           controller.close(); return;
         }
         const rawSnapshot = (snapshot as Record<string, unknown>) ?? { repo, scanned_at: new Date().toISOString(), engine_version: 'unified/1.0', rubric_version: 'docs/rubric/@mvp' };
-        // Single terminal scoring — no intermediate report (with archetype-aware renormalization)
-        const { scoreMvp } = await import("../../../../../packages/engine/scorer/mvp");
-        const arch = (rawSnapshot as { archetype?: string }).archetype ?? 'unknown';
-        const plane = (rawSnapshot as { planeInventory?: unknown }).planeInventory as { has_server: boolean; has_data: boolean; has_deploy: boolean; has_client: boolean; has_test: boolean } | undefined;
+        // Single terminal scoring via the shared composer (also used by the workflow CLI)
+        const { sealScan } = await import("../../../../../packages/engine/seal");
         const archetypeOverride = req.nextUrl.searchParams.get("archetype");
-        const effectiveArch = archetypeOverride && ['library','service','cli','infra','docs','agent-skills','mixed','unknown'].includes(archetypeOverride) ? archetypeOverride : arch;
-        const mvp = scoreMvp(finalFacts as never, { archetype: effectiveArch, planeInventory: plane });
-        // Derive repoSha from snapshot or facts
-        const snapSha = (rawSnapshot as { scanned_commit?: string }).scanned_commit;
-        const factSha = finalFacts.find((f) => (f as unknown as { commitSha?: string }).commitSha && (f as unknown as { commitSha: string }).commitSha !== 'unknown');
-        const repoSha = (snapSha && snapSha !== 'unknown' ? snapSha : (factSha as unknown as { commitSha?: string } | undefined)?.commitSha) ?? 'unknown';
-        const normalizedRepo = String((rawSnapshot as { repo?: string }).repo ?? repo);
-        const scannedAt = String((rawSnapshot as { scanned_at?: string }).scanned_at ?? new Date().toISOString());
-        // Derive top restore levers (recoverable headline points) and deep-dive scope from scored categories/rows
-        const deriveTopBlockers = (cats: typeof mvp.categories) => {
-          const out: Array<{ row: string; name: string; points_lost: number; weight_pp: string; summary: string }> = [];
-          for (const c of cats as unknown as Array<{ id: string; name: string; weight: number; applicable: number; indicator_rows: Array<{ id: string; name: string; status: string; not_applicable?: boolean; score?: number; reason?: string }> }>) {
-            if (!c.applicable) continue;
-            const pointValue = (100 * c.weight) / (3 * c.applicable) / 100;
-            for (const r of c.indicator_rows) {
-              if (r.status === 'unknown' || r.not_applicable || r.score == null) continue;
-              const lost = 3 - r.score;
-              if (lost <= 0) continue;
-              out.push({ row: r.id, name: r.name, points_lost: lost, weight_pp: `${(lost * pointValue).toFixed(2)}pp`, summary: r.reason ?? '' });
-            }
-          }
-          out.sort((a, b) => parseFloat(b.weight_pp) - parseFloat(a.weight_pp));
-          return out.slice(0, 5);
-        };
-        const topBlockers = deriveTopBlockers(mvp.categories);
-        // Deep-dive: indicators not in the paid set are the remainder of the 102
-        // For MVP/tranche the rows are the measured set; unknown for deep-dive is the complement.
-        // Build from rubric registry if available, otherwise from mvp rows unknown.
-        let deepDiveScope: Array<{ row: string; name: string; what_it_takes: string }> = [];
-        try {
-          const rubricMod = await import("../../../../../packages/engine/rubric.json", { with: { type: "json" } });
-          const rubric = rubricMod.default as { indicators: Array<{ id: string; name: string }> };
-          const known = new Set((mvp.rows as Array<{ id: string }>).map(r => r.id));
-          const unknownIndicators = rubric.indicators.filter(i => !known.has(i.id));
-          // Map to deep-dive scope using a minimal what-it-takes (unknown measure path already on placeholder would be ideal, but use generic)
-          deepDiveScope = unknownIndicators.slice(0, 18).map(i => ({ row: i.id, name: i.name, what_it_takes: "Not run in this scan — deep-dive row" }));
-          // Prefer any unknown rows that already carry unknown_measure_path (if any)
-          const unknownRows = (mvp.rows as Array<{ id: string; name: string; status: string; unknown_measure_path?: string }>).filter(r => r.status === 'unknown');
-          if (unknownRows.length) {
-            deepDiveScope = unknownRows.slice(0, 18).map(r => ({ row: r.id, name: r.name, what_it_takes: r.unknown_measure_path ?? "Not run" }));
-          }
-        } catch {}
-        const finalReport: Record<string, unknown> & { headline: { score: number; canonical_score: number; tier: string; ci_band: string }; snapshot: Record<string, unknown> } = {
-          id: scanId ?? `ls_${Date.now().toString(36)}`,
-          snapshot: { ...rawSnapshot, archetype: effectiveArch, scanned_commit: repoSha, repo: normalizedRepo, scanned_at: scannedAt, archetype_source: archetypeOverride ? 'override' : 'auto', archetype_override_from: archetypeOverride ? arch : undefined },
-          headline: { score: Math.round(mvp.score*100)/100, canonical_score: Math.round(((mvp as unknown as { canonical_score?: number }).canonical_score ?? mvp.score)*100)/100, tier: mvp.score >=80 ? 'Healthy' : mvp.score >=53 ? 'Moderate' : mvp.score >=27 ? 'High Risk' : 'Critical', ci_band: mvp.status === 'complete' ? 'complete' : 'degraded' },
-          categories: mvp.categories,
-          coverage: mvp.coverage,
-          status: mvp.status,
-          gates: mvp.gates,
-          provenance: { tool_manifest: [] },
-          top_blockers: topBlockers,
-          deep_dive_scope: deepDiveScope,
-          full_table: mvp.rows,
-          report_schema: "1",
-          sample: true,
-        };
-        // trace sealed entry
-        tracePush(`Scoring — gates evaluated`, { type: "scoring" });
-        const sealedLabel = `Sealed — ${mvp.status} · ${mvp.coverage.measured}/${mvp.coverage.measured + mvp.coverage.unknown + mvp.coverage.estimated} measured`;
-        tracePush(sealedLabel, { type: "sealed", pct: 100 });
-        // Truncate trace if unbounded (>200) — keep seal last, sentinel first
-        let traceToPersist: import("@/lib/reports").TraceEntry[] = trace;
-        if (trace.length > 200) {
-          const sealIdx = trace.findIndex(t => t.type === "sealed");
-          const sealEntry = sealIdx >= 0 ? trace[sealIdx] : null;
-          const withoutSeal = sealIdx >= 0 ? trace.filter((_, i) => i !== sealIdx) : trace;
-          const toDrop = withoutSeal.length - 199;
-          const kept = withoutSeal.slice(toDrop);
-          const sentinel: import("@/lib/reports").TraceEntry = { ts: kept[0]?.ts ?? 0, elapsedMs: kept[0]?.elapsedMs ?? 0, label: `… ${toDrop} earlier entries truncated`, phase: "budget" };
-          traceToPersist = sealEntry ? [sentinel, ...kept, sealEntry] : [sentinel, ...kept];
-        }
+        const sealed = sealScan({
+          facts: finalFacts as never,
+          snapshot: rawSnapshot,
+          budgetMs,
+          startMs,
+          trace: trace as never,
+          archetypeOverride,
+          scanId,
+          repo,
+        });
+        const finalReport: Record<string, unknown> & { headline: { score: number; canonical_score: number; tier: string; ci_band: string }; snapshot: Record<string, unknown> } = sealed.report as typeof finalReport;
+        const traceToPersist: import("@/lib/reports").TraceEntry[] = sealed.traceToPersist as unknown as import("@/lib/reports").TraceEntry[];
         // Build meta deterministically before deciding to persist (so client always gets runId)
-        let persistedMeta: unknown = null;
+        let persistedMeta: unknown = sealed.meta;
         try {
-          const { repoSlugFromUrl, normalizeTs, buildRunId, buildMeta, resolveEngineSha7, writeReportEnvelope } = await import("@/lib/reports");
-          const repoSlug = repoSlugFromUrl(normalizedRepo);
-          const ranAt = scannedAt;
-          const ts = normalizeTs(ranAt);
-          const engineSha7 = resolveEngineSha7();
-          const runId = buildRunId(repoSlug, engineSha7, ts);
-          const durationMs = Date.now() - startMs;
-          const meta = buildMeta({
-            repo: normalizedRepo,
-            repoSlug,
-            engineSha7,
-            runId,
-            ranAt,
-            durationMs,
-            budgetMs,
-            repoSha: String(repoSha),
-            report: finalReport as unknown as import("@/lib/types").Report,
-          });
-          persistedMeta = meta;
+          const { writeReportEnvelope } = await import("@/lib/reports");
           if (!clientAborted && !req.signal.aborted) {
-            await writeReportEnvelope({ meta, report: finalReport as unknown as import("@/lib/types").Report, trace: traceToPersist });
+            await writeReportEnvelope({ meta: sealed.meta as unknown as import("@/lib/reports").ReportMeta, report: finalReport as unknown as import("@/lib/types").Report, trace: traceToPersist });
           } else {
             console.warn("[scan] client aborted — skipping persist to avoid duplicate file (meta still sent)");
           }
