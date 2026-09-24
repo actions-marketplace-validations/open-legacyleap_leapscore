@@ -28,7 +28,7 @@ jobs:
   scan:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 24
       - name: Allow fetching the engine repo (it may be private)
@@ -41,7 +41,7 @@ jobs:
         run: npx -p tsx@4 -p "github:${{ github.repository }}#${LEAPSCORE_ENGINE_REF}" leapscore-scan --repo "${{ inputs.target_repo || github.repository }}" --sha "${{ inputs.sha }}" --out leapscore-report.json --engine-ref "${LEAPSCORE_ENGINE_REF}"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         if: always()
         with:
           name: leapscore-${{ github.run_number }}
