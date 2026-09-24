@@ -28,7 +28,7 @@ on:
 env:
   # Pinned engine ref — also passed as --engine-ref so meta.engineSha7 is truthful.
   # Must be a commit that contains packages/engine/bin/scan.ts.
-  LEAPSCORE_ENGINE_REF: cf794d4775a6f8a3e9b021ed51096149201a7cb9
+  LEAPSCORE_ENGINE_REF: 3886fde0c15bd5edf1f018af8eb1b8f6a0e79e66
 
 jobs:
   scan:
