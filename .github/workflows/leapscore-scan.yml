@@ -1,11 +1,13 @@
-# LeapScore workflow scan v1 — execution-only (self or public target).
+# LeapScore workflow scan v1 + project surface v1 (issues-only tracker).
 # No checkout: the engine clones the target internally from URL.
-# No surfacing: no check runs, issues, or comments (see docs/plans/12_GITHUB_SURFACE_PLAN.md).
+# Surfacing: sealed report syncs labeled issues into the runner repo (no check
+# runs, boards, or comments — see docs/plans/15_PROJECT_SURFACE_V1.md).
 # Bump LEAPSCORE_ENGINE_REF to the newest engine commit when the scan logic changes.
 name: LeapScore scan
 
 permissions:
   contents: read
+  issues: write
 
 on:
   workflow_dispatch:
@@ -18,6 +20,10 @@ on:
         description: 'reserved — non-empty is rejected in v1'
         required: false
         default: ''
+      surface:
+        description: "'true' = scan then sync issues; 'false' = execution-only"
+        required: false
+        default: 'true'
 
 env:
   # Pinned engine ref — also passed as --engine-ref so meta.engineSha7 is truthful.
@@ -39,6 +45,13 @@ jobs:
         # tsx rides along on PATH so the bin's `#!/usr/bin/env tsx` shebang resolves;
         # npm does not reliably install workspaceBins' runtime deps from a git spec.
         run: npx -p tsx@4 -p "github:${{ github.repository }}#${LEAPSCORE_ENGINE_REF}" leapscore-scan --repo "${{ inputs.target_repo || github.repository }}" --sha "${{ inputs.sha }}" --out leapscore-report.json --engine-ref "${LEAPSCORE_ENGINE_REF}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Surface issues
+        # Warn-only: issue/label failures never rewrite the sealed scan verdict.
+        # Runs only for sealed scans (success) with surface enabled (default true).
+        if: success() && inputs.surface == 'true'
+        run: npx -p tsx@4 -p "github:${{ github.repository }}#${LEAPSCORE_ENGINE_REF}" leapscore-scan --surface-from leapscore-report.json --repo "${{ inputs.target_repo || github.repository }}" --repo-a "${{ github.repository }}" --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" --engine-ref "${LEAPSCORE_ENGINE_REF}"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/upload-artifact@v5

@@ -25,6 +25,8 @@
 | 12 | [`12_GITHUB_SURFACE_PLAN.md`](12_GITHUB_SURFACE_PLAN.md) | GitHub check/PR surface for reports (check run, PR comment, badge) |
 | 13 | [`13_MVP_SLICE.md`](13_MVP_SLICE.md) | Lean MVP cut — 19 indicators, dual headline, two-phase scan (was `mvp/README.md`) |
 | 14 | [`14_WORKFLOW_SCAN_V1.md`](14_WORKFLOW_SCAN_V1.md) | Workflow scan v1 — self/target dispatch-only execution via thin CLI + artifact; no in-repo surfacing |
+| 15 | [`15_PROJECT_SURFACE_V1.md`](15_PROJECT_SURFACE_V1.md) | Project surface v1 — workflow issues-only tracker (runner-hosted, label-scoped dedup, warn-only surfacing); board/check/website deferred |
+| 16 | [`16_PROJECT_SURFACE_V2.md`](16_PROJECT_SURFACE_V2.md) | Project surface v2 — board linkage decision gate (PAT-first vs direct-App); ownership, authorship, mode-switch, migration price |
 
 **Order of dependency:** you cannot read 04 (v1 scope) without 03 (what's measurable); you cannot read 05 without 04; 06–09 all depend on 04/05. 10 is a summary of the rest.
 
@@ -133,6 +135,46 @@ Spec: `docs/plans/14_WORKFLOW_SCAN_V1.md`. Execution-only; no in-repo surfacing 
 | R6 | Empty `sha` = default-branch HEAD; non-empty `--sha` fails loudly (`exit 2`), pinning deferred (`clone.ts` fetch-pinned + `gh.ts` `ref` plumbing) | No hardcoded `main` (`master` repos exist); `shallowClone` is HEAD-only today so pinning has nothing to bind to — honest reject per the `12` §7 rule | **AGREED** (grill v2-Q6) |
 | R7 | Report seals (any score, gates fired or not) → exit 0; no report → non-zero (`1` crash, `2` refused/unsupported-input) | v1 is an audit instrument, not a quality gate; no team consent to break builds; `12` §4 fail-on-gate belongs to the surfacing world | **AGREED** (grill v2-Q7) |
 | R8 | Artifact `leapscore-report.json` (`{ report, meta, trace }` envelope mirroring website, schema `"1"`); per-run name, `retention-days: 30`, `if: always()`; perms `contents: read` | Parallel dispatches must not collide; machine file + human stdout; minimal blast radius | **AGREED** (grill v2-Q8) |
+
+---
+
+## Decisions Log — project surface v1 (grill S1–S15)
+
+Spec: `docs/plans/15_PROJECT_SURFACE_V1.md`. Workflow tickets-in-project; tickets-only (no check runs / website links — `12` trio deferred).
+
+| # | Decision | Rationale | Status |
+|---|----------|-----------|--------|
+| S1 | Self-surface first — extend the `14` workflow, no App / LeapScore infra in v1 | Reuses `GH_TOKEN`, no cross-repo consent story; proves ticket lifecycle before the `12` App model | **AGREED** (grill Q1) |
+| S2 | Lazy find-or-create per-target boards; multiple target projects may live in one runner repo | Zero-config like `14`; no project URL/number inputs to validate | **SUPERSEDED** (explore: issues-only v1 — no board; per-target separation via labels/titles/token. Board returns with v2 auth) |
+| S3 | Board name `LeapScore-<owner-dash-repo>` sanitized, no sha; sha lives in bodies/comments | Per-sha boards break dedup (`repo × indicator` continuity) and litter the runner; run identity belongs in the timeline (`12` §5 rule) | **SUPERSEDED** (explore: issues-only v1 — no boards at all; slug sanitization now serves the target label/title/token instead) |
+| S4 | Tickets/projects always live in the runner repo A; T is scan-subject-only | `GITHUB_TOKEN` from A cannot write into foreign T; avoids cross-repo writes `14` deferred | **AGREED** (grill Q4) |
+| S5 | All applicable non-Green `measured`+`estimated` rows mint/update; `unknown`/`N/A` never mint | Burst disclosed + deduped steady-state O(newly-degraded); unknowns stay in the artifact as the deep-dive list | **AGREED** (grill Q5) |
+| S6 | Indicator-only token `<!-- leapscore:v1 indicator=… -->` kept; disambiguation via project membership with a project→items→issue-bodies discovery walk; Search API forbidden | Multi-target in one repo collides under label listing; walk is heavier (GraphQL + REST pagination) but scoped; index lag would duplicate burst tickets | **SUPERSEDED** (explore: issues-only v1 — extended token `<!-- leapscore:v1 target=owner/repo indicator=… -->` + REST list-by-label discovery; label is prefilter, token authoritative; Search API still forbidden) |
+| S7 | `12` §5 lifecycle verbatim: open / band-change comment+reopen-close / wobble comment / Green auto-close / immediate reopen / deleted=recreated | Continuity in the timeline; no debounce (calibration candidate) | **AGREED** (grill Q7) |
+| S8 | `12` §5 body verbatim: status + evidence snippet + remediation + sha/links; ticket is a derived view; `<!-- leapscore:human -->` zone survives | Ticket actionable alone but never the source of truth | **AGREED** (grill Q8) |
+| S9 | `12` label taxonomy intact + `leapscore:target-<slug>`; no per-run/sha labels ever | Cross-target `label:leapscore:red` mixes boards without the target label; per-target ≠ per-run so the ban holds | **AGREED** (grill Q9) |
+| S10 | Inputs-only config: `surface:true/false` default `true`; no `.github/leapscore.yml` parsing in v1 | No file parsing, no Pro keys to disclose yet; file config arrives with the App story | **AGREED** (grill Q10) |
+| S11 | Tickets-only slice: no check run, no website links (explore: no board either — issues-only v1); artifact stays the machine record | Keeps perms to issues+projects; proves lifecycle first | **AGREED** (grill Q11; scope narrowed by explore — perms now issues-only) |
+| S12 | Warn-only surfacing: `14` exit map untouched (0 sealed / 1 crash / 2 refused); ticket failures → summary+stdout, artifact still uploads | Ticket failure never rewrites a sealed scan verdict | **AGREED** (grill Q12) |
+| S13 | Private guardrail: private T surfaces only into private runner or self-scan; public-runner×private-target = execution-only + loud `surface-skipped` | Never copies private evidence cross-boundary into a public runner (`12` H11 honesty applied across repos) | **AGREED** (grill Q13) |
+| S14 | Sequential/low-concurrency writes with backoff + burst counts in summary; duplicate tokens first-match-wins + warning | Respects abuse limits; first-scan burst undisguisable so disclose it | **AGREED** (grill Q14) |
+| S15 | Persist on disable/drop: no auto-close/delete; manual cleanup only | No uninstall webhook on workflows; history stays | **AGREED** (grill Q15) |
+
+---
+
+## Decisions Log — project surface v2 (gate V1 open)
+
+Spec: `docs/plans/16_PROJECT_SURFACE_V2.md`. Board linkage; v1 (`15`) ships issues-only first either way.
+
+| # | Decision | Rationale | Status |
+|---|----------|-----------|--------|
+| V1 | PAT-board-first vs direct-to-App-board | B-first = days not weeks, no App packaging; direct-C = no PAT lifecycle or migration burst. Proposed gate: first three production runners org-owned → direct-C, else B-first | **OPEN** (explore; owner + date TBD) |
+| V2 | B ownership rule: service-account (never named engineer), org-scoped preferred; rotation = non-event, holder-change = re-boarding with runbook written first | User-node board ownership makes holder-change a re-burst + orphan cleanup; fine-grained PATs are single-owner and may face org-approval gates | **PROPOSED** (explore) |
+| V3 | Auth matrix: issues on `GITHUB_TOKEN`, board ops on PAT/App token; `15` private-target guardrail carries over | Least privilege per op; board ops never cross visibility the issues can't cross | **PROPOSED** (explore) |
+| V4 | Split authorship: bot-authored issues, notification-quiet board linker | PAT-authored issues auto-subscribe a human to every future ping on a ~20-ticket burst; board adds create no issue content | **PROPOSED** (explore; spike: confirm add-to-board notification behavior) |
+| V5 | Explicit `board: auto\|on\|off` tri-state (`auto` default); `on`-without-token degrades loudly, never rewrites the scan verdict | Secret-presence must never be the only signal — "broken B" and "intended A" must look different | **PROPOSED** (explore) |
+| V6 | Identity grammar unchanged (`target=` already reserved); roster = label listing, board = view; record board node IDs | v1 grammar was made migration-proof on purpose; V2 titles are not unique so names can't be keys | **PROPOSED** (explore) |
+| V7 | B→C migration price accepted-if-B-ships: re-burst + freeze window + retire-after-verification | `copyProjectV2` duplicates config, not ownership; dual-board ambiguity needs a freeze rule | **PROPOSED** (explore; priced, not yet accepted) |
 
 ---
 
