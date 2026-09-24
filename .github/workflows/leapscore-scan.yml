@@ -21,7 +21,8 @@ on:
 
 env:
   # Pinned engine ref — also passed as --engine-ref so meta.engineSha7 is truthful.
-  LEAPSCORE_ENGINE_REF: 10bf5a5a97750a0dd69eb1b54e3c27d167fa4ee8
+  # Must be a commit that contains packages/engine/bin/scan.ts.
+  LEAPSCORE_ENGINE_REF: cf794d4775a6f8a3e9b021ed51096149201a7cb9
 
 jobs:
   scan:
@@ -30,8 +31,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+      - name: Allow fetching the engine repo (it may be private)
+        run: git config --global url."https://x-access-token:${GH_TOKEN}@github.com/".insteadOf "https://github.com/"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Scan with LeapScore
-        run: npx -p "github:legacyleap/leapscore#${LEAPSCORE_ENGINE_REF}" leapscore-scan --repo "${{ inputs.target_repo || github.repository }}" --sha "${{ inputs.sha }}" --out leapscore-report.json --engine-ref "${LEAPSCORE_ENGINE_REF}"
+        run: npx -p "github:${{ github.repository }}#${LEAPSCORE_ENGINE_REF}" leapscore-scan --repo "${{ inputs.target_repo || github.repository }}" --sha "${{ inputs.sha }}" --out leapscore-report.json --engine-ref "${LEAPSCORE_ENGINE_REF}"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/upload-artifact@v4
