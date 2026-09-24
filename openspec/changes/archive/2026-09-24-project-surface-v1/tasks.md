@@ -26,6 +26,6 @@
 ## 5. Workflow
 
 - [x] 5.1 Extend `.github/workflows/leapscore-scan.yml` (`surface` input default `true`, surface step gated on sealed envelope, `issues: write` permission) and verify YAML parses and the step graph matches plan §11 (scan → surface → upload-artifact `if: always()`)
-- [ ] 5.2 Verify E2E self-scan: two consecutive runs against a scratch repo, second run opens 0 issues and all lifecycle comments carry sha/engine-ref/run links
-- [ ] 5.3 Verify E2E two-target isolation: one runner, two targets, `target-a` rows never touch `target-b` tickets (incl. colliding-slug pair if available)
+- [x] 5.2 Verify E2E self-scan: two consecutive runs against a scratch repo, second run opens 0 issues and all lifecycle comments carry sha/engine-ref/run links
+- [x] 5.3 Verify E2E two-target isolation: one runner, two targets, `target-a` rows never touch `target-b` tickets (incl. colliding-slug pair if available)
 - [ ] 5.4 Verify E2E guardrail + burst: private-T × public-A run produces artifact with zero writes and the skip line; rough-target run prints burst counts and duplicate-token warnings where applicable
