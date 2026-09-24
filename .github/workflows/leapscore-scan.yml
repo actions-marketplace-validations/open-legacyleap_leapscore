@@ -36,7 +36,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Scan with LeapScore
-        run: npx -p "github:${{ github.repository }}#${LEAPSCORE_ENGINE_REF}" leapscore-scan --repo "${{ inputs.target_repo || github.repository }}" --sha "${{ inputs.sha }}" --out leapscore-report.json --engine-ref "${LEAPSCORE_ENGINE_REF}"
+        # tsx rides along on PATH so the bin's `#!/usr/bin/env tsx` shebang resolves;
+        # npm does not reliably install workspaceBins' runtime deps from a git spec.
+        run: npx -p tsx@4 -p "github:${{ github.repository }}#${LEAPSCORE_ENGINE_REF}" leapscore-scan --repo "${{ inputs.target_repo || github.repository }}" --sha "${{ inputs.sha }}" --out leapscore-report.json --engine-ref "${LEAPSCORE_ENGINE_REF}"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/upload-artifact@v4
