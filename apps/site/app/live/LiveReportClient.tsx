@@ -2,11 +2,13 @@
 
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
+import { ReportView } from "@/components/report-view";
+import { ScanTraceView } from "@/components/scan-trace-view";
 import type { Report } from "@/lib/types";
 import type { TraceEntry } from "@/lib/reports";
+import { refusedCopy, scannerPermalinkUrl, scannerScanUrl } from "@/lib/scanner";
 
 type TimelineEntry = { ts: number; label: string };
 
@@ -14,7 +16,6 @@ type TimelineEntry = { ts: number; label: string };
 const inflightScans = new Map<string, AbortController>();
 
 export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
-  const router = useRouter();
   const [budgetMs, setBudgetMs] = useState<number | null>(null);
   const [indicatorCount, setIndicatorCount] = useState<number | null>(null);
   const [pct, setPct] = useState(0);
@@ -105,14 +106,10 @@ export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
       }
     }, 200);
 
-    async function navigateToReport(runId: string) {
-      if (cancelled || !runId) return;
-      router.push(`/reports/${encodeURIComponent(runId)}`);
-    }
-
     async function run() {
       try {
-        const res = await fetch(`/api/scan?repo=${encodeURIComponent(initialRepo)}`, { cache: "no-store", signal: abortController.signal });
+        // Cross-origin scanner scan API — no same-origin proxy exists.
+        const res = await fetch(scannerScanUrl(initialRepo), { cache: "no-store", signal: abortController.signal });
         if (!res.ok && !res.body) {
           const txt = await res.text();
           throw new Error(txt.slice(0, 500));
@@ -135,16 +132,15 @@ export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
             if (meta?.runId) {
               setPersistedMeta({ runId: meta.runId });
               setPendingRunId(meta.runId);
-              if (typeof document !== "undefined" && document.hidden) {
-                setTimeout(() => { if (!cancelled) navigateToReport(meta.runId!); }, 2000);
-              }
             }
+            // Rendered in place from the terminal frame — no navigation.
           } else if ((json as { type?: string }).type === "refused") {
             sealedRef.current = true; setSealed(true);
             if (intervalRef.current) clearInterval(intervalRef.current);
             const e = json as { reason: string; detail: string; repo: string };
             setRefused({ reason: e.reason, detail: e.detail, repo: e.repo ?? initialRepo });
           }
+          // Unknown single-shot frame types are ignored without failing.
           return;
         }
         const reader = res.body.getReader();
@@ -231,12 +227,11 @@ export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
                 setPct(100);
                 setRemainingMs(0);
                 setReport(rep);
+                // Terminal report frame is self-sufficient: render in place,
+                // no navigation, no store round trip.
                 if (meta?.runId) {
                   setPersistedMeta({ runId: meta.runId });
                   setPendingRunId(meta.runId);
-                  if (typeof document !== "undefined" && document.hidden) {
-                    setTimeout(() => { if (!cancelled) navigateToReport(meta.runId!); }, 2000);
-                  }
                 }
               } else if (type === "refused") {
                 sealedRef.current = true; setSealed(true);
@@ -244,6 +239,7 @@ export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
                 const e = evt as { reason: string; detail: string; repo: string };
                 setRefused({ reason: e.reason, detail: e.detail, repo: e.repo ?? initialRepo });
               }
+              // Unknown frame types are additive: skip without failing.
             } catch {}
           }
         }
@@ -270,9 +266,6 @@ export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
               if (meta?.runId) {
                 setPersistedMeta({ runId: meta.runId });
                 setPendingRunId(meta.runId);
-                if (typeof document !== "undefined" && document.hidden) {
-                  setTimeout(() => { if (!cancelled) navigateToReport(meta.runId!); }, 2000);
-                }
               }
             } else if (type === "refused") {
               sealedRef.current = true; setSealed(true);
@@ -280,6 +273,7 @@ export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
               const e = evt as { reason: string; detail: string; repo: string };
               setRefused({ reason: e.reason, detail: e.detail, repo: e.repo ?? initialRepo });
             }
+            // Unknown frame types are additive: skip without failing.
           } catch {}
         }
       } catch (e) {
@@ -296,7 +290,7 @@ export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
       if (intervalRef.current) clearInterval(intervalRef.current);
       abortController.abort();
     };
-  }, [initialRepo, router]);
+  }, [initialRepo]);
 
   if (error) {
     return (
@@ -309,22 +303,27 @@ export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
   }
 
   if (refused) {
+    const copy = refusedCopy(refused.reason);
     return (
       <div className="mx-auto max-w-5xl px-4 py-10">
         <div className="mb-8">
           <p className="text-xs tracking-wider text-faint uppercase">Live report</p>
           <h1 className="mt-1 font-mono text-2xl font-semibold tracking-tight">{refused.repo}</h1>
           <p className="mt-2 rounded border border-hairline bg-panel px-4 py-3 text-sm text-muted">
-            Snapshot refused — {refused.reason}
-            {refused.reason === "rate-limited" ? " — set GH_TOKEN and retry." : ""} {refused.detail.slice(0, 300)}
+            {copy.title} — {copy.body} {refused.detail.slice(0, 300)}
             <br />
             Try a public GitHub URL like <code className="font-mono">vercel/next.js</code>.
           </p>
-          <Link href="/" className="mt-4 inline-block text-sm underline underline-offset-2 hover:text-foreground">
-            ← Back to home
-          </Link>
+          <div className="mt-4 flex gap-4">
+            <Link href={`/live?repo=${encodeURIComponent(refused.repo)}`} className="text-sm underline underline-offset-2 hover:text-foreground">
+              Retry scan
+            </Link>
+            <Link href="/" className="text-sm underline underline-offset-2 hover:text-foreground">
+              ← Back to home
+            </Link>
+          </div>
         </div>
-        <p className="mt-8 text-xs text-faint">Live engine refused · elapsed {Math.floor(elapsedMs/1000)}s</p>
+        <p className="mt-8 text-xs text-faint">Scanner refused ({refused.reason}) · timer frozen at {Math.floor(elapsedMs/1000)}s · no score</p>
       </div>
     );
   }
@@ -347,18 +346,15 @@ export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
     );
   }
 
-  // Sealed — show CTA navigating to persisted report
+  // Sealed — render the report in place from the terminal frame.
+  // No navigation: a fresh runId has no website page until ingest + build.
+  // The scanner's permalink is the shareable URL.
   if (report) {
-    const isDegraded = report.status !== "complete";
     const measured = report.coverage.measured;
     const totalForLabel = indicatorCount ?? (report.coverage.measured + report.coverage.unknown + report.coverage.estimated + report.coverage.not_applicable);
-    const ctaLabel = isDegraded ? `Reveal report — ${measured}/${totalForLabel} measured` : "Reveal report";
     const elapsedS = Math.floor(elapsedMs / 1000);
     const runId = persistedMeta?.runId ?? pendingRunId;
-    const reportHref = runId ? `/reports/${encodeURIComponent(runId)}` : null;
-    const handleReveal = () => {
-      if (reportHref) router.push(reportHref);
-    };
+    const permalink = runId ? scannerPermalinkUrl(runId) : null;
     return (
       <div className="mx-auto max-w-5xl px-4 py-10">
         <div className="sticky top-0 z-10 -mx-4 border-b border-hairline bg-background/80 px-4 py-3 backdrop-blur">
@@ -383,80 +379,18 @@ export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
           ) : null}
         </div>
 
-        <div className="instrument-panel rounded-lg border border-hairline bg-panel/50 p-4">
-          <h2 className="text-sm font-medium text-ink">Scan timeline</h2>
-          <p className="mt-0.5 text-xs text-faint">{(hasTraceStream ? traces : timeline).length} steps · {elapsedS}s elapsed</p>
-          {hasTraceStream ? (
-            <>
-              <ol className="mt-3 space-y-1.5">
-                {milestoneRows.map((e, idx) => (
-                  <li key={`m-${idx}`} className="flex gap-3 font-mono text-xs">
-                    <span className="w-12 shrink-0 text-faint tabular-nums">{(e.ts / 1000).toFixed(1)}s</span>
-                    <span className="text-muted">{e.label}</span>
-                  </li>
-                ))}
-              </ol>
-              {detectorRows.length > 0 && (
-                <Collapsible open={detectorTraceOpen} onOpenChange={setDetectorTraceOpen} className="mt-3">
-                  <CollapsibleTrigger className="flex w-full items-center justify-between rounded border border-hairline px-3 py-2 text-left hover:bg-panel focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                    <span className="text-xs font-medium text-ink">Show detector trace ({detectorRows.length})</span>
-                    <span className="text-xs text-faint">{detectorTraceOpen ? "Hide" : "Show"}</span>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <ol className="mt-2 max-h-64 space-y-1 overflow-auto pr-1">
-                      {detectorRows.map((e, idx) => (
-                        <li key={`d-${idx}`} className="flex gap-3 font-mono text-xs">
-                          <span className="w-12 shrink-0 text-faint tabular-nums">{(e.ts / 1000).toFixed(1)}s</span>
-                          <span className="text-muted">{e.label}</span>
-                          {e.durationMs != null && <span className="text-faint">· {e.durationMs}ms</span>}
-                        </li>
-                      ))}
-                    </ol>
-                  </CollapsibleContent>
-                </Collapsible>
-              )}
-            </>
-          ) : (
-            renderTimelineList(timeline)
-          )}
+        <ReportView report={report} title="Live report" />
+        <div className="mt-6">
+          <ScanTraceView trace={traces} />
         </div>
 
-        <div className="mt-6 flex flex-col items-center gap-2">
-          {reportHref ? (
-            <Link
-              href={reportHref}
-              prefetch
-              onClick={(e) => {
-                // also handle via router for consistency, but allow native link semantics for bookmark/copy
-                // let Next.js handle navigation
-              }}
-              className="rounded-md bg-foreground px-6 py-3 text-sm font-medium text-background hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              {ctaLabel}
-            </Link>
-          ) : (
-            <button
-              disabled
-              className="rounded-md bg-foreground px-6 py-3 text-sm font-medium text-background opacity-50"
-            >
-              {ctaLabel}
-            </button>
-          )}
-          {/* Fallback button for programmatic navigation (e.g. keyboard) kept for parity */}
-          {reportHref && (
-            <button onClick={handleReveal} className="sr-only">
-              reveal
-            </button>
-          )}
-        </div>
-        <p className="mt-2 text-center text-xs text-faint">
-          {runId ? (
+        <p className="mt-6 text-center text-xs text-faint">
+          {permalink ? (
             <>
-              Report will open at{" "}
-              <Link href={reportHref!} className="font-mono underline underline-offset-2 hover:text-foreground">
-                /reports/{runId}
-              </Link>{" "}
-              — bookmarkable
+              Shareable permalink (scanner, no re-scan):{" "}
+              <a href={permalink} className="font-mono underline underline-offset-2 hover:text-foreground">
+                {permalink}
+              </a>
             </>
           ) : (
             <>Preparing permalink… (report sealed, awaiting runId)</>

@@ -13,14 +13,23 @@ import {
   parseRunId,
   repoFromSlug,
   isValidRunId,
-  resolveEngineSha7,
   buildMeta,
   getReportsDir,
-  writeReportEnvelope,
   readReportEnvelope,
   listReportMetas,
 } from "@/lib/reports";
+import { resolveEngineSha7 } from "@leapscore/contracts";
 import type { Report } from "@/lib/types";
+
+function writeEnvelopeFile(meta: { runId: string }, report: Report, trace: unknown[] = []) {
+  // Test-local writer: the website has no write path; build tooling (the
+  // sync step) is the only writer. Tests write fixtures directly via fs.
+  const dir = getReportsDir();
+  return (async () => {
+    await mkdir(dir, { recursive: true });
+    await writeFile(path.join(dir, `${meta.runId}.json`), JSON.stringify({ meta, report, trace, contractVersion: 1 }, null, 2), "utf8");
+  })();
+}
 
 function fakeReport(score = 62.4, tier = "Moderate"): Report {
   return {
@@ -127,18 +136,18 @@ describe("runId grammar", () => {
   });
 });
 
-describe("resolveEngineSha7", () => {
+describe("resolveEngineSha7 (shared contract)", () => {
   it("prefers LEAPSCORE_SHA", () => {
-    expect(resolveEngineSha7({ env: { LEAPSCORE_SHA: "abcdef123456" } as unknown as NodeJS.ProcessEnv })).toBe("abcdef1");
+    expect(resolveEngineSha7({ env: { LEAPSCORE_SHA: "abcdef123456" } })).toBe("abcdef1");
   });
-  it("falls back to VERCEL_GIT_COMMIT_SHA", () => {
-    expect(resolveEngineSha7({ env: { VERCEL_GIT_COMMIT_SHA: "1234567890abc" } as unknown as NodeJS.ProcessEnv })).toBe("1234567");
+  it("explicit engineRef wins over checkout state", () => {
+    expect(resolveEngineSha7({ env: {}, engineRef: "3886fde0c15", execImpl: () => "deadbee" })).toBe("3886fde");
   });
   it("falls back to git exec", () => {
-    expect(resolveEngineSha7({ env: {} as unknown as NodeJS.ProcessEnv, execImpl: () => "deadbeef" })).toBe("deadbee");
+    expect(resolveEngineSha7({ env: {}, execImpl: () => "deadbeef" })).toBe("deadbee");
   });
   it("returns unknown when all fail", () => {
-    expect(resolveEngineSha7({ env: {} as unknown as NodeJS.ProcessEnv, execImpl: () => { throw new Error("no git"); } })).toBe("unknown");
+    expect(resolveEngineSha7({ env: {}, execImpl: () => { throw new Error("no git"); } })).toBe("unknown");
   });
 });
 
@@ -212,7 +221,7 @@ describe("reports dir helpers", () => {
       repoSha: "abc123",
       report,
     });
-    await writeReportEnvelope({ meta, report });
+    await writeEnvelopeFile(meta, report);
     const loaded = await readReportEnvelope(runId);
     expect(loaded).not.toBeNull();
     expect(loaded!.meta.runId).toBe(runId);
@@ -225,20 +234,23 @@ describe("reports dir helpers", () => {
     expect(await readReportEnvelope("bad__format")).toBeNull();
   });
 
-  it("write rejects invalid runId", async () => {
+  it("read rejects unknown contract version explicitly", async () => {
     const report = fakeReport();
+    const runId = buildRunId("vercel__next.js", "abc1234", normalizeTs("2026-08-29T05:33:00.123Z"));
     const meta = buildMeta({
       repo: "vercel/next.js",
       repoSlug: "vercel__next.js",
       engineSha7: "abc1234",
-      runId: "../../etc/passwd",
+      runId,
       ranAt: "2026-08-29T05:33:00.123Z",
       durationMs: 1000,
       budgetMs: 5000,
       repoSha: "abc",
       report,
     });
-    await expect(writeReportEnvelope({ meta, report })).rejects.toThrow(/invalid runId/);
+    await mkdir(getReportsDir(), { recursive: true });
+    await writeFile(path.join(getReportsDir(), `${runId}.json`), JSON.stringify({ meta, report, trace: [], contractVersion: 9999 }), "utf8");
+    expect(await readReportEnvelope(runId)).toBeNull();
   });
 
   it("listReportMetas skips bad json and sorts by ranAt desc", async () => {
@@ -248,8 +260,8 @@ describe("reports dir helpers", () => {
     const id2 = buildRunId("vercel__next.js", "abc1234", ts2);
     const r1 = fakeReport(50, "Moderate");
     const r2 = fakeReport(60, "Moderate");
-    await writeReportEnvelope({ meta: buildMeta({ repo: "vercel/next.js", repoSlug: "vercel__next.js", engineSha7: "abc1234", runId: id1, ranAt: "2026-08-28T10:00:00.000Z", durationMs: 1000, budgetMs: 5000, repoSha: "unknown", report: r1 }), report: r1 });
-    await writeReportEnvelope({ meta: buildMeta({ repo: "vercel/next.js", repoSlug: "vercel__next.js", engineSha7: "abc1234", runId: id2, ranAt: "2026-08-29T12:00:00.000Z", durationMs: 1000, budgetMs: 5000, repoSha: "unknown", report: r2 }), report: r2 });
+    await writeEnvelopeFile(buildMeta({ repo: "vercel/next.js", repoSlug: "vercel__next.js", engineSha7: "abc1234", runId: id1, ranAt: "2026-08-28T10:00:00.000Z", durationMs: 1000, budgetMs: 5000, repoSha: "unknown", report: r1 }), r1);
+    await writeEnvelopeFile(buildMeta({ repo: "vercel/next.js", repoSlug: "vercel__next.js", engineSha7: "abc1234", runId: id2, ranAt: "2026-08-29T12:00:00.000Z", durationMs: 1000, budgetMs: 5000, repoSha: "unknown", report: r2 }), r2);
     // Add a truncated file with valid runId-like name
     const badId = buildRunId("bad__repo", "abc1234", normalizeTs("2026-08-29T13:00:00.000Z"));
     await mkdir(getReportsDir(), { recursive: true });
@@ -268,16 +280,5 @@ describe("reports dir helpers", () => {
     await rm(getReportsDir(), { recursive: true, force: true });
     const metas = await listReportMetas();
     expect(metas).toEqual([]);
-  });
-
-  it("directory creation via ensureReportsDir", async () => {
-    await rm(getReportsDir(), { recursive: true, force: true });
-    const { ensureReportsDir } = await import("@/lib/reports");
-    const dir = await ensureReportsDir();
-    expect(dir).toBe(getReportsDir());
-    // dir exists check via readdir
-    const { readdir: rd } = await import("node:fs/promises");
-    const list = await rd(dir);
-    expect(Array.isArray(list)).toBe(true);
   });
 });

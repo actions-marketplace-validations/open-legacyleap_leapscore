@@ -36,11 +36,9 @@ yarn-error.log*
 # vercel
 .vercel
 
-# reports — persisted scan runs (local durability)
-# keep directory but ignore generated envelopes
-/reports/*.json
-!/reports/.gitkeep
-!/reports/django__django__506fc82__2026-08-12T000000-000Z.json
+# reports — ingested build inputs (tracked; populated only by the sync step
+# from the scanner's canonical store, never written by the website)
+!/reports/*.json
 
 # typescript
 *.tsbuildinfo

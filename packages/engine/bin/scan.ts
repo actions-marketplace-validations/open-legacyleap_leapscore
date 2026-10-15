@@ -1,9 +1,10 @@
 #!/usr/bin/env tsx
 /** packages/engine/bin/scan.ts — thin workflow CLI over runUnifiedScan + sealScan (spec: workflow-scan) */
 import { mkdir, writeFile, readFile, appendFile } from 'node:fs/promises';
+import { execSync } from 'node:child_process';
 import { dirname } from 'node:path';
 import { runUnifiedScan } from '../orchestrator';
-import { sealScan } from '../seal';
+import { sealScan, CONTRACT_VERSION } from '../seal';
 import { normalizeTargetSlug } from '../surface/slug';
 import { createSurfaceRestClient } from '../surface/rest';
 import type { SurfaceRestClient } from '../surface/rest';
@@ -337,12 +338,13 @@ export async function main(argv: string[], opts: MainOpts = {}): Promise<number>
     trace: trace as never,
     engineRef: args.engineRef,
     env: env as NodeJS.ProcessEnv,
+    execImpl: (cmd: string) => execSync(cmd, { encoding: "utf8", timeout: 1500, stdio: ["ignore", "pipe", "ignore"] }).trim(),
     scanId,
     repo,
   });
 
   await mkdir(dirname(args.out), { recursive: true });
-  await writeFile(args.out, JSON.stringify({ report: sealed.report, meta: sealed.meta, trace: sealed.traceToPersist }, null, 2), 'utf8');
+  await writeFile(args.out, JSON.stringify({ report: sealed.report, meta: sealed.meta, trace: sealed.traceToPersist, contractVersion: CONTRACT_VERSION }, null, 2), 'utf8');
   stdout(sealed.stdoutLine);
   if (args.surface) {
     await runSurfacePhase({

@@ -16,7 +16,9 @@
     "test": "npm run test --workspaces --if-present",
     "check:rubric-consistency": "tsx tooling/scripts/compile-rubric.ts --check",
     "check:detector-isolation": "tsx tooling/checks/detector-isolation.ts",
-    "compile:rubric": "tsx tooling/scripts/compile-rubric.ts"
+    "check:site-boundary": "tsx tooling/checks/site-boundary.ts",
+    "compile:rubric": "tsx tooling/scripts/compile-rubric.ts",
+    "sync:reports": "tsx tooling/scripts/sync-reports.ts"
   },
   "devDependencies": {
     "tsx": "^4.19.0",

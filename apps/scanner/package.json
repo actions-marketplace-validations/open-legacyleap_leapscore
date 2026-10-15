@@ -1,0 +1,23 @@
+{
+  "name": "@leapscore/scanner",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/server.ts",
+    "start": "tsx src/server.ts",
+    "build": "tsc --noEmit",
+    "lint": "tsc --noEmit",
+    "test": "SCANNER_NO_LISTEN=1 vitest run"
+  },
+  "dependencies": {
+    "@leapscore/contracts": "^0.1.0",
+    "@leapscore/engine": "^0.1.0",
+    "tsx": "^4.19.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "typescript": "^5",
+    "vitest": "^4.1.11"
+  }
+}

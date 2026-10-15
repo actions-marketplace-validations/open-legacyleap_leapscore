@@ -17,8 +17,8 @@ The system SHALL render every `IndicatorRow.name` and `IndicatorRow.category_id`
 - **THEN** each row's `name` is looked up from the registry (e.g. `ECOS-02` → `Major package drift`) and the UI at `apps/site/components/category-section.tsx:113` displays that name.
 
 #### Scenario: Sample and live share one source
-- **WHEN** `apps/site/lib/sample.ts` and `apps/site/lib/provider.live.ts` build `IndicatorRow`s
-- **THEN** both import the same registry; a drift between them fails `npm run check:rubric-consistency`.
+- **WHEN** `apps/site/lib/sample.ts` builds the sample report's `IndicatorRow`s and the scanner service builds a live report's rows
+- **THEN** both import the same registry; a drift between them fails `npm run check:rubric-consistency`. The website SHALL NOT carry a separate live row-builder, because live rows now arrive already built over the scan API.
 
 ### Requirement: No ID-as-title fallback
 
@@ -99,6 +99,10 @@ The system SHALL ensure `evidence.facts` arriving at the UI is a flat record of 
 #### Scenario: Phase-1 rows also avoid nesting
 - **WHEN** `VEL-09` or any Phase-1 indicator is measured via `gh-api`
 - **THEN** its `evidence.facts` are also flat primitives (or JSON-stringified where the fact is inherently structured), never `{vel09: [object Object]}`.
+
+#### Scenario: Flattening holds across the wire
+- **WHEN** a live report's rows arrive at the website over the scan API rather than from an in-process call
+- **THEN** `evidence.facts` are still flat primitives at the render boundary, and the UI's defensive flattening still covers any nested shape
 
 ### Requirement: Live report chrome is minimal and shows commit link
 

@@ -109,6 +109,7 @@ Renders the real `06_DATA_MODEL_API.md` schema with seeded values. All numbers d
 | Data seam | `ReportProvider` interface mirroring `06` schema; mock adapter seeded; later a live adapter. UI never touches the provider contract |
 | Location | this repo `apps/site/` (rubric is `docs/rubric/`, the canonical source the mock references) |
 | Tooling | none exists; `apps/site/` establishes lint/format (W-OPEN-3) |
+| Deployment topology (W15) | Produce/present split: `apps/scanner` (produce — scan execution, GH-token custody, canonical report store, versioned NDJSON scan API + per-runId permalinks) and `apps/site` (present — statically prerendered, no engine import, no token, no request-time reads; `/reports` ingested via explicit sync). Shared boundary: `packages/contracts` (envelope + runId grammar + `CONTRACT_VERSION`). See `openspec/changes/leapscore-scanner` |
 
 ---
 

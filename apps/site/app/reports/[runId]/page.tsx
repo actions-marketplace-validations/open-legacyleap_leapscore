@@ -1,10 +1,18 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { readReportEnvelope, isValidRunId } from "@/lib/reports";
+import { listReportMetas, readReportEnvelope, isValidRunId } from "@/lib/reports";
 import { ReportView } from "@/components/report-view";
 import { ScanTraceView } from "@/components/scan-trace-view";
 
-export const dynamic = "force-dynamic";
+// Build-time prerender: exactly the ingested runIds. A grammatically valid
+// but un-ingested runId 404s at the edge; traversal is rejected 404 before
+// any store access. No request-time filesystem read.
+export const dynamicParams = false;
+
+export async function generateStaticParams(): Promise<{ runId: string }[]> {
+  const metas = await listReportMetas();
+  return metas.map((m) => ({ runId: m.runId }));
+}
 
 export async function generateMetadata({ params }: { params: Promise<{ runId: string }> }): Promise<Metadata> {
   const { runId } = await params;

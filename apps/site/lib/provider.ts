@@ -140,23 +140,16 @@ export class SampleReportProvider implements ReportProvider {
 
 const sampleProvider: ReportProvider = new SampleReportProvider();
 
-/** Single seam the app pages call. A state: return a live scan provider here. */
-export function getReportProvider(query?: { live?: string | null }): ReportProvider {
-  const liveFlag = query?.live === '1' || query?.live === 'true';
-  const tokenPresent = !!(process.env.GH_TOKEN ?? process.env.GITHUB_TOKEN);
-  if (liveFlag && tokenPresent) {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { LiveReportProvider } = require('@/lib/provider.live');
-    return new LiveReportProvider() as ReportProvider;
-  }
+/**
+ * Single seam the app pages call. Sample-only: live scans arrive over HTTP
+ * from the scanner service (`LiveReportClient` → scanner scan API), never
+ * through this in-process seam.
+ */
+export function getReportProvider(): ReportProvider {
   return sampleProvider;
 }
 
 export function getReportProviderForTest(query: { live?: string | null }, opts: { tokenPresent: boolean; liveImpl?: ReportProvider }): ReportProvider {
   if (query.live === '1' && opts.tokenPresent && opts.liveImpl) return opts.liveImpl;
-  if (query.live === '1' && opts.tokenPresent) {
-    const { LiveReportProvider } = require('@/lib/provider.live');
-    return new LiveReportProvider() as ReportProvider;
-  }
   return sampleProvider;
 }

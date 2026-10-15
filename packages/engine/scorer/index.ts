@@ -4,7 +4,21 @@
 // Stub.
 
 import type { FactRecord } from '../facts';
-export type Report = { headline: { score: number; tier: string }; coverage: unknown; categories: unknown[]; gates: unknown[] };
+import type { Report as ContractReport } from '@leapscore/contracts';
+export type Report = ContractReport;
 export function score(_facts: FactRecord[], _rubricVersion: string): Report {
-  return { headline: { score: 0, tier: 'unknown' }, coverage: {}, categories: [], gates: [] };
+  return {
+    report_schema: '1',
+    id: 'ls_stub',
+    status: 'degraded',
+    snapshot: { repo: 'unknown/unknown', scanned_at: new Date().toISOString(), engine_version: 'stub', rubric_version: _rubricVersion },
+    headline: { score: 0, tier: 'unknown', ci_band: 'stub' },
+    coverage: { measured: 0, estimated: 0, unknown: 0, not_applicable: 0, measured_pct: '0%', estimated_pct: '0%', unknown_pct: '0%' },
+    gates: [],
+    categories: [],
+    top_blockers: [],
+    deep_dive_scope: [],
+    full_table: [],
+    sample: true,
+  };
 }

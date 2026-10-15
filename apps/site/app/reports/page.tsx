@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { listReportMetas } from "@/lib/reports";
+import { scannerPermalinkUrl } from "@/lib/scanner";
 
 export const metadata: Metadata = {
   title: "Reports · LeapScore",
@@ -105,7 +106,7 @@ export default async function ReportsPage() {
                       View
                     </Link>
                     <a
-                      href={`/api/reports/${encodeURIComponent(m.runId)}`}
+                      href={scannerPermalinkUrl(m.runId)}
                       className="rounded border border-hairline px-2 py-0.5 text-xs text-faint hover:text-foreground"
                     >
                       JSON

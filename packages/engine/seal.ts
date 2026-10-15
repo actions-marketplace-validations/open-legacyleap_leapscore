@@ -1,100 +1,34 @@
-/** packages/engine/seal.ts — shared terminal composer (website route + workflow CLI) */
-import { execSync } from 'node:child_process';
+/** packages/engine/seal.ts — shared terminal composer (scanner service + workflow CLI) */
 import { scoreMvp } from './scorer/mvp';
 import type { FactRecord } from './facts';
 import rubricData from './rubric.json' with { type: 'json' };
+// Single producer-owned contract: runId grammar, envelope, provenance.
+import {
+  CONTRACT_VERSION,
+  normalizeRepoForSlug,
+  repoSlugFromNormalized,
+  repoSlugFromUrl,
+  normalizeTs,
+  buildRunId,
+  resolveEngineSha7,
+  type Report as ContractReport,
+  type EnvelopeMeta as ContractMeta,
+  type TraceEntry as ContractTrace,
+  type ReportEnvelope as ContractEnvelope,
+} from '@leapscore/contracts';
 
-export type SealTraceEntry = {
-  ts: number;
-  label: string;
-  type?: string;
-  pct?: number;
-  elapsedMs?: number;
-  remainingMs?: number;
-  completedIds?: string[];
-  phase?: string;
-  detectorId?: string;
-  durationMs?: number;
-  status?: string;
-  errorKind?: string;
+export type SealTraceEntry = ContractTrace;
+export type SealMeta = Omit<ContractMeta, 'contractVersion'> & { coverage?: unknown };
+export type ReportEnvelope = ContractEnvelope;
+export {
+  CONTRACT_VERSION,
+  normalizeRepoForSlug,
+  repoSlugFromNormalized,
+  repoSlugFromUrl,
+  normalizeTs,
+  buildRunId,
+  resolveEngineSha7,
 };
-
-export type SealMeta = {
-  repo: string;
-  repoUrl: string;
-  repoSlug: string;
-  engineSha7: string;
-  runId: string;
-  ranAt: string;
-  durationMs: number;
-  budgetMs: number;
-  repoSha: string;
-  score: number;
-  tier: string;
-  status: string;
-  engine_version: string;
-  rubric_version: string;
-  filename: string;
-  coverage?: unknown;
-};
-
-// --- runId grammar (mirrors apps/site/lib/reports.ts; duplicated so CLI has no site dep) ---
-
-export function normalizeRepoForSlug(raw: string | null | undefined): string {
-  if (!raw) return 'django/django';
-  const cleaned = raw
-    .trim()
-    .replace(/^https?:\/\//, '')
-    .replace(/^github\.com\//i, '')
-    .replace(/\.git$/i, '');
-  const withoutQuery = cleaned.split(/[?#]/)[0];
-  const parts = withoutQuery.split('/').filter(Boolean);
-  if (parts.length < 2) return 'django/django';
-  const owner = parts[0];
-  const repo = parts[1];
-  if (!owner || !repo) return 'django/django';
-  return `${owner}/${repo}`;
-}
-
-export function repoSlugFromNormalized(normalized: string): string {
-  const lower = normalized.toLowerCase();
-  const [owner, repo] = lower.split('/');
-  if (!owner || !repo) return 'unknown__unknown';
-  return `${owner}__${repo}`;
-}
-
-export function repoSlugFromUrl(raw: string | null | undefined): string {
-  return repoSlugFromNormalized(normalizeRepoForSlug(raw));
-}
-
-export function normalizeTs(iso: string): string {
-  return iso.replace(/:/g, '').replace('.', '-');
-}
-
-export function buildRunId(repoSlug: string, engineSha7: string, ts: string): string {
-  const safeEngine = engineSha7 && engineSha7.trim() ? engineSha7.trim().slice(0, 7) : 'unknown';
-  return `${repoSlug}__${safeEngine}__${ts}`;
-}
-
-export function resolveEngineSha7(opts: {
-  env?: NodeJS.ProcessEnv;
-  engineRef?: string;
-  execImpl?: (cmd: string) => string;
-} = {}): string {
-  const env = opts.env ?? process.env;
-  const cands = [env.LEAPSCORE_SHA, opts.engineRef, env.LEAPSCORE_ENGINE_REF, env.VERCEL_GIT_COMMIT_SHA];
-  for (const c of cands) {
-    if (c && String(c).trim()) return String(c).trim().slice(0, 7);
-  }
-  try {
-    const exec = opts.execImpl ?? ((cmd: string) => execSync(cmd, { encoding: 'utf8', timeout: 1500, stdio: ['ignore', 'pipe', 'ignore'] }).trim());
-    const out = exec('git rev-parse --short HEAD');
-    if (out && out.trim()) return out.trim().slice(0, 7);
-  } catch {
-    // ignore
-  }
-  return 'unknown';
-}
 
 export function tierForScore(score: number): string {
   return score >= 80 ? 'Healthy' : score >= 53 ? 'Moderate' : score >= 27 ? 'High Risk' : 'Critical';
@@ -162,18 +96,15 @@ export type SealInput = {
   trace: SealTraceEntry[];
   archetypeOverride?: string | null;
   engineRef?: string;
-  env?: NodeJS.ProcessEnv;
+  env?: Record<string, string | undefined>;
   execImpl?: (cmd: string) => string;
   scanId?: string;
   repo?: string;
 };
 
 export type SealOutput = {
-  report: Record<string, unknown> & {
-    headline: { score: number; canonical_score: number; tier: string; ci_band: string };
-    snapshot: Record<string, unknown>;
-  };
-  meta: SealMeta;
+  report: ContractReport;
+  meta: ContractMeta;
   traceToPersist: SealTraceEntry[];
   stdoutLine: string;
   durationMs: number;
@@ -229,7 +160,7 @@ export function sealScan(input: SealInput): SealOutput {
     full_table: mvp.rows,
     report_schema: '1',
     sample: true,
-  } as SealOutput['report'];
+  } as unknown as SealOutput['report'];
 
   const trace: SealTraceEntry[] = [...input.trace];
   const pushTrace = (label: string, extra: Partial<SealTraceEntry> = {}) => {
@@ -242,10 +173,10 @@ export function sealScan(input: SealInput): SealOutput {
 
   const repoSlug = repoSlugFromUrl(normalizedRepo);
   const ts = normalizeTs(scannedAt);
-  const engineSha7 = resolveEngineSha7({ env: input.env, engineRef: input.engineRef });
+  const engineSha7 = resolveEngineSha7({ env: input.env, engineRef: input.engineRef, execImpl: input.execImpl });
   const runId = buildRunId(repoSlug, engineSha7, ts);
   const durationMs = Date.now() - input.startMs;
-  const meta: SealMeta = {
+  const meta: ContractMeta = {
     repo: normalizedRepo,
     repoUrl: `https://github.com/${normalizedRepo}`,
     repoSlug,
@@ -261,7 +192,8 @@ export function sealScan(input: SealInput): SealOutput {
     engine_version: (report.snapshot.engine_version as string) ?? 'unified/1.0',
     rubric_version: (report.snapshot.rubric_version as string) ?? 'docs/rubric@tranche-a',
     filename: `${runId}.json`,
-    coverage: report.coverage as unknown,
+    coverage: report.coverage as unknown as ContractMeta['coverage'],
+    contractVersion: CONTRACT_VERSION,
   };
 
   return { report, meta, traceToPersist, stdoutLine: formatStdout(report as never), durationMs, runId, repoSha: String(repoSha) };
