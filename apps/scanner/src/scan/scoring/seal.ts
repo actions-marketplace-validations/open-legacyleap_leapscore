@@ -11,6 +11,15 @@ import {
   normalizeTs,
   buildRunId,
   resolveEngineSha7,
+  tierForScore,
+  tierLegacyFor,
+  localSlugFromPath,
+  assessmentUrlForBand,
+  assessmentCtaForBand,
+  ASSESSMENT_BASE_URL,
+  ASSESSMENT_CAMPAIGN,
+  ALLOWED_NETWORK_HOSTS,
+  NETWORK_NEVER_SEND_RULE,
   type Report as ContractReport,
   type EnvelopeMeta as ContractMeta,
   type TraceEntry as ContractTrace,
@@ -28,19 +37,24 @@ export {
   normalizeTs,
   buildRunId,
   resolveEngineSha7,
+  tierForScore,
+  tierLegacyFor,
+  localSlugFromPath,
+  assessmentUrlForBand,
+  assessmentCtaForBand,
+  ASSESSMENT_BASE_URL,
+  ASSESSMENT_CAMPAIGN,
+  ALLOWED_NETWORK_HOSTS,
+  NETWORK_NEVER_SEND_RULE,
 };
-
-export function tierForScore(score: number): string {
-  return score >= 80 ? 'Healthy' : score >= 53 ? 'Moderate' : score >= 27 ? 'High Risk' : 'Critical';
-}
 
 const ARCH_ALLOW = new Set(['library', 'service', 'cli', 'infra', 'docs', 'agent-skills', 'mixed', 'unknown']);
 
-function deriveTopBlockers(cats: unknown): Array<{ row: string; name: string; points_lost: number; weight_pp: string; summary: string }> {
-  const out: Array<{ row: string; name: string; points_lost: number; weight_pp: string; summary: string }> = [];
+function deriveTopBlockers(cats: unknown): Array<{ row: string; name: string; points_lost: number; weight_pp: string; summary: string; evidence_file?: string; rule?: string }> {
+  const out: Array<{ row: string; name: string; points_lost: number; weight_pp: string; summary: string; evidence_file?: string; rule?: string }> = [];
   for (const c of cats as Array<{
     id: string; name: string; weight: number; applicable: number;
-    indicator_rows: Array<{ id: string; name: string; status: string; not_applicable?: boolean; score?: number; reason?: string }>;
+    indicator_rows: Array<{ id: string; name: string; status: string; not_applicable?: boolean; score?: number; reason?: string; evidence?: { tool?: string; pointers?: Array<{ file?: string; detail?: string }> } }>;
   }>) {
     if (!c.applicable) continue;
     const pointValue = ((100 * c.weight) / (3 * c.applicable)) / 100;
@@ -48,7 +62,16 @@ function deriveTopBlockers(cats: unknown): Array<{ row: string; name: string; po
       if (r.status === 'unknown' || r.not_applicable || r.score == null) continue;
       const lost = 3 - r.score;
       if (lost <= 0) continue;
-      out.push({ row: r.id, name: r.name, points_lost: lost, weight_pp: `${(lost * pointValue).toFixed(2)}pp`, summary: r.reason ?? '' });
+      const firstPointer = r.evidence?.pointers?.[0];
+      out.push({
+        row: r.id,
+        name: r.name,
+        points_lost: lost,
+        weight_pp: `${(lost * pointValue).toFixed(2)}pp`,
+        summary: r.reason ?? '',
+        evidence_file: firstPointer?.file ?? firstPointer?.detail,
+        rule: r.evidence?.tool ?? r.id,
+      });
     }
   }
   out.sort((a, b) => parseFloat(b.weight_pp) - parseFloat(a.weight_pp));
@@ -84,8 +107,8 @@ export function truncateTrace(trace: SealTraceEntry[]): SealTraceEntry[] {
 }
 
 export function formatStdout(report: { headline: { score: number; tier: string }; gates: unknown[]; coverage: { measured: number; estimated: number; unknown: number } }): string {
-  const fired = (report.gates as Array<{ status?: string }>).filter((g) => g.status === 'fired' || (g as unknown as { fired?: boolean }).fired).length;
-  return `${report.headline.score}/${report.headline.tier} gates:${fired}/${report.gates.length} coverage:${report.coverage.measured}m/${report.coverage.estimated}e/${report.coverage.unknown}u`;
+  const fired = (report.gates as Array<{ status?: string }>).filter((g) => g.status === 'fired' || (g as unknown as { fired?: boolean }).fired || (g as unknown as { status?: string }).status === 'proven').length;
+  return `${report.headline.score}/${report.headline.tier} gates:${fired}/${report.gates.length} coverage:${report.coverage.measured}m/${report.coverage.estimated}e/${report.coverage.unknown}u ${assessmentUrlForBand(report.headline.tier)}`;
 }
 
 export type SealInput = {
@@ -100,6 +123,9 @@ export type SealInput = {
   execImpl?: (cmd: string) => string;
   scanId?: string;
   repo?: string;
+  /** Local-subject overrides (spec: report-envelope runId grammar). */
+  subjectSlug?: string;
+  repoUrl?: string;
 };
 
 export type SealOutput = {
@@ -132,6 +158,8 @@ export function sealScan(input: SealInput): SealOutput {
 
   const topBlockers = deriveTopBlockers(mvp.categories);
   const deepDiveScope = buildDeepDiveScope(mvp.rows as Array<{ id: string; name: string; status: string; unknown_measure_path?: string }>);
+  const tier = tierForScore(mvp.score);
+  const tierLegacy = tierLegacyFor(tier);
 
   const report = {
     id: input.scanId ?? `ls_${Date.now().toString(36)}`,
@@ -147,7 +175,8 @@ export function sealScan(input: SealInput): SealOutput {
     headline: {
       score: Math.round(mvp.score * 100) / 100,
       canonical_score: Math.round(((mvp as unknown as { canonical_score?: number }).canonical_score ?? mvp.score) * 100) / 100,
-      tier: tierForScore(mvp.score),
+      tier,
+      tier_legacy: tierLegacy,
       ci_band: mvp.status === 'complete' ? 'complete' : 'degraded',
     },
     categories: mvp.categories,
@@ -171,14 +200,14 @@ export function sealScan(input: SealInput): SealOutput {
   pushTrace(sealedLabel, { type: 'sealed', pct: 100 });
   const traceToPersist = truncateTrace(trace);
 
-  const repoSlug = repoSlugFromUrl(normalizedRepo);
+  const repoSlug = input.subjectSlug ?? repoSlugFromUrl(normalizedRepo);
   const ts = normalizeTs(scannedAt);
   const engineSha7 = resolveEngineSha7({ env: input.env, engineRef: input.engineRef, execImpl: input.execImpl });
   const runId = buildRunId(repoSlug, engineSha7, ts);
   const durationMs = Date.now() - input.startMs;
   const meta: ContractMeta = {
     repo: normalizedRepo,
-    repoUrl: `https://github.com/${normalizedRepo}`,
+    repoUrl: input.repoUrl ?? `https://github.com/${normalizedRepo}`,
     repoSlug,
     engineSha7,
     runId,
@@ -188,6 +217,7 @@ export function sealScan(input: SealInput): SealOutput {
     repoSha: String(repoSha),
     score: report.headline.score,
     tier: report.headline.tier,
+    tier_legacy: tierLegacy,
     status: report.status as string,
     engine_version: (report.snapshot.engine_version as string) ?? 'unified/1.0',
     rubric_version: (report.snapshot.rubric_version as string) ?? 'docs/rubric@tranche-a',

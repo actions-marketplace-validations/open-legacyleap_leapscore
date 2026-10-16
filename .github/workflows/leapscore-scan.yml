@@ -1,8 +1,8 @@
-# LeapScore workflow scan v1 + project surface v1 (issues-only tracker).
-# No checkout: the engine clones the target internally from URL.
+# LeapScore workflow scan v2 (local-first dogfood) + project surface v1.
+# Checkout-first: the Action scans the checked-out working tree with
+# `leapscore-scan scan <path>` — no internal clone, no PAT for self scans.
 # Surfacing: sealed report syncs labeled issues into the runner repo (no check
 # runs, boards, or comments — see docs/plans/15_PROJECT_SURFACE_V1.md).
-# Bump LEAPSCORE_ENGINE_REF to the newest engine commit when the scan logic changes.
 name: LeapScore scan
 
 permissions:
@@ -12,53 +12,50 @@ permissions:
 on:
   workflow_dispatch:
     inputs:
-      target_repo:
-        description: 'owner/repo to scan (default: self)'
+      fail_under:
+        description: '0-100 threshold: fail the step when the sealed score is below it (empty = no gate)'
         required: false
         default: ''
-      sha:
-        description: 'reserved — non-empty is rejected in v1'
+      strict:
+        description: "'true' = zero-socket scan (vendored snapshots only)"
         required: false
-        default: ''
+        default: 'false'
       surface:
         description: "'true' = scan then sync issues; 'false' = execution-only"
         required: false
         default: 'true'
 
 env:
-  # Pinned engine ref — also passed as --engine-ref so meta.engineSha7 is truthful.
-  # Must be a commit that contains apps/scanner/bin/scan.ts.
+  # Pinned engine ref — also passed as engine_ref so meta.engineSha7 is truthful.
   LEAPSCORE_ENGINE_REF: 3886fde0c15bd5edf1f018af8eb1b8f6a0e79e66
 
 jobs:
   scan:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
         with:
           node-version: 24
-      - name: Allow fetching the engine repo (it may be private)
-        run: git config --global url."https://x-access-token:${GH_TOKEN}@github.com/".insteadOf "https://github.com/"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Scan with LeapScore
-        # tsx rides along on PATH so the bin's `#!/usr/bin/env tsx` shebang resolves;
-        # npm does not reliably install workspaceBins' runtime deps from a git spec.
-        run: npx -p tsx@4 -p "github:${{ github.repository }}#${LEAPSCORE_ENGINE_REF}" leapscore-scan --repo "${{ inputs.target_repo || github.repository }}" --sha "${{ inputs.sha }}" --out leapscore-report.json --engine-ref "${LEAPSCORE_ENGINE_REF}"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Scan working tree with LeapScore
+        id: scan
+        uses: ./action
+        with:
+          path: .
+          fail_under: ${{ inputs.fail_under }}
+          strict: ${{ inputs.strict }}
+          out_dir: leapscore-report
+          engine_ref: ${{ env.LEAPSCORE_ENGINE_REF }}
       - name: Surface issues
         # Warn-only: issue/label failures never rewrite the sealed scan verdict.
         # Runs only for sealed scans (success) with surface enabled (default true).
-        # Surfacing runs in the standalone apps/surface binary with its own
-        # issues:write token split (SURFACE_TOKEN, else GH_TOKEN/GITHUB_TOKEN).
         if: success() && inputs.surface == 'true'
-        run: npx -p tsx@4 -p "github:${{ github.repository }}#${LEAPSCORE_ENGINE_REF}" surface --from leapscore-report.json --repo "${{ inputs.target_repo || github.repository }}" --repo-a "${{ github.repository }}" --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        run: npx -p tsx@4 -p "github:${{ github.repository }}#${LEAPSCORE_ENGINE_REF}" surface --from leapscore-report/report.json --repo "${{ github.repository }}" --repo-a "${{ github.repository }}" --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
         env:
           SURFACE_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/upload-artifact@v5
         if: always()
         with:
           name: leapscore-${{ github.run_number }}
-          path: leapscore-report.json
+          path: leapscore-report/
           retention-days: 30

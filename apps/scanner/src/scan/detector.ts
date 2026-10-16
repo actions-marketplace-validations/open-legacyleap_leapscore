@@ -19,7 +19,7 @@ export interface Detector {
 export type ScanContext = {
   clonePath: string;
   commitSha: string;
-  gh: RateLimitedGhClient;
+  gh?: RateLimitedGhClient;
   manifests: EcosystemManifest[];
   budgetLease: { timeoutMs: number; byteCap: number; sampleN?: number };
   cache: FactCache;

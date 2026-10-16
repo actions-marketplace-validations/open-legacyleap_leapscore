@@ -116,6 +116,8 @@ export interface TopBlocker {
   points_lost: number;
   weight_pp: string;
   summary: string;
+  evidence_file?: string;
+  rule?: string;
 }
 
 export interface DeepDiveScopeEntry {
@@ -145,6 +147,7 @@ export interface Report {
     score: number;
     canonical_score?: number;
     tier: string;
+    tier_legacy?: string;
     ci_band: string;
   };
   coverage: CoverageCounts;
@@ -168,6 +171,7 @@ export interface EnvelopeMeta {
   repoSha: string;
   score: number;
   tier: string;
+  tier_legacy?: string;
   status: string;
   engine_version: string;
   rubric_version: string;
@@ -284,8 +288,75 @@ export function isValidRunId(runId: string): boolean {
 }
 
 // ---------------------------------------------------------------------------
-// Provenance — explicit-reference path, producer-owned
+// Display tiers — Low / Moderate / High / Critical (thresholds 80/53/27).
+// Legacy aliases (Healthy for Low, High Risk for High) are carried as
+// `tier_legacy` for one release.
 // ---------------------------------------------------------------------------
+
+export const TIER_THRESHOLDS = { low: 80, moderate: 53, high: 27 } as const;
+
+export function tierForScore(score: number): string {
+  if (score >= TIER_THRESHOLDS.low) return "Low";
+  if (score >= TIER_THRESHOLDS.moderate) return "Moderate";
+  if (score >= TIER_THRESHOLDS.high) return "High";
+  return "Critical";
+}
+
+export function tierLegacyFor(tier: string): string {
+  if (tier === "Low") return "Healthy";
+  if (tier === "High") return "High Risk";
+  return tier;
+}
+
+/** Local subject slug: normalized directory basename (lowercased, unsafe chars → `-`). */
+export function localSlugFromPath(raw: string): string {
+  const base = raw.replace(/[/\\]+$/, "").split(/[/\\]/).filter(Boolean).pop() ?? "scan";
+  const slug = base.toLowerCase().replace(/[^a-z0-9.\-]+/g, "-").replace(/^-+|-+$/g, "");
+  return slug || "scan";
+}
+
+// ---------------------------------------------------------------------------
+// Assessment funnel — the only telemetry is the click on this tracked link.
+// ---------------------------------------------------------------------------
+
+export const ASSESSMENT_BASE_URL = "https://leapscore.dev/assessment";
+export const ASSESSMENT_CAMPAIGN = "cli-scan-v1";
+
+const BAND_CTA: Record<string, string> = {
+  Low: "Keep this scan in CI to catch drift early — a $0 Assessment benchmarks you against peers.",
+  Moderate:
+    "Risk is concentrated in a few areas — a $0 Assessment clarifies what to fix first.",
+  High: "Significant modernisation risk — book a $0 Assessment to scope the fix.",
+  Critical: "Significant modernisation risk — book a $0 Assessment to scope the fix.",
+};
+
+export function assessmentUrlForBand(tier: string): string {
+  const band = tier.toLowerCase();
+  return `${ASSESSMENT_BASE_URL}?utm_campaign=${ASSESSMENT_CAMPAIGN}&band=${band}`;
+}
+
+export function assessmentCtaForBand(tier: string): string {
+  return BAND_CTA[tier] ?? BAND_CTA.Moderate;
+}
+
+// ---------------------------------------------------------------------------
+// Network posture — allowlisted open-internet GET hosts for default (non-strict)
+// local scans. Code, file paths, and repository names are never transmitted.
+// ---------------------------------------------------------------------------
+
+export const ALLOWED_NETWORK_HOSTS = [
+  "registry.npmjs.org",
+  "pypi.org",
+  "proxy.golang.org",
+  "repo.maven.apache.org",
+  "packagist.org",
+  "crates.io",
+  "endoflife.date",
+  "osv.dev",
+] as const;
+
+export const NETWORK_NEVER_SEND_RULE =
+  "Code, file paths, and repository names never leave the machine: allowlisted hosts receive only registry/package identifiers and version strings via GET.";
 
 export function resolveEngineSha7(opts: {
   env?: Record<string, string | undefined>;

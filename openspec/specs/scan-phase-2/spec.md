@@ -5,11 +5,15 @@ Clone-based Phase 2 that scores the remaining 13 MVP indicators (ECOS 5 + SEC 3 
 ## Requirements
 
 ### Requirement: Worker/queue clone pipeline
-The system SHALL, when the requested indicator set includes any clone-dependent detector, clone the repo shallow (`--filter=blob:none`) within the unified budget via a worker/queue job executed inside the scanner service, run manifest sniff per `{root, ecosystem}[]`, and expose the clone via read-only `readFile` to detectors. The clone SHALL NOT execute in the website process, and the website SHALL have no clone capability. No repo code SHALL be executed. When no clone-dependent indicator is requested, the clone step SHALL be skipped and budget SHALL omit `cloneBaseMs`. The clone step SHALL NOT be surfaced as a separate "Phase 2" in UI or API.
+The system SHALL, when the requested indicator set includes any clone-dependent detector AND the subject is remote (`--repo`), clone the repo shallow (`--filter=blob:none`) within the unified budget via a worker/queue job executed inside the scanner service, run manifest sniff per `{root, ecosystem}[]`, and expose the clone via read-only `readFile` to detectors. For local subjects (`scan <path>`) the clone step SHALL be skipped entirely and detectors SHALL read directly from the given path via the same read-only `readFile` with identical traversal guards and byte caps. The clone SHALL NOT execute in the website process, and the website SHALL have no clone capability. No repo code SHALL be executed. When no clone-dependent indicator is requested, the clone step SHALL be skipped and budget SHALL omit `cloneBaseMs`. The clone step SHALL NOT be surfaced as a separate "Phase 2" in UI or API. `ScanContext.gh` SHALL be optional: local scans run with no GH client and GH-touching detectors are excluded from the local set.
 
 #### Scenario: Shallow clone succeeds
 - **WHEN** a unified scan for `https://github.com/vercel/next.js` with 19 requested indicators enqueues work under the ~240s unified budget
 - **THEN** worker clones with `--filter=blob:none`, sniff finds `package-lock.json` at `/`, selects JS adapters, and detectors read via `readFile`, all within the same unified budget that also covers GH-API detectors
+
+#### Scenario: Local path skips clone
+- **WHEN** a scan runs as `leapscore scan ./app` with clone-dependent indicators requested
+- **THEN** no `git clone` runs, detectors read from `./app` directly, and the report seals with the same row shapes as the remote path
 
 #### Scenario: No manifest falls back to agnostic plane
 - **WHEN** no `package-lock.json`/`pyproject.toml`/`go.mod` found
@@ -22,6 +26,7 @@ The system SHALL, when the requested indicator set includes any clone-dependent 
 #### Scenario: Clone runs in the scanner service
 - **WHEN** a clone-dependent indicator set is scanned and the website process is inspected
 - **THEN** the clone is created and read only inside the scanner service, and no clone work, temp directory, or filesystem read occurs in the website
+
 ### Requirement: Indicator-count-driven budget with uniform sharding
 The system SHALL compute the wall-clock budget from the **requested indicator list** as a single unified value: `budgetMs = baseMs + Σ per-indicator cost` where `fast=5s`, `api-budgeted=10s`, `slow-dissolvable=40s`, `baseMs = 30s` if any `slow-dissolvable` requested else `5s`, clamped to `[10s, 240s]` for MVP (scales to larger for v1). The special-case mapping `6→10s / 13→240s` SHALL be removed; the generic formula SHALL govern. It SHALL enforce per-detector `timeoutMs`/`byteCap`, compute `budgetLease.sampleN` via uniform file-tree sharding on dissolve, and set `truncated=true` → `estimated+scope-limited` or `unknown` for `api-budgeted` exhaustion. Progress bar pct SHALL be derived from `elapsed/budgetMs` and completed cost, not from per-phase milestones. For the canonical 19 MVP indicators the result remains ~240s.
 
@@ -40,6 +45,7 @@ The system SHALL compute the wall-clock budget from the **requested indicator li
 #### Scenario: Progress reflects unified budget
 - **WHEN** scan runs with 19 indicators and budget ~240s
 - **THEN** progress bar advances monotonically with `elapsed/budgetMs` and remaining = `budgetMs - elapsed`, reaching 100% at budget expiry regardless of how many clone vs GH detectors remain
+
 ### Requirement: ECOS-01 runtime EOL fact (clone)
 
 The system SHALL emit ECOS-01 from version-manager files, manifests, `Dockerfile` `FROM`, and CI matrices, mapping to `endoflife.date` and computing `days_until_eol`.

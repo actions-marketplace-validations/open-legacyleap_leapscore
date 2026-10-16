@@ -72,11 +72,11 @@ describe('gate predicates (MVP)', () => {
 });
 
 describe('gate capping', () => {
-  it('78 + G1 proven caps to High Risk', () => {
+  it('78 + G1 proven caps to High', () => {
     const f = fake('SEC-02', { sec02: { tree_findings: [{ rule: 'aws' }], verified_live: 1, history_scanned_full: true } });
     const gates = evaluateGates([f]);
     const capped = cappedTier(78, gates);
-    expect(capped.tier).toBe('High Risk');
+    expect(capped.tier).toBe('High');
     expect(capped.capped).toBe(true);
   });
   it('20 + proven stays Critical (stricter wins)', () => {

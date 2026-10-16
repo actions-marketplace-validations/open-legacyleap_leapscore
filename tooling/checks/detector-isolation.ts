@@ -17,6 +17,7 @@ const ALLOWED_FS_FILES = new Set([
   'apps/scanner/src/scan/registry.ts',
   'apps/scanner/src/scan/scoring/scorer/rollup.ts',
   'apps/scanner/src/scan/scoring/seal.ts',
+  'apps/scanner/src/scan/local.ts',
   'apps/scanner/bin/scan.ts',
 ]);
 

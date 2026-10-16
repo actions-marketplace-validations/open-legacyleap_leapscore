@@ -93,25 +93,32 @@ export function cappedTier(score: number, gates: Gate[]): { tier: string; capped
   const proven = gates.some(g => g.status === 'proven');
   if (!proven) return { tier: tierForScore(score), capped: false };
   if (score < 27) return { tier: 'Critical', capped: true };
-  return { tier: 'High Risk', capped: true };
+  return { tier: 'High', capped: true };
 }
 
 function tierForScore(score: number): string {
-  if (score >= 80) return 'Healthy';
+  if (score >= 80) return 'Low';
   if (score >= 53) return 'Moderate';
-  if (score >= 27) return 'High Risk';
+  if (score >= 27) return 'High';
   return 'Critical';
+}
+
+/** Legacy alias for one release: Low→Healthy, High→High Risk, others unchanged. */
+export function tierLegacyFor(tier: string): string {
+  if (tier === 'Low') return 'Healthy';
+  if (tier === 'High') return 'High Risk';
+  return tier;
 }
 
 export function rollup(rows: Array<{ score?: number; status: string; not_applicable?: boolean }>, rubric: { weights: { base: Record<string, number> } }, facts: FactRecord[], categoryId?: string) {
   // Minimal engine rollup: category% + headline already done in mvp/phase1; this adds gate-capped verdict.
-  // kept for task 3.1 verification: score 78 + G1 proven -> High Risk
+  // kept for task 3.1 verification: score 78 + G1 proven -> High
   const gates = evaluateGates(facts);
   const applicable = rows.filter(r => !r.not_applicable && r.status !== 'unknown');
   const sum = applicable.reduce((a, r) => a + (r.score ?? 0), 0);
   const category_score = applicable.length ? (sum / (applicable.length * 3)) * 100 : 0;
   // weighted headline would need per-category; caller can reuse scoring; here just demo cappedTier
-  // For demo fixture: if facts contain proven G1, tier should be High Risk even if category_score implies Moderate
+  // For demo fixture: if facts contain proven G1, tier should be High even if category_score implies Moderate
   const demoScore = 78; // fixture from task
   const capped = cappedTier(demoScore, gates);
   return { category_score, gates, cappedTier: capped.tier, provenCount: gates.filter(g => g.status === 'proven').length };

@@ -1,0 +1,39 @@
+name: "LeapScore local scan"
+description: "Checkout-first thin wrapper around `leapscore-scan scan <path>`: scans the checked-out working tree with local detectors, no clone, no GH-API."
+branding:
+  icon: "activity"
+  color: "blue"
+
+inputs:
+  path:
+    description: "Local directory to scan (default: the checked-out working tree)"
+    required: false
+    default: "."
+  fail_under:
+    description: "Exit non-zero via core.setFailed when the sealed score is below this 0-100 threshold"
+    required: false
+    default: ""
+  strict:
+    description: "'true' = zero-socket mode (vendored snapshots only; any network attempt aborts)"
+    required: false
+    default: "false"
+  out_dir:
+    description: "Report directory receiving report.json + report.html + report.md"
+    required: false
+    default: "leapscore-report"
+  engine_ref:
+    description: "Pinned engine ref for meta.engineSha7 identity"
+    required: false
+    default: ""
+
+outputs:
+  exit-code:
+    description: "Scanner exit code: 0 pass, 1 crash, 2 usage-or-refused, 3 threshold trip"
+  score:
+    description: "Sealed score (when a report was written)"
+  tier:
+    description: "Sealed band: Low, Moderate, High, or Critical"
+
+runs:
+  using: "node20"
+  main: "dist/index.js"

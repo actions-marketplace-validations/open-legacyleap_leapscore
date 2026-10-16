@@ -11,6 +11,7 @@ import { detectSec07 } from './detectors/sec07';
 import { detectTest08 } from './detectors/test08';
 import type { Phase1ScanContext } from './detector';
 import { factsToRows, scorePhase1 } from './scoring/scorer/phase1';
+import { tierForScore } from './scoring/seal';
 
 export type Phase1Report = ReturnType<typeof scorePhase1> & {
   id: string;
@@ -19,13 +20,6 @@ export type Phase1Report = ReturnType<typeof scorePhase1> & {
   provenance: { tool_manifest: string[] };
   facts: FactRecord[];
 };
-
-function tierForScore(s: number): string {
-  if (s >= 80) return 'Healthy';
-  if (s >= 53) return 'Moderate';
-  if (s >= 27) return 'High Risk';
-  return 'Critical';
-}
 
 export async function runPhase1Scan(repoUrl: string, opts: { token?: string; fetchImpl?: typeof fetch; indicatorIds?: string[] } = {}): Promise<Phase1Report | { status: 'snapshot_refused'; reason: string; detail: string }> {
   const token = opts.token ?? process.env.GH_TOKEN ?? process.env.GITHUB_TOKEN;
