@@ -291,6 +291,11 @@ const MVP_IDS = ['VEL-06','VEL-09','VEL-08','VEL-10','SEC-07','TEST-08','ECOS-01
 export const TRANCHE_A_IDS = ['DOCS-01','DOCS-03','DOCS-04','DOCS-08','DOCS-09','PERF-02','PERF-06','DATA-01','ECOS-06','ECOS-08','SEC-09','SEC-10'];
 export const ALL_MEASURED_IDS = [...MVP_IDS, ...TRANCHE_A_IDS];
 
+/** Coverage floor for headline suppression (3.2): the headline is suppressed with
+ * an `insufficient-signal` verdict when fewer than this fraction of requested
+ * rows are measured. A constant — tunable without changing specs or tasks. */
+export const COVERAGE_FLOOR = 0.5;
+
 const RUBRIC_REGISTRY: Record<string, { name: string; category: string; effort: string; remediation: { quick_win: string; structural: string; gold_standard: string; effort: string } }> = Object.fromEntries(
   ((rubricData as unknown as { indicators: Array<{ id: string; category: string; name: string; effort: string; remediation: { quick_win: string; structural: string; gold_standard: string; effort: string } }> }).indicators ?? []).map(i => [i.id, { name: i.name, category: i.category, effort: i.effort, remediation: i.remediation }])
 );
@@ -382,13 +387,29 @@ export function scoreMvp(facts: FactRecord[], opts: { archetype?: string; planeI
   // Determine applicable categories (those with at least one implemented-and-applicable row that is measured/estimated)
   const applicableCats = [...byCat.entries()].filter(([, rows]) => rows.some(r => r.status === 'measured' || r.status === 'estimated')).map(([cat]) => cat);
   const renormWeights = renormalizeWeights(applicableCats, BASE_WEIGHTS);
+  // Legacy (renormalized) headline — retained as a reference field (deterministic-scoring 3.1).
+  // Unknowns vanish from its denominator; machine-speed-dependent, never gated on.
+  const legacyScore = (() => {
+    let s = 0;
+    for (const [cat, rows] of byCat.entries()) {
+      const measured = rows.filter(r => !r.not_applicable && (r.status === 'measured' || r.status === 'estimated'));
+      const sum = measured.reduce((a, r) => a + (r.score ?? 0), 0);
+      const applicable = measured.length;
+      const catPct = applicable ? (sum / (applicable * 3)) * 100 : 0;
+      const w = renormWeights[cat] ?? 0;
+      s += (catPct * w) / 100;
+    }
+    return s;
+  })();
   // Preserve canonical score for footnote
   const canonicalScore = (() => {
     let s = 0;
     for (const [cat, rows] of byCat.entries()) {
-      const measured = rows.filter(r => !r.not_applicable && r.status === 'measured');
-      const sum = measured.reduce((a, r) => a + (r.score ?? 0), 0);
-      const applicable = measured.length;
+      // Frozen denominator (3.1): unknowns stay in the denominator as disclosed
+      // unscored (0 in the numerator); N/A + not_implemented stay excluded.
+      const scored = rows.filter(r => !r.not_applicable && r.status !== 'not_implemented' && (r.status === 'measured' || r.status === 'estimated' || r.status === 'unknown'));
+      const sum = scored.reduce((a, r) => a + (r.score ?? 0), 0);
+      const applicable = scored.length;
       const catPct = applicable ? (sum / (applicable * 3)) * 100 : 0;
       s += (catPct * (BASE_WEIGHTS[cat] ?? 0)) / 100;
     }
@@ -402,14 +423,20 @@ export function scoreMvp(facts: FactRecord[], opts: { archetype?: string; planeI
     const unknown = rows.filter(r => r.status === 'unknown').length;
     const sum = measured.reduce((a, r) => a + (r.score ?? 0), 0) + estimated.reduce((a, r) => a + (r.score ?? 0), 0);
     const applicable = measured.length + estimated.length;
-    const category_score = applicable ? (sum / (applicable * 3)) * 100 : null;
+    const legacy_category_score = applicable ? (sum / (applicable * 3)) * 100 : null;
+    // Frozen denominator: unknowns disclosed as unscored (3.1)
+    const frozenApplicable = applicable + unknown;
+    const category_score = frozenApplicable ? (sum / (frozenApplicable * 3)) * 100 : null;
     const weight = renormWeights[cat] ?? 0;
     const canonicalWeight = BASE_WEIGHTS[cat] ?? 0;
-    const weighted_contribution = category_score == null ? 0 : (category_score * weight) / 100;
-    return { id: cat, name: CATEGORY_LABELS[cat] ?? cat, weight, canonical_weight: canonicalWeight, applicable, scored_sum: sum, category_score, weighted_contribution, status_counts: { measured: measured.length, estimated: estimated.length, unknown, not_applicable: notApplicable, not_implemented: notImplemented }, indicator_rows: rows };
+    const weighted_contribution = category_score == null ? 0 : (category_score * canonicalWeight) / 100;
+    const legacy_weighted = legacy_category_score == null ? 0 : (legacy_category_score * weight) / 100;
+    return { id: cat, name: CATEGORY_LABELS[cat] ?? cat, weight: canonicalWeight, canonical_weight: canonicalWeight, applicable: frozenApplicable, scored_sum: sum, category_score, renormalized_category_score: legacy_category_score, weighted_contribution, legacy_weighted_contribution: legacy_weighted, status_counts: { measured: measured.length, estimated: estimated.length, unknown, not_applicable: notApplicable, not_implemented: notImplemented }, indicator_rows: rows };
   });
   // No phantom empty categories — empty categories are omitted (not evaluated) but keep for display as dimmed if entirely N/A / Not Implemented
+  // Headline uses the frozen denominator (3.1); the renormalized value is reference-only.
   const score = categories.reduce((a,c) => a + c.weighted_contribution, 0);
+  const renormalizedScore = categories.reduce((a,c) => a + (c.legacy_weighted_contribution ?? 0), 0);
   const measured = allRows.filter(r => r.status === 'measured').length;
   const estimated = allRows.filter(r => r.status === 'estimated').length;
   const not_applicable = allRows.filter(r => r.status === 'not_applicable').length;
@@ -419,23 +446,24 @@ export function scoreMvp(facts: FactRecord[], opts: { archetype?: string; planeI
   const totalApplicable = measured + estimated + unknown;
   const coverage = { measured, estimated, unknown, not_applicable, not_implemented, measured_pct: `${Math.round(measured/(totalApplicable||1)*100)}%`, estimated_pct: `${Math.round(estimated/(totalApplicable||1)*100)}%`, unknown_pct: `${Math.round(unknown/(totalApplicable||1)*100)}%`, not_applicable_pct: `${Math.round(not_applicable/102*100)}%`, not_implemented_pct: `${Math.round(not_implemented/102*100)}%` };
   const status = (measured === ALL_MEASURED_IDS.length || measured === MVP_IDS.length) ? 'complete' as const : 'degraded' as const;
+  // Coverage floor (3.2): fewer than half of requested rows measured → suppress the
+  // headline with an explicit insufficient-signal verdict instead of a number.
+  // Requested ≈ rows the scan attempted (measured + estimated + unknown).
+  const requested = measured + estimated + unknown;
+  const suppressed = requested > 0 && measured < requested * COVERAGE_FLOOR;
+  const verdict = suppressed ? ('insufficient-signal' as const) : undefined;
   const rawGates = evaluateGates(facts);
-  // Gates whose sole source rows are all not_implemented or all not_applicable -> that same status (precedence not_implemented > not_applicable)
+  // Gate corollary (D5/3.3): a gate with NO measured/estimated source row is
+  // unevaluable — reported in the verdict line, never silently uncapped.
+  const rowStatusById = new Map(allRows.map(r => [r.id, r.status]));
   const gates = rawGates.map(g => {
-    const statuses = g.source_rows.map(id => {
-      if (!new Set(ALL_MEASURED_IDS).has(id)) return 'not_implemented';
-      const evalRes = evaluateApplicability(id, archetype, plane as never);
-      if (evalRes.notApplicable) return 'not_applicable';
-      return 'applicable';
-    });
-    if (statuses.every(s => s === 'not_implemented')) return { ...g, status: 'not_implemented' as const, note: 'detector not implemented in this slice — gate not evaluable' };
-    if (statuses.every(s => s === 'not_applicable' || s === 'not_implemented')) {
-      // if any not_implemented, prefer that per precedence
-      const hasNotImplemented = statuses.includes('not_implemented');
-      return { ...g, status: hasNotImplemented ? 'not_implemented' as const : 'not_applicable' as const, note: hasNotImplemented ? 'detector not implemented — gate not evaluable' : 'not applicable for this archetype — gate not evaluable' };
-    }
-    if (statuses.every(s => s === 'not_applicable')) return { ...g, status: 'not_applicable' as const, note: 'not applicable for this archetype — gate not evaluable' };
-    return g;
+    const statuses = g.source_rows.map(id => rowStatusById.get(id) ?? 'not_implemented');
+    if (statuses.some(s => s === 'measured' || s === 'estimated')) return g;
+    let note: string;
+    if (statuses.every(s => s === 'not_implemented')) note = 'detector not implemented in this slice — gate unevaluable';
+    else if (statuses.every(s => s === 'not_applicable' || s === 'not_implemented')) note = 'not applicable for this archetype — gate unevaluable';
+    else note = `${g.note} — unevaluable: source row(s) unknown`;
+    return { ...g, status: 'unevaluable' as const, note };
   });
-  return { categories, coverage, score, canonical_score: canonicalScore, status, gates, rows: allRows };
+  return { categories, coverage, score, renormalized_score: renormalizedScore, canonical_score: canonicalScore, status, gates, rows: allRows, suppressed, verdict };
 }

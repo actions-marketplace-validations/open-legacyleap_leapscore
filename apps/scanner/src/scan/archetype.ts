@@ -40,6 +40,7 @@ async function listFilesRecursive(clonePath: string, maxDepth = 3): Promise<stri
     if (depth > maxDepth) return;
     try {
       const entries = await readdir(dir, { withFileTypes: true });
+      entries.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
       for (const e of entries) {
         if (e.name.startsWith('.') && e.name !== '.github') continue;
         if (e.name === 'node_modules' || e.name === 'dist' || e.name === 'build' || e.name === '.next') continue;
@@ -55,6 +56,7 @@ async function listFilesRecursive(clonePath: string, maxDepth = 3): Promise<stri
     } catch {}
   }
   await walk(clonePath, 0, '');
+  out.sort();
   return out;
 }
 

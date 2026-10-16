@@ -3,7 +3,9 @@ import { stat, readFile as fsReadFile } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { join, resolve } from 'node:path';
-import { createBudgetControllerForIndicators, budgetForIndicators, BUDGET_COST, INDICATOR_BUDGET_CLASS } from './budget';
+import { createBudgetControllerForIndicators, budgetForIndicators, BUDGET_COST, INDICATOR_BUDGET_CLASS, computeSampleN, partitionByteCap, isKillerTrip } from './budget';
+import { walkSortedTree } from './tree';
+import { buildToolVersions, toolVersion } from './detectors/common';
 import { sniffEcosystems } from './ecosystem';
 import { classifyArchetype, classifyArchetypePerRoot } from './archetype';
 import { validateFact, type FactRecord } from './facts';
@@ -70,6 +72,8 @@ export type LocalScanOpts = {
   fetchImpl?: typeof fetch;
   byteCap?: number;
   scannedCommitOverride?: string;
+  /** Override the wall-clock killer (4.1 verification only; default KILLER_TIMEOUT_MS). */
+  killerMs?: number;
 };
 
 export type LocalScanEvent = {
@@ -94,6 +98,35 @@ export function bindLocalReadFile(root: string, opts: { byteCap?: number; signal
       if ((e as NodeJS.ErrnoException).code === 'ENOENT') return null;
       throw e;
     }
+  };
+}
+
+/** Partitioned readFile factory (deterministic-scoring 1.3): each detector gets an
+ * independent byte counter so one detector cannot exhaust another's budget. */
+export function bindLocalReadFilePartitioned(
+  root: string,
+  opts: { byteCap?: number; signal?: AbortSignal } = {},
+) {
+  const totalCap = opts.byteCap ?? 4 * 1024 * 1024;
+  return {
+    totalCap,
+    forDetector(perDetectorCap: number) {
+      let bytesRead = 0;
+      return async (p: string): Promise<Buffer | null> => {
+        if (opts.signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+        const full = join(root, p.replace(/^\//, ''));
+        if (full !== root && !full.startsWith(root + '/')) return null;
+        try {
+          const buf = await fsReadFile(full);
+          bytesRead += buf.length;
+          if (bytesRead > perDetectorCap) throw new DOMException('byteCap exceeded', 'QuotaExceededError');
+          return buf;
+        } catch (e) {
+          if ((e as NodeJS.ErrnoException).code === 'ENOENT') return null;
+          throw e;
+        }
+      };
+    },
   };
 }
 
@@ -145,7 +178,7 @@ export async function* runLocalScan(
   const ids = requested.filter((id) => LOCAL_IDS.includes(id));
   const { budgetMs, breakdown, indicatorCount } = budgetForIndicators(ids, { withCloneBase: true });
   const totalCost = ids.reduce((a, id) => a + (BUDGET_COST[INDICATOR_BUDGET_CLASS[id] ?? 'fast'] ?? 5000), 0) + 30000;
-  const budget = createBudgetControllerForIndicators(ids, { withCloneBase: true, byteCap: opts.byteCap });
+  const budget = createBudgetControllerForIndicators(ids, { withCloneBase: true, byteCap: opts.byteCap, killerMs: opts.killerMs });
   const start = Date.now();
   const signal = budget.signal;
   const scanId = `ls_${Date.now().toString(36)}`;
@@ -161,6 +194,19 @@ export async function* runLocalScan(
 
   const readFile = bindLocalReadFile(absPath, { byteCap: opts.byteCap, signal });
   const commitSha = opts.scannedCommitOverride ?? await resolveLocalCommit(absPath);
+
+  // Deterministic bounding (1.2): single canonical sorted walk → fileCount → sampleN,
+  // threaded into every slow detector's lease before fan-out.
+  let sampleN: number | undefined;
+  try {
+    const walk = await walkSortedTree(absPath);
+    sampleN = computeSampleN(walk.fileCount);
+    budget.setSampleN(sampleN);
+    const elapsedMs = Date.now() - start;
+    yield { type: 'trace', ts: elapsedMs, elapsedMs, label: `Tree walk — ${walk.fileCount} files, sampleN ${sampleN ?? 'full'} (canonical sorted order)`, phase: 'budget' };
+  } catch {
+    // walk failure must not fail the scan; detectors fall back to full reads
+  }
 
   let manifests: Array<{ root: string; ecosystem: string; lockfile: string; manifest: string }> = [];
   try {
@@ -192,7 +238,7 @@ export async function* runLocalScan(
     manifests: manifests as ScanContext['manifests'],
     budgetLease: budget.lease(),
     cache: { get: () => undefined, set: () => {} },
-    toolVersions: new Map([['phase2', '1.0']]),
+    toolVersions: buildToolVersions(),
     readFile,
   };
 
@@ -221,6 +267,11 @@ export async function* runLocalScan(
   }
 
   const starts = reqDetectors.map(() => Date.now());
+  // Partitioned byte budgets (1.3): each detector reads through an independent
+  // counter so scheduling order cannot let one detector starve another.
+  const partitioned = bindLocalReadFilePartitioned(absPath, { byteCap: opts.byteCap, signal });
+  const perDetectorCap = partitionByteCap(partitioned.totalCap, Math.max(1, reqDetectors.length));
+  const detectorCtxs = reqDetectors.map(() => ({ ...ctx, readFile: partitioned.forDetector(perDetectorCap) }));
   let settled: Array<{ ok: boolean; value?: FactRecord; error?: unknown; durationMs: number }>;
   try {
     settled = await Promise.all(reqDetectors.map((fn, idx) => {
@@ -228,7 +279,7 @@ export async function* runLocalScan(
       if (signal.aborted || (opts.strict && (signal as unknown as { _strictAborted?: boolean })._strictAborted)) {
         return Promise.resolve({ ok: false as const, error: new StrictOfflineError('aborted'), durationMs: Date.now() - s });
       }
-      return (fn as unknown as (ctx: ScanContext, sig: AbortSignal) => Promise<FactRecord>)(ctx, signal).then(
+      return (fn as unknown as (ctx: ScanContext, sig: AbortSignal) => Promise<FactRecord>)(detectorCtxs[idx], signal).then(
         (v) => ({ ok: true as const, value: v, durationMs: Date.now() - s }),
         (e) => ({ ok: false as const, error: e, durationMs: Date.now() - s }),
       );
@@ -237,6 +288,14 @@ export async function* runLocalScan(
     const elapsedMs = Date.now() - start;
     yield { type: 'trace', ts: elapsedMs, elapsedMs, label: `Local detectors crashed — ${String(e).slice(0, 120)}`, phase: 'detector', status: 'error' };
     settled = [];
+  }
+
+  // Killer timeout (4.1): the wall-clock budget is a run-failure killer, never a
+  // degraded seal. Check BEFORE budget.cancel() — cancel aborts cleanly.
+  if (isKillerTrip(signal)) {
+    budget.cancel();
+    yield { type: 'run-failure', reason: 'budget-exceeded', detail: 'wall-clock killer fired before deterministic work completed — no headline sealed' };
+    return;
   }
 
   const facts: FactRecord[] = settled.map((r, i) => {
@@ -251,7 +310,7 @@ export async function* runLocalScan(
     }
     const detail = String((r as unknown as { error: unknown }).error).slice(0, 300);
     const isBudget = detail.includes('budget-exceeded') || detail.includes('TimeoutError') || detail.includes('AbortError') || detail.includes('byteCap');
-    return { id, detectorId: id, schemaVersion: '1.0.0', facts: {}, evidencePointers: [], provenance: { tool: 'phase2', version: '1', flags: [], durationMs: 0 }, truncated: true, error: { kind: isBudget ? 'cap' as const : 'crash' as const, detail }, root: '/', scanId } as unknown as FactRecord;
+    return { id, detectorId: id, schemaVersion: '1.0.0', facts: {}, evidencePointers: [], provenance: { tool: 'phase2', version: toolVersion('phase2'), flags: [], durationMs: 0 }, truncated: true, error: { kind: isBudget ? 'cap' as const : 'crash' as const, detail }, root: '/', scanId } as unknown as FactRecord;
   });
 
   // Determinism: sort detector outputs by id before seal.
@@ -272,9 +331,10 @@ export async function* runLocalScan(
     const elapsedMs = Date.now() - start;
     const completedIds = facts.filter((f) => !(f as unknown as { error?: unknown }).error).map((f) => f.detectorId);
     const completedCost = completedIds.reduce((a, id) => a + (BUDGET_COST[INDICATOR_BUDGET_CLASS[id] ?? 'fast'] ?? 5000), 0);
-    const timePct = Math.min(elapsedMs / budgetMs, 1);
+    // Deterministic progress (scan-phase-2): completed work only, never elapsed/budgetMs.
     const costPct = totalCost ? completedCost / totalCost : 0;
-    const pct = Math.min(99, Math.round((0.6 * timePct + 0.4 * costPct) * 100));
+    const countPct = reqIds.length ? completedIds.length / reqIds.length : 0;
+    const pct = Math.min(99, Math.round(((0.5 * costPct + 0.5 * countPct)) * 100));
     yield { type: 'progress', pct, elapsedMs, remainingMs: Math.max(0, budgetMs - elapsedMs), completedIds, completedCost, totalCost, milestone: `Local detectors — ${completedIds.length}/${reqIds.length} complete` };
     yield { type: 'trace', ts: elapsedMs, elapsedMs, label: `Local detectors — ${completedIds.length}/${reqIds.length} complete`, phase: 'clone' };
     yield { type: 'progress', pct: Math.min(99, pct + 1), elapsedMs, remainingMs: Math.max(0, budgetMs - elapsedMs), completedIds, completedCost, totalCost, milestone: 'Scoring — gates evaluated' };
@@ -285,7 +345,7 @@ export async function* runLocalScan(
   const covered = new Set(facts.map((f) => f.detectorId));
   for (const id of ids) {
     if (!covered.has(id)) {
-      facts.push({ id, detectorId: id, schemaVersion: '1.0.0', facts: {}, evidencePointers: [], provenance: { tool: 'budget', version: '1', flags: [], durationMs: 0 }, truncated: true, error: { kind: 'cap' as const, detail: 'budget-exceeded' }, root: '/', scanId } as unknown as FactRecord);
+      facts.push({ id, detectorId: id, schemaVersion: '1.0.0', facts: {}, evidencePointers: [], provenance: { tool: 'budget', version: toolVersion('budget'), flags: [], durationMs: 0 }, truncated: true, error: { kind: 'cap' as const, detail: 'budget-exceeded' }, root: '/', scanId } as unknown as FactRecord);
     }
   }
   facts.sort((a, b) => String(a.detectorId).localeCompare(String(b.detectorId)));

@@ -1,5 +1,6 @@
 /** apps/scanner/src/scan/seal.ts — shared terminal composer (scanner service + workflow CLI) */
 import { scoreMvp } from './scorer/mvp';
+import { computeScoreFingerprint, FINGERPRINT_VERSION } from './fingerprint';
 import type { FactRecord } from '../facts';
 import rubricData from './rubric.json' with { type: 'json' };
 // Single producer-owned contract: runId grammar, envelope, provenance.
@@ -106,9 +107,15 @@ export function truncateTrace(trace: SealTraceEntry[]): SealTraceEntry[] {
   return sealEntry ? [sentinel, ...kept, sealEntry] : [sentinel, ...kept];
 }
 
-export function formatStdout(report: { headline: { score: number; tier: string }; gates: unknown[]; coverage: { measured: number; estimated: number; unknown: number } }): string {
-  const fired = (report.gates as Array<{ status?: string }>).filter((g) => g.status === 'fired' || (g as unknown as { fired?: boolean }).fired || (g as unknown as { status?: string }).status === 'proven').length;
-  return `${report.headline.score}/${report.headline.tier} gates:${fired}/${report.gates.length} coverage:${report.coverage.measured}m/${report.coverage.estimated}e/${report.coverage.unknown}u ${assessmentUrlForBand(report.headline.tier)}`;
+export function formatStdout(report: { headline: { score: number; tier: string; suppressed?: boolean; verdict?: string }; gates: unknown[]; coverage: { measured: number; estimated: number; unknown: number } }): string {
+  const gates = report.gates as Array<{ status?: string }>;
+  const fired = gates.filter((g) => g.status === 'fired' || (g as unknown as { fired?: boolean }).fired || (g as unknown as { status?: string }).status === 'proven').length;
+  const unevaluable = gates.filter((g) => g.status === 'unevaluable').length;
+  const gatePart = unevaluable ? `gates:${fired}/${report.gates.length} unevaluable:${unevaluable}/${report.gates.length}` : `gates:${fired}/${report.gates.length}`;
+  if (report.headline.suppressed) {
+    return `insufficient-signal ${gatePart} coverage:${report.coverage.measured}m/${report.coverage.estimated}e/${report.coverage.unknown}u ${assessmentUrlForBand(report.headline.tier)}`;
+  }
+  return `${report.headline.score}/${report.headline.tier} ${gatePart} coverage:${report.coverage.measured}m/${report.coverage.estimated}e/${report.coverage.unknown}u ${assessmentUrlForBand(report.headline.tier)}`;
 }
 
 export type SealInput = {
@@ -126,6 +133,10 @@ export type SealInput = {
   /** Local-subject overrides (spec: report-envelope runId grammar). */
   subjectSlug?: string;
   repoUrl?: string;
+  /** Semantic flag joining the score fingerprint (deterministic-scoring 2.2). */
+  strict?: boolean;
+  /** Headline policy (4.2): frozen (default) or legacy escape hatch. Joins the fingerprint. */
+  scorePolicy?: 'frozen' | 'legacy';
 };
 
 export type SealOutput = {
@@ -158,7 +169,13 @@ export function sealScan(input: SealInput): SealOutput {
 
   const topBlockers = deriveTopBlockers(mvp.categories);
   const deepDiveScope = buildDeepDiveScope(mvp.rows as Array<{ id: string; name: string; status: string; unknown_measure_path?: string }>);
-  const tier = tierForScore(mvp.score);
+  // Score policy (4.2): legacy escape hatch seals the renormalized reference as
+  // the headline; frozen (default) seals the frozen denominator.
+  const policy = input.scorePolicy ?? 'frozen';
+  const headlineScore = policy === 'legacy'
+    ? Math.round((((mvp as unknown as { renormalized_score?: number }).renormalized_score ?? mvp.score)) * 100) / 100
+    : Math.round(mvp.score * 100) / 100;
+  const tier = tierForScore(headlineScore);
   const tierLegacy = tierLegacyFor(tier);
 
   const report = {
@@ -173,11 +190,18 @@ export function sealScan(input: SealInput): SealOutput {
       archetype_override_from: input.archetypeOverride ? arch : undefined,
     },
     headline: {
-      score: Math.round(mvp.score * 100) / 100,
-      canonical_score: Math.round(((mvp as unknown as { canonical_score?: number }).canonical_score ?? mvp.score) * 100) / 100,
+      // Frozen denominator (3.1): unknowns disclosed as unscored. canonical_score
+      // is the defined CI-gating number (--fail-under targets it); the legacy
+      // renormalized value stays in JSON as reference only.
+      score: headlineScore,
+      canonical_score: headlineScore,
+      renormalized_score: Math.round(((mvp as unknown as { renormalized_score?: number }).renormalized_score ?? mvp.score) * 100) / 100,
+      score_policy: policy,
+      suppressed: (mvp as unknown as { suppressed?: boolean }).suppressed ?? false,
+      verdict: (mvp as unknown as { verdict?: string }).verdict,
       tier,
       tier_legacy: tierLegacy,
-      ci_band: mvp.status === 'complete' ? 'complete' : 'degraded',
+      ci_band: (mvp as unknown as { verdict?: string }).verdict === 'insufficient-signal' ? 'insufficient-signal' : mvp.status === 'complete' ? 'complete' : 'degraded',
     },
     categories: mvp.categories,
     coverage: mvp.coverage,
@@ -205,6 +229,20 @@ export function sealScan(input: SealInput): SealOutput {
   const engineSha7 = resolveEngineSha7({ env: input.env, engineRef: input.engineRef, execImpl: input.execImpl });
   const runId = buildRunId(repoSlug, engineSha7, ts);
   const durationMs = Date.now() - input.startMs;
+  const engineVersion = (report.snapshot.engine_version as string) ?? 'unified/1.0';
+  const rubricVersion = (report.snapshot.rubric_version as string) ?? 'docs/rubric@tranche-a';
+  // Deterministic fingerprint (2.2): scored payload only — runId/scanned_at/durations excluded.
+  const scoreFingerprint = computeScoreFingerprint({
+    facts: input.facts,
+    rubricVersion,
+    engineVersion,
+    engineSha7,
+    snapshotVersions: (rawSnapshot.snapshot_versions as Record<string, unknown> | undefined) ?? {},
+    strict: !!input.strict,
+    indicatorSet: input.facts.map((f) => String((f as unknown as { detectorId?: string }).detectorId ?? '')),
+    archetype: effectiveArch,
+    scorePolicy: policy,
+  });
   const meta: ContractMeta = {
     repo: normalizedRepo,
     repoUrl: input.repoUrl ?? `https://github.com/${normalizedRepo}`,
@@ -219,11 +257,13 @@ export function sealScan(input: SealInput): SealOutput {
     tier: report.headline.tier,
     tier_legacy: tierLegacy,
     status: report.status as string,
-    engine_version: (report.snapshot.engine_version as string) ?? 'unified/1.0',
-    rubric_version: (report.snapshot.rubric_version as string) ?? 'docs/rubric@tranche-a',
+    engine_version: engineVersion,
+    rubric_version: rubricVersion,
     filename: `${runId}.json`,
     coverage: report.coverage as unknown as ContractMeta['coverage'],
     contractVersion: CONTRACT_VERSION,
+    score_fingerprint: scoreFingerprint,
+    fingerprint_version: FINGERPRINT_VERSION,
   };
 
   return { report, meta, traceToPersist, stdoutLine: formatStdout(report as never), durationMs, runId, repoSha: String(repoSha) };

@@ -87,6 +87,27 @@ describe('1.2 exit map with --fail-under', () => {
       rmSync(outDir, { recursive: true, force: true });
     }
   }, 120_000);
+  it('--fail-under gates on the frozen headline (3.4)', async () => {
+    const dir = makeFixture();
+    const outDir = mkdtempSync(join(tmpdir(), 'leapscore-out-'));
+    const outDir2 = mkdtempSync(join(tmpdir(), 'leapscore-out-'));
+    try {
+      const base = await runCli(['scan', dir, '--out', outDir]);
+      expect(base.code).toBe(0);
+      const env = JSON.parse(readFileSync(join(outDir, 'report.json'), 'utf8'));
+      const frozen = env.report.headline.score as number;
+      expect(env.report.headline.score_policy).toBe('frozen');
+      const trip = await runCli(['scan', dir, '--out', outDir2, '--fail-under', String(frozen + 1)]);
+      expect(trip.code).toBe(3);
+      expect(trip.err.join('\n')).toContain(String(frozen));
+      const pass = await runCli(['scan', dir, '--out', outDir2, '--fail-under', String(frozen)]);
+      expect(pass.code).toBe(0);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+      rmSync(outDir, { recursive: true, force: true });
+      rmSync(outDir2, { recursive: true, force: true });
+    }
+  }, 180_000);
 });
 
 describe('1.3 + 5.3 single stdout line with tracked link', () => {
@@ -154,6 +175,10 @@ describe('2.3 determinism: sorted outputs, commit identity', () => {
       const a = JSON.parse(readFileSync(join(outA, 'report.json'), 'utf8'));
       const b = JSON.parse(readFileSync(join(outB, 'report.json'), 'utf8'));
       expect(a.report.headline.score).toBe(b.report.headline.score);
+      // deterministic-scoring 2.4: fingerprint-equality across repeat runs
+      expect(a.meta.score_fingerprint).toBeTruthy();
+      expect(a.meta.fingerprint_version).toBe(1);
+      expect(a.meta.score_fingerprint).toBe(b.meta.score_fingerprint);
       expect(a.meta.runId).not.toBe(b.meta.runId);
       const pa = parseRunId(a.meta.runId);
       const pb = parseRunId(b.meta.runId);
@@ -222,6 +247,10 @@ describe('3.3 three files share score and runId', () => {
       expect(md).toContain(String(env.meta.score));
       expect(md).toContain(env.meta.runId);
       expect(md).toContain(env.meta.tier);
+      // artifact envelope shares the fingerprint across all three files
+      expect(env.meta.score_fingerprint).toBeTruthy();
+      expect(html).toContain(String(env.meta.score_fingerprint).slice(0, 12));
+      expect(md).toContain(String(env.meta.score_fingerprint).slice(0, 12));
     } finally {
       rmSync(dir, { recursive: true, force: true });
       rmSync(outDir, { recursive: true, force: true });

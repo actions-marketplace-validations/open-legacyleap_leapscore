@@ -1,5 +1,5 @@
 import type { ScanContext, RawFact } from '../detector';
-import { ghErrorKind, makeProvenance } from './common';
+import { ghErrorKind, makeProvenance, toolVersion } from './common';
 
 export async function detectEcos08(ctx: ScanContext, signal: AbortSignal): Promise<RawFact> {
   const start = Date.now();
@@ -23,10 +23,10 @@ export async function detectEcos08(ctx: ScanContext, signal: AbortSignal): Promi
       }
     }
     if (!framework) {
-      return { detectorId: 'ECOS-08', schemaVersion: '1.0.0', facts: { ecos08: { frameworks: [], coupling_share: 0, facade_layer_detected: false, fork_pinned: false } } as unknown as Record<string,unknown>, evidencePointers: [{ detail: 'no framework detected' }], provenance: { tool: 'endoflife.date', version: '1', flags: ['endoflife.date'], durationMs: Date.now() - start }, truncated: false };
+      return { detectorId: 'ECOS-08', schemaVersion: '1.0.0', facts: { ecos08: { frameworks: [], coupling_share: 0, facade_layer_detected: false, fork_pinned: false } } as unknown as Record<string,unknown>, evidencePointers: [{ detail: 'no framework detected' }], provenance: { tool: 'endoflife.date', version: toolVersion('endoflife.date'), flags: ['endoflife.date'], durationMs: Date.now() - start }, truncated: false };
     }
     // Reuse endoflife.date cache — for MVP we don't fetch live, mark active
     const facts = { ecos08: { frameworks: [{ name: framework, version: version ?? 'unknown', support_status: 'active', eol_date: null }], coupling_share: 0.1, facade_layer_detected: false, fork_pinned: false } };
-    return { detectorId: 'ECOS-08', schemaVersion: '1.0.0', facts: facts as unknown as Record<string,unknown>, evidencePointers: [{ detail: `${framework}@${version} active` }], provenance: { tool: 'endoflife.date', version: '1', flags: ['endoflife.date'], durationMs: Date.now() - start }, truncated: false };
+    return { detectorId: 'ECOS-08', schemaVersion: '1.0.0', facts: facts as unknown as Record<string,unknown>, evidencePointers: [{ detail: `${framework}@${version} active` }], provenance: { tool: 'endoflife.date', version: toolVersion('endoflife.date'), flags: ['endoflife.date'], durationMs: Date.now() - start }, truncated: false };
   } catch (e) { return { detectorId: 'ECOS-08', schemaVersion: '1.0.0', facts: {}, evidencePointers: [], provenance: makeProvenance('endoflife.date', start), truncated: true, error: ghErrorKind(e) }; }
 }

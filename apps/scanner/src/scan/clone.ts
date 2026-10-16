@@ -13,6 +13,8 @@ export type CloneHandle = {
   commitSha: string;
   cleanup: () => void;
   readFile: (path: string) => Promise<Buffer | null>;
+  /** Partitioned reader factory (deterministic-scoring 1.3): independent per-detector counters. */
+  partitionedReadFile: (perDetectorCap: number) => (path: string) => Promise<Buffer | null>;
 };
 
 export async function shallowClone(repoUrl: string, opts: { signal?: AbortSignal; byteCap?: number } = {}): Promise<CloneHandle> {
@@ -56,10 +58,29 @@ export async function shallowClone(repoUrl: string, opts: { signal?: AbortSignal
     }
   };
 
+  const partitionedReadFile = (perDetectorCap: number) => {
+    let detectorBytes = 0;
+    return async (p: string): Promise<Buffer | null> => {
+      if (opts.signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+      const full = join(tmp, p.replace(/^\//, ''));
+      if (!full.startsWith(tmp)) return null;
+      try {
+        const buf = await fsReadFile(full);
+        detectorBytes += buf.length;
+        if (detectorBytes > perDetectorCap) throw new DOMException('byteCap exceeded', 'QuotaExceededError');
+        return buf;
+      } catch (e) {
+        if ((e as NodeJS.ErrnoException).code === 'ENOENT') return null;
+        throw e;
+      }
+    };
+  };
+
   return {
     clonePath: tmp,
     commitSha,
     cleanup: () => rmSync(tmp, { recursive: true, force: true }),
     readFile,
+    partitionedReadFile,
   };
 }

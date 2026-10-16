@@ -2,14 +2,13 @@
 /** apps/scanner/bin/scan.ts — thin workflow CLI over runUnifiedScan/runLocalScan + sealScan (spec: workflow-scan, scan-local) */
 import { mkdir, writeFile } from 'node:fs/promises';
 import { stat } from 'node:fs/promises';
-import { execSync } from 'node:child_process';
 import { resolve, basename } from 'node:path';
 import { runUnifiedScan } from '../src/scan/orchestrator';
 import { runLocalScan } from '../src/scan/local';
 import { sealScan, CONTRACT_VERSION, localSlugFromPath, assessmentUrlForBand } from '../src/scan/scoring/seal';
 import { renderHtml, renderMarkdown } from '../src/scan/render';
 
-export const USAGE = `leapscore-scan [scan] [<path> | --repo <owner/repo>] --out <dir> [--strict] [--fail-under <0-100>] [--sha <sha>] [--engine-ref <sha>]
+export const USAGE = `leapscore-scan [scan] [<path> | --repo <owner/repo>] --out <dir> [--strict] [--fail-under <0-100>] [--sha <sha>] [--engine-ref <sha>] [--score-policy frozen|legacy]
 
   scan <path>             Local directory scan (default entry): no clone, no GH-API, 25 local detectors
   --repo <owner/repo>     Remote scan subject as owner/repo (no https:// prefix, no .git suffix)
@@ -18,6 +17,7 @@ export const USAGE = `leapscore-scan [scan] [<path> | --repo <owner/repo>] --out
   --strict                Zero-socket mode: any network attempt aborts (vendored snapshots only). Conflicts with --repo.
   --fail-under <0-100>    Exit 3 when the sealed score is below <n> (files are still written)
   --engine-ref <sha>      Pinned engine ref for meta.engineSha7 identity (else LEAPSCORE_SHA/git/unknown)
+  --score-policy <p>      Headline policy: frozen (default; unknowns disclosed as unscored) or legacy (renormalized reference as headline, one-release escape hatch)
   --help                  Print this usage
 
   Exits: 0 pass · 1 crash · 2 usage-or-refused · 3 threshold trip (--fail-under)
@@ -41,6 +41,7 @@ export type ParsedArgs = {
   engineRef?: string;
   strict?: boolean;
   failUnder?: string;
+  scorePolicy?: string;
   surface?: boolean;
   surfaceFrom?: string;
   repoA?: string;
@@ -61,6 +62,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
     else if (a === '--out') out.out = argv[++i];
     else if (a === '--engine-ref') out.engineRef = argv[++i];
     else if (a === '--fail-under') out.failUnder = argv[++i];
+    else if (a === '--score-policy') out.scorePolicy = argv[++i];
     else if (a === '--surface-from') out.surfaceFrom = argv[++i];
     else if (a === '--repo-a') out.repoA = argv[++i];
     else if (a === '--run-url') out.runUrl = argv[++i];
@@ -69,6 +71,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
     else if (a.startsWith('--out=')) out.out = a.slice('--out='.length);
     else if (a.startsWith('--engine-ref=')) out.engineRef = a.slice('--engine-ref='.length);
     else if (a.startsWith('--fail-under=')) out.failUnder = a.slice('--fail-under='.length);
+    else if (a.startsWith('--score-policy=')) out.scorePolicy = a.slice('--score-policy='.length);
     else if (a.startsWith('--surface-from=')) out.surfaceFrom = a.slice('--surface-from='.length);
     else if (a.startsWith('--repo-a=')) out.repoA = a.slice('--repo-a='.length);
     else if (a.startsWith('--run-url=')) out.runUrl = a.slice('--run-url='.length);
@@ -90,6 +93,14 @@ export function parseFailUnder(raw: string | undefined): number | undefined {
     throw new Error(`invalid --fail-under ${JSON.stringify(raw)}: expected a number 0-100\n${USAGE}`);
   }
   return n;
+}
+
+export type ScorePolicy = 'frozen' | 'legacy';
+
+export function parseScorePolicy(raw: string | undefined): ScorePolicy {
+  if (raw == null || raw === '') return 'frozen';
+  if (raw === 'frozen' || raw === 'legacy') return raw;
+  throw new Error(`invalid --score-policy ${JSON.stringify(raw)}: expected frozen|legacy\n${USAGE}`);
 }
 
 export function validateRepo(raw: string | undefined): string {
@@ -179,6 +190,13 @@ export async function main(argv: string[], opts: MainOpts = {}): Promise<number>
     stderr(e instanceof Error ? e.message : String(e));
     return EXIT_USAGE;
   }
+  let scorePolicy: ScorePolicy;
+  try {
+    scorePolicy = parseScorePolicy(args.scorePolicy);
+  } catch (e) {
+    stderr(e instanceof Error ? e.message : String(e));
+    return EXIT_USAGE;
+  }
   if (!args.out) {
     stderr(`missing --out <dir>\n${USAGE}`);
     return EXIT_USAGE;
@@ -195,11 +213,11 @@ export async function main(argv: string[], opts: MainOpts = {}): Promise<number>
   const trace: Array<{ ts: number; elapsedMs: number; label: string; type?: string }> = [];
 
   if (useLocal) {
-    return await runLocalMain(args.path!, { env, stdout, stderr, outDir, startMs, trace, failUnder, strict: !!args.strict, engineRef: args.engineRef });
+    return await runLocalMain(args.path!, { env, stdout, stderr, outDir, startMs, trace, failUnder, scorePolicy, strict: !!args.strict, engineRef: args.engineRef });
   }
   const repo = validateRepoSafe(args.repo, stderr);
   if (!repo) return EXIT_USAGE;
-  return await runRemoteMain(repo, { env, stdout, stderr, outDir, startMs, trace, failUnder, engineRef: args.engineRef });
+  return await runRemoteMain(repo, { env, stdout, stderr, outDir, startMs, trace, failUnder, scorePolicy, engineRef: args.engineRef });
 }
 
 function validateRepoSafe(raw: string | undefined, stderr: (s: string) => void): string | null {
@@ -219,6 +237,7 @@ type RunOpts = {
   startMs: number;
   trace: Array<{ ts: number; elapsedMs: number; label: string; type?: string }>;
   failUnder: number | undefined;
+  scorePolicy: ScorePolicy;
   engineRef?: string;
 };
 
@@ -244,7 +263,9 @@ async function runLocalMain(
   let snapshot: Record<string, unknown> | null = null;
   let scanId: string | undefined;
   try {
-    const gen = runLocalScan(absPath, { strict: o.strict });
+    const killerEnv = (o.env.LEAPSCORE_KILLER_MS ?? '') as string;
+    const killerMs = killerEnv !== '' && Number.isFinite(Number(killerEnv)) ? Number(killerEnv) : undefined;
+    const gen = runLocalScan(absPath, { strict: o.strict, killerMs });
     for await (const evt of gen) {
       if (evt.type === 'meta') {
         budgetMs = (evt.budgetMs as number) ?? 0;
@@ -259,6 +280,12 @@ async function runLocalMain(
           label: (evt.label as string) ?? '',
           type: 'trace',
         });
+      } else if (evt.type === 'run-failure') {
+        // Killer timeout (4.1): run failure — no headline, no report files, exit 1.
+        const reason = String((evt.reason as string) ?? 'budget-exceeded');
+        const detail = String((evt.detail as string) ?? '').slice(0, 300);
+        o.stderr(`crash (${reason}): ${detail}`);
+        return EXIT_CRASH;
       } else if (evt.type === 'refused') {
         const reason = String((evt.reason as string) ?? 'crash');
         const detail = String((evt.detail as string) ?? '').slice(0, 500);
@@ -291,11 +318,15 @@ async function runLocalMain(
     trace: o.trace as never,
     engineRef: o.engineRef,
     env: o.env as NodeJS.ProcessEnv,
-    execImpl: (cmd: string) => execSync(cmd, { encoding: 'utf8', timeout: 1500, stdio: ['ignore', 'pipe', 'ignore'] }).trim(),
+    // 2.3: engine identity from release metadata (--engine-ref / LEAPSCORE_SHA),
+    // never `git rev-parse` in the caller's working tree.
+    execImpl: () => { throw new Error('no consumer-tree git'); },
     scanId,
     repo: absPath,
     subjectSlug: localSlugFromPath(basename(absPath)),
     repoUrl: `file://${absPath}`,
+    strict: o.strict,
+    scorePolicy: o.scorePolicy,
   });
 
   return await writeReportsAndExit(sealed, o);
@@ -311,7 +342,9 @@ async function runRemoteMain(repo: string, o: RunOpts): Promise<number> {
   let snapshot: unknown = null;
   let scanId: string | undefined;
   try {
-    const gen = runUnifiedScan(repoUrl, token ? { token } : {});
+    const killerEnv = (o.env.LEAPSCORE_KILLER_MS ?? '') as string;
+    const killerMs = killerEnv !== '' && Number.isFinite(Number(killerEnv)) ? Number(killerEnv) : undefined;
+    const gen = runUnifiedScan(repoUrl, { ...(token ? { token } : {}), ...(killerMs != null ? { killerMs } : {}) });
     for await (const evt of gen) {
       if (evt.type === 'meta') {
         budgetMs = evt.budgetMs ?? 0;
@@ -326,6 +359,12 @@ async function runRemoteMain(repo: string, o: RunOpts): Promise<number> {
           label: (evt.label as string) ?? '',
           type: 'trace',
         });
+      } else if (evt.type === 'run-failure') {
+        // Killer timeout (4.1): run failure — no headline, no report files, exit 1.
+        const reason = String((evt as { reason?: string }).reason ?? 'budget-exceeded');
+        const detail = String((evt as { detail?: string }).detail ?? '').slice(0, 300);
+        o.stderr(`crash (${reason}): ${detail}`);
+        return EXIT_CRASH;
       } else if (evt.type === 'refused') {
         const reason = String((evt as { reason?: string }).reason ?? 'crash');
         const detail = String((evt as { detail?: string }).detail ?? '').slice(0, 500);
@@ -358,9 +397,13 @@ async function runRemoteMain(repo: string, o: RunOpts): Promise<number> {
     trace: o.trace as never,
     engineRef: o.engineRef,
     env: o.env as NodeJS.ProcessEnv,
-    execImpl: (cmd: string) => execSync(cmd, { encoding: 'utf8', timeout: 1500, stdio: ['ignore', 'pipe', 'ignore'] }).trim(),
+    // 2.3: engine identity from release metadata (--engine-ref / LEAPSCORE_SHA),
+    // never `git rev-parse` in the caller's working tree.
+    execImpl: () => { throw new Error('no consumer-tree git'); },
     scanId,
     repo,
+    strict: false,
+    scorePolicy: o.scorePolicy,
   });
 
   return await writeReportsAndExit(sealed, o);
@@ -376,7 +419,7 @@ async function writeReportsAndExit(
   o: RunOpts,
 ): Promise<number> {
   const report = sealed.report as {
-    headline: { score: number; tier: string };
+    headline: { score: number; tier: string; suppressed?: boolean; verdict?: string };
     gates: unknown[];
     coverage: { measured: number; estimated: number; unknown: number };
     top_blockers: Array<{ row: string; name: string; points_lost: number; weight_pp: string; summary: string; evidence_file?: string; rule?: string }>;
@@ -384,9 +427,12 @@ async function writeReportsAndExit(
     snapshot: { repo?: string; scanned_commit?: string; scanned_at?: string };
     status: string;
   };
+  const suppressed = report.headline.suppressed === true;
   const meta = sealed.meta as { repo: string; repoSha: string; runId: string; score: number; tier: string; tier_legacy?: string; status: string };
   const renderInput = {
     score: report.headline.score,
+    suppressed,
+    fingerprint: (sealed.meta as { score_fingerprint?: string }).score_fingerprint,
     tier: report.headline.tier,
     tierLegacy: meta.tier_legacy,
     repo: meta.repo,
@@ -405,7 +451,9 @@ async function writeReportsAndExit(
   await writeFile(`${o.outDir}/report.md`, renderMarkdown(renderInput), 'utf8');
 
   const threshold = o.failUnder;
-  const tripped = threshold != null && report.headline.score < threshold;
+  // --fail-under gates on the frozen headline (3.4). A suppressed headline has no
+  // presented number: with a threshold set the run trips fail-closed (exit 3).
+  const tripped = threshold != null && (suppressed || report.headline.score < threshold);
   const thresholdState = threshold != null ? ` threshold:${tripped ? 'trip' : 'pass'}(fail-under ${threshold})` : '';
   // Single stdout line: score/band, gates, coverage, threshold state + assessment URL exactly once.
   const line = `${sealed.stdoutLine}${thresholdState}`;
@@ -413,7 +461,7 @@ async function writeReportsAndExit(
   const finalLine = line.includes(url) ? line : `${line} ${url}`;
   o.stdout(finalLine);
   if (tripped) {
-    o.stderr(`threshold trip: score ${report.headline.score} < --fail-under ${threshold}`);
+    o.stderr(suppressed ? `threshold trip: headline suppressed (insufficient signal) < --fail-under ${threshold}` : `threshold trip: score ${report.headline.score} < --fail-under ${threshold}`);
     return EXIT_THRESHOLD;
   }
   return EXIT_OK;

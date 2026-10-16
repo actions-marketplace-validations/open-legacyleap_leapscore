@@ -28,23 +28,31 @@ The system SHALL, when the requested indicator set includes any clone-dependent 
 - **THEN** the clone is created and read only inside the scanner service, and no clone work, temp directory, or filesystem read occurs in the website
 
 ### Requirement: Indicator-count-driven budget with uniform sharding
-The system SHALL compute the wall-clock budget from the **requested indicator list** as a single unified value: `budgetMs = baseMs + Σ per-indicator cost` where `fast=5s`, `api-budgeted=10s`, `slow-dissolvable=40s`, `baseMs = 30s` if any `slow-dissolvable` requested else `5s`, clamped to `[10s, 240s]` for MVP (scales to larger for v1). The special-case mapping `6→10s / 13→240s` SHALL be removed; the generic formula SHALL govern. It SHALL enforce per-detector `timeoutMs`/`byteCap`, compute `budgetLease.sampleN` via uniform file-tree sharding on dissolve, and set `truncated=true` → `estimated+scope-limited` or `unknown` for `api-budgeted` exhaustion. Progress bar pct SHALL be derived from `elapsed/budgetMs` and completed cost, not from per-phase milestones. For the canonical 19 MVP indicators the result remains ~240s.
+The system SHALL bound scan work deterministically from the **requested indicator list and the target file tree**: `sampleN` SHALL be derived from the sorted file count via uniform file-tree sharding and threaded through every slow detector's lease before fan-out, so all slow detectors shard identically on any machine. Per-detector byte budgets SHALL be partitioned, never drawn from a shared running counter. The wall-clock budget SHALL NOT degrade rows to `unknown` and SHALL NOT trigger a degraded seal: it is a pathological-repo killer only, and when it fires the run SHALL fail loudly (crash semantics) with no partial headline. Deterministic bound hits (`sampleN` truncation, per-detector byte cap) SHALL yield `truncated=true` → `unknown` with "what it takes", and progress pct SHALL derive from completed deterministic work plus completed cost, not from `elapsed/budgetMs` against a deadline.
 
 #### Scenario: Budget scales with list
 - **WHEN** requested IDs = 19 MVP (mix of fast/api/slow with clone base)
-- **THEN** `budgetMs` ≈ `30 + Σ costs ≈ 240s`; when requested IDs = 3 fast only → `~20s` (`5 + 3*5`)
+- **THEN** deterministic bounds are computed from the indicator set and file count; the killer timeout is a fixed generous constant independent of the list
 
 #### Scenario: Dissolve triggers sampled run
-- **WHEN** `jscpd` exceeds its per-detector slice and `sampleN` is set via sharding
-- **THEN** detector honors `sampleN` + `abort`, returns `truncated=true`, scorer marks `estimated` + `scope-limited`, and final unified report includes that status
+- **WHEN** `jscpd` exceeds its deterministic shard and `sampleN` was set from the file count
+- **THEN** detector honors `sampleN`, returns `truncated=true`, scorer marks `unknown` with "what it takes", and the headline treats it per the frozen-denominator policy
 
 #### Scenario: Budget exceeded seals degraded report
-- **WHEN** unified budget expires with `ARCH-01` still running
-- **THEN** orchestrator seals once with completed rows `measured` and timed-out rows `unknown "budget-exceeded"`, status `degraded`, and `provenance` records `budgetMs` + `indicatorCount`; no intermediate report was emitted
+- **WHEN** the wall-clock killer fires with `ARCH-01` still running
+- **THEN** the orchestrator does not seal a degraded report; the run fails loudly with exit `1` and a `budget-exceeded` run-failure reason, and no headline is written (this scenario replaces the former degraded-seal behavior)
 
 #### Scenario: Progress reflects unified budget
-- **WHEN** scan runs with 19 indicators and budget ~240s
-- **THEN** progress bar advances monotonically with `elapsed/budgetMs` and remaining = `budgetMs - elapsed`, reaching 100% at budget expiry regardless of how many clone vs GH detectors remain
+- **WHEN** scan runs with 19 indicators over a large tree
+- **THEN** progress advances monotonically with completed detectors and completed shard cost, reaching 100% when deterministic work completes
+
+#### Scenario: Killer timeout fails the run
+- **WHEN** the wall-clock killer fires with `ARCH-01` still running
+- **THEN** the orchestrator does not seal; the CLI exits `1` with a `budget-exceeded` run-failure reason and writes no headline
+
+#### Scenario: Progress reflects deterministic work
+- **WHEN** scan runs with 19 indicators over a large tree
+- **THEN** progress advances monotonically with completed detectors and completed shard cost, reaching 100% when deterministic work completes
 
 ### Requirement: ECOS-01 runtime EOL fact (clone)
 

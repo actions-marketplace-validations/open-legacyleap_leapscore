@@ -26,9 +26,9 @@ describe('gate predicates (MVP)', () => {
     const g = evaluateGates([f]).find(x => x.id === 'G1')!;
     expect(g.status).toBe('proven');
   });
-  it('G1 needs-verification when fact missing (GH-only)', () => {
+  it('G1 unevaluable when fact missing (GH-only)', () => {
     const g = evaluateGates([]).find(x => x.id === 'G1')!;
-    expect(g.status).toBe('needs-verification');
+    expect(g.status).toBe('unevaluable');
   });
   it('G2 proven on critical reachable', () => {
     const f = fake('SEC-01', { sec01: { critical_open_over_14d: 1, findings: [{ id: 'CVE-2025-1234', pkg: 'urllib3', in_core_import_closure: true }] } });
@@ -63,11 +63,11 @@ describe('gate predicates (MVP)', () => {
     expect(g.note).toContain('manual_steps=1');
     expect(g.note).toContain('CFR unknown');
   });
-  it('G4/G5/G7 outside MVP stay needs-verification', () => {
+  it('G4/G5/G7 outside MVP stay unevaluable', () => {
     const gates = evaluateGates([]);
-    expect(gates.find(x => x.id === 'G4')!.status).toBe('needs-verification');
-    expect(gates.find(x => x.id === 'G5')!.status).toBe('needs-verification');
-    expect(gates.find(x => x.id === 'G7')!.status).toBe('needs-verification');
+    expect(gates.find(x => x.id === 'G4')!.status).toBe('unevaluable');
+    expect(gates.find(x => x.id === 'G5')!.status).toBe('unevaluable');
+    expect(gates.find(x => x.id === 'G7')!.status).toBe('unevaluable');
   });
 });
 

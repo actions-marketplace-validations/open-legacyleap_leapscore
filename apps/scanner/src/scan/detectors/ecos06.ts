@@ -1,5 +1,5 @@
 import type { ScanContext, RawFact } from '../detector';
-import { ghErrorKind, makeProvenance } from './common';
+import { ghErrorKind, makeProvenance, toolVersion } from './common';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
@@ -16,7 +16,7 @@ export async function detectEcos06(ctx: ScanContext, signal: AbortSignal): Promi
       }
     }
     if (!lockfilePath) {
-      return { detectorId: 'ECOS-06', schemaVersion: '1.0.0', facts: { ecos06: { transitive_total: 0, direct_unused: [], pct_direct_unused: null, duplicates: [], duplicate_security_critical: false, no_lockfile: true } } as unknown as Record<string,unknown>, evidencePointers: [{ detail: 'no lockfile' }], provenance: { tool: 'lockfile+rg', version: '1', flags: ['lockfile+rg'], durationMs: Date.now() - start }, truncated: true, error: { kind: 'cap', detail: 'no lockfile — unknown' } };
+      return { detectorId: 'ECOS-06', schemaVersion: '1.0.0', facts: { ecos06: { transitive_total: 0, direct_unused: [], pct_direct_unused: null, duplicates: [], duplicate_security_critical: false, no_lockfile: true } } as unknown as Record<string,unknown>, evidencePointers: [{ detail: 'no lockfile' }], provenance: { tool: 'lockfile+rg', version: toolVersion('lockfile+rg'), flags: ['lockfile+rg'], durationMs: Date.now() - start }, truncated: true, error: { kind: 'cap', detail: 'no lockfile — unknown' } };
     }
     let transitiveTotal = 0;
     const duplicates: Array<{name:string; versions:string[]}> = [];
@@ -44,6 +44,6 @@ export async function detectEcos06(ctx: ScanContext, signal: AbortSignal): Promi
       }
     } catch {}
     const facts = { ecos06: { transitive_total: transitiveTotal, direct_unused: [], pct_direct_unused: null, duplicates, duplicate_security_critical: false } };
-    return { detectorId: 'ECOS-06', schemaVersion: '1.0.0', facts: facts as unknown as Record<string,unknown>, evidencePointers: [{ detail: `${transitiveTotal} transitives; ${duplicates.length} duplicate versions`, file: lockfilePath }], provenance: { tool: 'lockfile+rg', version: '1', flags: ['lockfile+rg'], durationMs: Date.now() - start }, truncated: false };
+    return { detectorId: 'ECOS-06', schemaVersion: '1.0.0', facts: facts as unknown as Record<string,unknown>, evidencePointers: [{ detail: `${transitiveTotal} transitives; ${duplicates.length} duplicate versions`, file: lockfilePath }], provenance: { tool: 'lockfile+rg', version: toolVersion('lockfile+rg'), flags: ['lockfile+rg'], durationMs: Date.now() - start }, truncated: false };
   } catch (e) { return { detectorId: 'ECOS-06', schemaVersion: '1.0.0', facts: {}, evidencePointers: [], provenance: makeProvenance('lockfile+rg', start), truncated: true, error: ghErrorKind(e) }; }
 }

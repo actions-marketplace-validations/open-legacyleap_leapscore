@@ -58,6 +58,6 @@ export async function sniffEcosystems(clonePath: string, opts: { readFile?: (p: 
 async function listSubdirs(clonePath: string): Promise<string[]> {
   try {
     const entries = await readdir(clonePath, { withFileTypes: true });
-    return entries.filter((e) => e.isDirectory() && !e.name.startsWith('.') && e.name !== 'node_modules').map((e) => e.name);
+    return entries.filter((e) => e.isDirectory() && !e.name.startsWith('.') && e.name !== 'node_modules').map((e) => e.name).sort();
   } catch { return []; }
 }

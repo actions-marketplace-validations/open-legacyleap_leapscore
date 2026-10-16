@@ -1,7 +1,7 @@
 /** scanner/scan/scoring/scorer/rollup.ts — category% + headline + tiers + gates (11:§2, 02:§3) */
 import type { FactRecord } from '../../facts';
 
-export type GateStatus = 'proven' | 'not-proven' | 'needs-verification';
+export type GateStatus = 'proven' | 'not-proven' | 'needs-verification' | 'unevaluable';
 export type Gate = { id: string; name: string; status: GateStatus; source_rows: string[]; note: string };
 
 function unwrapFact(id: string, fact: FactRecord | undefined): Record<string, unknown> {
@@ -17,7 +17,7 @@ function unwrapFact(id: string, fact: FactRecord | undefined): Record<string, un
 
 function evalG1(byId: Map<string, FactRecord>): Gate {
   const f = byId.get('SEC-02');
-  if (!f || f.error) return { id: 'G1', name: 'Credential exposure', status: 'needs-verification', source_rows: ['SEC-02'], note: 'needs live secrets scan (no tree/history fact)' };
+  if (!f || f.error) return { id: 'G1', name: 'Credential exposure', status: 'unevaluable', source_rows: ['SEC-02'], note: 'needs live secrets scan (no tree/history fact) — unevaluable: source row unknown' };
   const inner = unwrapFact('SEC-02', f);
   const verified = (inner.verified_live as number) ?? 0;
   const tree = inner.tree_findings as Array<unknown> | undefined;
@@ -31,7 +31,7 @@ function evalG1(byId: Map<string, FactRecord>): Gate {
 
 function evalG2(byId: Map<string, FactRecord>): Gate {
   const f = byId.get('SEC-01');
-  if (!f || f.error) return { id: 'G2', name: 'Crit CVE > 14d', status: 'needs-verification', source_rows: ['SEC-01'], note: 'needs SCA + reachability (no lockfile fact)' };
+  if (!f || f.error) return { id: 'G2', name: 'Crit CVE > 14d', status: 'unevaluable', source_rows: ['SEC-01'], note: 'needs SCA + reachability (no lockfile fact) — unevaluable: source row unknown' };
   const inner = unwrapFact('SEC-01', f);
   const over = (inner.critical_open_over_14d as number) ?? 0;
   const findings = inner.findings as Array<Record<string, unknown>> | undefined;
@@ -43,7 +43,7 @@ function evalG2(byId: Map<string, FactRecord>): Gate {
 
 function evalG3(byId: Map<string, FactRecord>): Gate {
   const f = byId.get('ECOS-01');
-  if (!f || f.error) return { id: 'G3', name: 'Runtime EOL', status: 'needs-verification', source_rows: ['ECOS-01'], note: 'needs endoflife lookup (no runtime fact)' };
+  if (!f || f.error) return { id: 'G3', name: 'Runtime EOL', status: 'unevaluable', source_rows: ['ECOS-01'], note: 'needs endoflife lookup (no runtime fact) — unevaluable: source row unknown' };
   const inner = unwrapFact('ECOS-01', f);
   const runtimes = inner.runtimes as Array<Record<string, unknown>> | undefined;
   const lookupOk = inner.lookup_ok as boolean | undefined;
@@ -58,7 +58,7 @@ function evalG3(byId: Map<string, FactRecord>): Gate {
 
 function evalG8(byId: Map<string, FactRecord>): Gate {
   const f = byId.get('ECOS-05');
-  if (!f || f.error) return { id: 'G8', name: 'Copyleft in core', status: 'needs-verification', source_rows: ['ECOS-05'], note: 'needs SBOM (no license fact)' };
+  if (!f || f.error) return { id: 'G8', name: 'Copyleft in core', status: 'unevaluable', source_rows: ['ECOS-05'], note: 'needs SBOM (no license fact) — unevaluable: source row unknown' };
   const inner = unwrapFact('ECOS-05', f);
   const strong = inner.copyleft_strong as Array<unknown> | undefined;
   const closed = inner.closed_source_distribution_likely as boolean | undefined;
@@ -69,7 +69,8 @@ function evalG8(byId: Map<string, FactRecord>): Gate {
 
 function evalG6(byId: Map<string, FactRecord>): Gate {
   const f08 = byId.get('VEL-08');
-  const inner = f08 && !f08.error ? unwrapFact('VEL-08', f08) : {};
+  if (!f08 || f08.error) return { id: 'G6', name: 'Delivery is on fire', status: 'unevaluable', source_rows: ['VEL-03','VEL-08'], note: 'needs deploy data (no VEL-08 fact) — unevaluable: source row unknown' };
+  const inner = unwrapFact('VEL-08', f08);
   const manual = (inner.manual_steps as number) ?? (inner.cd_chain ? 1 : 0);
   // VEL-03 never in MVP, so CFR unknown
   return { id: 'G6', name: 'Delivery is on fire', status: 'needs-verification', source_rows: ['VEL-03','VEL-08'], note: `VEL-08 manual_steps=${manual}; CFR unknown — needs deploy data` };
@@ -83,9 +84,9 @@ export function evaluateGates(facts: FactRecord[]): Gate[] {
     evalG3(byId),
     evalG8(byId),
     evalG6(byId),
-    { id: 'G4', name: 'OWASP Top-10 reachable', status: 'needs-verification', source_rows: ['SEC-03','SEC-04'], note: 'needs DAST / staging (outside MVP)' },
-    { id: 'G5', name: 'Untested core', status: 'needs-verification', source_rows: ['TEST-06'], note: 'needs coverage artifact (outside MVP)' },
-    { id: 'G7', name: 'Data-rescue risk', status: 'needs-verification', source_rows: ['DATA-06'], note: 'needs infra/restore drill (outside MVP)' },
+    { id: 'G4', name: 'OWASP Top-10 reachable', status: 'unevaluable', source_rows: ['SEC-03','SEC-04'], note: 'needs DAST / staging (outside MVP) — unevaluable: no detector' },
+    { id: 'G5', name: 'Untested core', status: 'unevaluable', source_rows: ['TEST-06'], note: 'needs coverage artifact (outside MVP) — unevaluable: no detector' },
+    { id: 'G7', name: 'Data-rescue risk', status: 'unevaluable', source_rows: ['DATA-06'], note: 'needs infra/restore drill (outside MVP) — unevaluable: no detector' },
   ];
 }
 

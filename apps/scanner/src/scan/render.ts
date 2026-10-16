@@ -5,6 +5,11 @@ export type RenderInput = {
   score: number;
   tier: string;
   tierLegacy?: string;
+  /** When true, the headline number is suppressed (insufficient signal) — emitters
+   * print the verdict instead of a score. Reference scores stay in report.json. */
+  suppressed?: boolean;
+  /** Deterministic score fingerprint shared across all three artifact files. */
+  fingerprint?: string;
   repo: string;
   repoSha: string;
   runId: string;
@@ -27,6 +32,9 @@ export function renderHtml(r: RenderInput): string {
   const url = assessmentUrlForBand(r.tier);
   const cta = assessmentCtaForBand(r.tier);
   const commitShort = r.repoSha && r.repoSha !== 'unknown' ? r.repoSha.slice(0, 7) : 'unknown';
+  const headline = r.suppressed
+    ? `<h1><span class="score">insufficient signal</span> <span class="band">no headline</span></h1>`
+    : `<h1><span class="score">${r.score}</span> <span class="band">${esc(r.tier)}</span></h1>`;
   const risks = r.topBlockers.slice(0, 5).map((b) => {
     const evidence = b.evidence_file ? ` — evidence: ${esc(b.evidence_file)}` : '';
     const rule = b.rule ? ` (rule: ${esc(b.rule)})` : '';
@@ -39,7 +47,7 @@ export function renderHtml(r: RenderInput): string {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>LeapScore ${r.score}/${esc(r.tier)} — ${esc(r.repo)}</title>
+<title>LeapScore ${r.suppressed ? 'insufficient signal' : `${r.score}/${esc(r.tier)}`} — ${esc(r.repo)}</title>
 <style>
 body{font-family:system-ui,-apple-system,sans-serif;max-width:760px;margin:2rem auto;padding:0 1rem;color:#111;line-height:1.5}
 .score{font-size:2.5rem;font-weight:700}.band{display:inline-block;padding:.2rem .6rem;border-radius:999px;background:#111;color:#fff;font-weight:600}
@@ -48,8 +56,8 @@ h2{margin-top:2rem}ul{padding-left:1.2rem}
 </style>
 </head>
 <body>
-<h1><span class="score">${r.score}</span> <span class="band">${esc(r.tier)}</span></h1>
-<p class="meta">${esc(r.repo)} · commit ${esc(commitShort)} · ${esc(r.scannedAt)} · ${esc(r.runId)} · ${esc(r.status)} · coverage ${r.coverage.measured}m/${r.coverage.estimated}e/${r.coverage.unknown}u</p>
+${headline}
+<p class="meta">${esc(r.repo)} · commit ${esc(commitShort)} · ${esc(r.scannedAt)} · ${esc(r.runId)} · ${esc(r.status)} · coverage ${r.coverage.measured}m/${r.coverage.estimated}e/${r.coverage.unknown}u${r.fingerprint ? ` · fingerprint ${esc(r.fingerprint.slice(0, 12))}` : ''}</p>
 <div class="cta"><strong>Next step:</strong> ${esc(cta)}<br><a href="${esc(url)}">${esc(url)}</a></div>
 <h2>Top risks</h2>
 <ul>${risks || '<li>No deductions — clean scan.</li>'}</ul>
@@ -69,9 +77,9 @@ export function renderMarkdown(r: RenderInput): string {
   const cta = assessmentCtaForBand(r.tier);
   const commitShort = r.repoSha && r.repoSha !== 'unknown' ? r.repoSha.slice(0, 7) : 'unknown';
   const lines: string[] = [];
-  lines.push(`# LeapScore: ${r.score}/${r.tier} — ${r.repo}`);
+  lines.push(r.suppressed ? `# LeapScore: insufficient signal — ${r.repo}` : `# LeapScore: ${r.score}/${r.tier} — ${r.repo}`);
   lines.push(``);
-  lines.push(`commit ${commitShort} · ${r.scannedAt} · \`${r.runId}\` · ${r.status} · coverage ${r.coverage.measured}m/${r.coverage.estimated}e/${r.coverage.unknown}u`);
+  lines.push(`commit ${commitShort} · ${r.scannedAt} · \`${r.runId}\` · ${r.status} · coverage ${r.coverage.measured}m/${r.coverage.estimated}e/${r.coverage.unknown}u${r.fingerprint ? ` · fingerprint \`${r.fingerprint.slice(0, 12)}\`` : ''}`);
   lines.push(``);
   lines.push(`> Next step: ${cta}`);
   lines.push(`>`);

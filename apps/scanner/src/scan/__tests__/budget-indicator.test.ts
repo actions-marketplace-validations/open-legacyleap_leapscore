@@ -36,7 +36,9 @@ describe('indicator-driven budget', () => {
   it('createBudgetControllerForIndicators exposes budgetMs and breakdown', () => {
     const ctrl = createBudgetControllerForIndicators(['VEL-06','VEL-09','VEL-08','VEL-10','SEC-07','TEST-08'], { withCloneBase: false });
     expect(ctrl.budgetMs).toBe(15_000);
-    expect(ctrl.lease().timeoutMs).toBe(15_000);
+    // The wall-clock timeout is the fixed killer constant, independent of the list (4.1)
+    expect(ctrl.lease().timeoutMs).toBe(240_000);
+    expect(ctrl.killerMs).toBe(240_000);
     ctrl.cancel();
   });
   it('31 IDs (Tranche A) → clamped 240s', () => {

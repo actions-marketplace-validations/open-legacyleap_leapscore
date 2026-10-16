@@ -9,11 +9,18 @@ export type BudgetController = {
   lease(): BudgetLease;
   isDissolved(): boolean;
   cancel(): void;
+  /** Thread deterministic sampleN after the canonical tree walk (deterministic-scoring 1.2). */
+  setSampleN(n: number | undefined): void;
 };
+
+/** Wall-clock killer constant (deterministic-scoring D6/4.1): generous run-failure net,
+ * not a control loop. Value confirmed by the 1.4 corpus spike; see change notes. */
+export const KILLER_TIMEOUT_MS = 240_000;
 
 export function createBudgetController(opts: { timeoutMs?: number; byteCap?: number; sampleN?: number } = {}): BudgetController {
   const timeoutMs = opts.timeoutMs ?? 10_000; // Phase-1 default; Phase-2 uses 240_000
   const byteCap = opts.byteCap ?? 4 * 1024 * 1024;
+  let sampleN = opts.sampleN;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(new DOMException('budget-exceeded', 'TimeoutError')), timeoutMs);
   // allow process to exit in tests
@@ -23,7 +30,10 @@ export function createBudgetController(opts: { timeoutMs?: number; byteCap?: num
     signal: controller.signal,
     lease(): BudgetLease {
       const remaining = timeoutMs;
-      return { timeoutMs: remaining, byteCap, sampleN: opts.sampleN };
+      return { timeoutMs: remaining, byteCap, sampleN };
+    },
+    setSampleN(n: number | undefined): void {
+      sampleN = n;
     },
     isDissolved(): boolean {
       return controller.signal.aborted;
@@ -79,10 +89,38 @@ export function budgetForIndicators(ids: string[], opts: { withCloneBase?: boole
   return { budgetMs: final, breakdown: counts, indicatorCount: ids.length };
 }
 
-export function createBudgetControllerForIndicators(ids: string[], opts: { byteCap?: number; withCloneBase?: boolean } = {}): BudgetController & { budgetMs: number; breakdown: Record<string, number> } {
+export function createBudgetControllerForIndicators(ids: string[], opts: { byteCap?: number; withCloneBase?: boolean; sampleN?: number; killerMs?: number } = {}): BudgetController & { budgetMs: number; breakdown: Record<string, number>; killerMs: number } {
   const { budgetMs, breakdown } = budgetForIndicators(ids, opts);
-  const ctrl = createBudgetController({ timeoutMs: budgetMs, byteCap: opts.byteCap });
-  return Object.assign(ctrl, { budgetMs, breakdown });
+  // The wall-clock budget is a pathological-repo killer only (deterministic-scoring
+  // 4.1): a fixed generous constant independent of the indicator list. It never
+  // degrades rows — when it fires the run fails loudly with no sealed headline.
+  const killerMs = opts.killerMs ?? KILLER_TIMEOUT_MS;
+  const ctrl = createBudgetController({ timeoutMs: killerMs, byteCap: opts.byteCap, sampleN: opts.sampleN });
+  return Object.assign(ctrl, { budgetMs, breakdown, killerMs });
+}
+
+/** True when the wall-clock killer (not a normal cancel) aborted the signal.
+ * budget.cancel() aborts with 'cancelled'/AbortError; the killer aborts with
+ * DOMException('budget-exceeded', 'TimeoutError'). Check BEFORE cancel(). */
+export function isKillerTrip(signal: AbortSignal): boolean {
+  if (!signal.aborted) return false;
+  const reason = signal.reason as unknown;
+  const msg = reason instanceof DOMException ? reason.message : String(reason ?? '');
+  return msg.includes('budget-exceeded');
+}
+
+/** Test/CI escape hatch for the killer constant (4.1 verification only). */
+export function killerMsFromEnv(env: Record<string, string | undefined>): number | undefined {
+  const raw = env.LEAPSCORE_KILLER_MS;
+  if (raw == null || raw === '') return undefined;
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? n : undefined;
+}
+/** Partition a total byte budget across detectors so no detector can exhaust
+ * another's budget (deterministic-scoring 1.3). Even split with a 256 KiB floor. */
+export function partitionByteCap(totalByteCap: number, detectorCount: number): number {
+  if (detectorCount <= 0) return totalByteCap;
+  return Math.max(256 * 1024, Math.floor(totalByteCap / detectorCount));
 }
 
 /** Helper: race a promise against an AbortSignal with cap semantics */

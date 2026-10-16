@@ -31,6 +31,11 @@ const STATUS: Record<GateStatus, { label: string; dot: string; note: string }> =
     dot: "bg-transparent border border-dashed border-zinc-600",
     note: "Detector not built yet in this slice — excluded.",
   },
+  unevaluable: {
+    label: "Unevaluable",
+    dot: "bg-zinc-500",
+    note: "Source rows unknown — gate reported, never silently uncapped.",
+  },
 };
 
 function GroupTable({ gates }: { gates: Gate[] }) {

@@ -1,5 +1,7 @@
 /** engine/orchestrator.ts — unified budgeted scan (GH-API + clone under one deadline) */
-import { createBudgetControllerForIndicators, budgetForIndicators, BUDGET_COST, INDICATOR_BUDGET_CLASS } from './budget';
+import { createBudgetControllerForIndicators, budgetForIndicators, BUDGET_COST, INDICATOR_BUDGET_CLASS, computeSampleN, partitionByteCap, isKillerTrip } from './budget';
+import { walkSortedTree } from './tree';
+import { buildToolVersions, toolVersion } from './detectors/common';
 import { createGhClient, GhRateLimitError } from './gh';
 import { ingestRepoUrl } from './ingest';
 import { shallowClone } from './clone';
@@ -79,11 +81,11 @@ function errorKindForFact(f: FactRecord): "cap" | "crash" | "rate-limit" | undef
 }
 
 /** Unified scan: single budget covering GH + clone detectors, streaming meta/progress/trace/done */
-export async function* runUnifiedScan(repoUrl: string, opts: { token?: string; indicatorIds?: string[] } = {}): AsyncGenerator<{ type: string; budgetMs?: number; breakdown?: Record<string, number>; indicatorCount?: number; pct?: number; elapsedMs?: number; remainingMs?: number; completedIds?: string[]; completedCost?: number; totalCost?: number; facts?: FactRecord[]; snapshot?: unknown; id?: string; error?: string; reason?: string; detail?: string; milestone?: string; ts?: number; label?: string; phase?: string; detectorId?: string; durationMs?: number; status?: string; errorKind?: string }> {
+export async function* runUnifiedScan(repoUrl: string, opts: { token?: string; indicatorIds?: string[]; killerMs?: number } = {}): AsyncGenerator<{ type: string; budgetMs?: number; breakdown?: Record<string, number>; indicatorCount?: number; pct?: number; elapsedMs?: number; remainingMs?: number; completedIds?: string[]; completedCost?: number; totalCost?: number; facts?: FactRecord[]; snapshot?: unknown; id?: string; error?: string; reason?: string; detail?: string; milestone?: string; ts?: number; label?: string; phase?: string; detectorId?: string; durationMs?: number; status?: string; errorKind?: string }> {
   const ids = opts.indicatorIds ?? EXPANDED_IDS;
   const { budgetMs, breakdown, indicatorCount } = getUnifiedBudget(ids);
   const totalCost = ids.reduce((a, id) => a + (BUDGET_COST[INDICATOR_BUDGET_CLASS[id] ?? 'fast'] ?? 5000), 0) + (ids.some(id => INDICATOR_BUDGET_CLASS[id] === 'slow-dissolvable') ? 30000 : 5000);
-  const budget = createBudgetControllerForIndicators(ids, { withCloneBase: ids.some(id => INDICATOR_BUDGET_CLASS[id] === 'slow-dissolvable') });
+  const budget = createBudgetControllerForIndicators(ids, { withCloneBase: ids.some(id => INDICATOR_BUDGET_CLASS[id] === 'slow-dissolvable'), killerMs: opts.killerMs });
   const start = Date.now();
   const signal = budget.signal;
 
@@ -126,7 +128,7 @@ export async function* runUnifiedScan(repoUrl: string, opts: { token?: string; i
   // GH detectors (phase1 subset that is in requested ids)
   const ghIds = phase1Ids.filter(id => ids.includes(id));
   const ghDetectors = [detectVel06, detectVel09, detectVel08, detectVel10, detectSec07, detectTest08].filter((_, i) => ids.includes(phase1Ids[i]));
-  const ghCtx: Phase1ScanContext = { owner, repo, gh, signal, toolVersions: new Map([['gh-api','1.0']]) };
+  const ghCtx: Phase1ScanContext = { owner, repo, gh, signal, toolVersions: buildToolVersions() };
   let ghFacts: FactRecord[] = [];
   if (ghDetectors.length) {
     // record per-detector start times
@@ -183,17 +185,23 @@ export async function* runUnifiedScan(repoUrl: string, opts: { token?: string; i
     const elapsedMs = Date.now() - start;
     const completedIds = ghFacts.filter(f => !f.error).map(f => f.detectorId);
     const completedCost = completedIds.reduce((a, id) => a + (BUDGET_COST[INDICATOR_BUDGET_CLASS[id] ?? 'fast'] ?? 5000), 0);
-    const timePct = Math.min(elapsedMs / budgetMs, 1);
     const costPct = totalCost ? completedCost / totalCost : 0;
-    const pct = Math.min(100, Math.round((0.6 * timePct + 0.4 * costPct) * 100));
+    const countPct = ghIds.length ? completedIds.length / ghIds.length : 0;
+    const pct = Math.min(100, Math.round(((0.5 * costPct + 0.5 * countPct)) * 100));
     yield { type: 'progress', pct, elapsedMs, remainingMs: Math.max(0, budgetMs - elapsedMs), completedIds, completedCost, totalCost, milestone: `GH detectors — ${completedIds.length}/${ghIds.length} complete` };
     yield { type: 'trace', ts: elapsedMs, elapsedMs, label: `GH detectors — ${completedIds.length}/${ghIds.length} complete`, phase: 'gh' };
   }
 
   if (signal.aborted) {
+    // Killer trip (4.1) fails the run loudly with no sealed headline.
+    if (isKillerTrip(signal)) {
+      budget.cancel();
+      yield { type: 'run-failure', reason: 'budget-exceeded', detail: 'wall-clock killer fired after the GH phase — no headline sealed' };
+      return;
+    }
     // Budget already expired after GH phase — seal with what we have + unknown for remaining
     const remainingIds = ids.filter(id => !ghFacts.some(f => f.detectorId === id));
-    const unknownFacts: FactRecord[] = remainingIds.map(id => ({ id, detectorId: id, schemaVersion: '1.0.0', facts: {}, evidencePointers: [], provenance: { tool: 'budget', version: '1', flags: [], durationMs: 0 }, truncated: true, error: { kind: 'cap' as const, detail: 'budget-exceeded' }, root: '/', scanId } as unknown as FactRecord));
+    const unknownFacts: FactRecord[] = remainingIds.map(id => ({ id, detectorId: id, schemaVersion: '1.0.0', facts: {}, evidencePointers: [], provenance: { tool: 'budget', version: toolVersion('budget'), flags: [], durationMs: 0 }, truncated: true, error: { kind: 'cap' as const, detail: 'budget-exceeded' }, root: '/', scanId } as unknown as FactRecord));
     const allFacts = [...ghFacts, ...unknownFacts];
     const elapsedMs = Date.now() - start;
     yield { type: 'trace', ts: elapsedMs, elapsedMs, label: `Budget exceeded — sealing with ${ghFacts.length}/${ids.length} detectors`, phase: 'budget', status: 'error', errorKind: 'cap' };
@@ -240,6 +248,11 @@ export async function* runUnifiedScan(repoUrl: string, opts: { token?: string; i
         } catch (archE) {
           (job as unknown as { _archMeta?: unknown })._archMeta = { error: archE instanceof Error ? archE.message : String(archE) };
         }
+        // Deterministic bounding (1.2): canonical sorted walk → sampleN before fan-out.
+        try {
+          const walk = await walkSortedTree(clone.clonePath);
+          budget.setSampleN(computeSampleN(walk.fileCount));
+        } catch { /* walk failure: detectors fall back to full reads */ }
         const ctx: ScanContext = {
           clonePath: clone.clonePath,
           commitSha: clone.commitSha,
@@ -247,7 +260,7 @@ export async function* runUnifiedScan(repoUrl: string, opts: { token?: string; i
           manifests: manifests.map(m => ({ root: m.root, ecosystem: m.ecosystem as never, lockfile: m.lockfile, manifest: m.manifest })),
           budgetLease: budget.lease(),
           cache: { get: () => undefined, set: () => {} },
-          toolVersions: new Map([['phase2','1.0']]),
+          toolVersions: buildToolVersions(),
           readFile: clone.readFile,
         };
         // Filter by applicability (task 2.4) — skip not_applicable detectors
@@ -274,9 +287,12 @@ export async function* runUnifiedScan(repoUrl: string, opts: { token?: string; i
           } catch {}
         }
         const starts = reqDetectors.map(() => Date.now());
+        // Partitioned byte budgets (1.3): independent per-detector counters.
+        const perDetectorCap = partitionByteCap(4 * 1024 * 1024, Math.max(1, reqDetectors.length));
         const settled = await Promise.all(reqDetectors.map((fn, idx) => {
           const s = starts[idx];
-          return (fn as unknown as (ctx: ScanContext, sig: AbortSignal) => Promise<FactRecord>)(ctx, sig).then(
+          const dctx: ScanContext = { ...ctx, readFile: clone.partitionedReadFile(perDetectorCap) };
+          return (fn as unknown as (ctx: ScanContext, sig: AbortSignal) => Promise<FactRecord>)(dctx, sig).then(
             v => ({ ok: true as const, value: v, durationMs: Date.now() - s }),
             e => ({ ok: false as const, error: e, durationMs: Date.now() - s }),
           );
@@ -296,7 +312,7 @@ export async function* runUnifiedScan(repoUrl: string, opts: { token?: string; i
           }
           const detail = String((r as unknown as { error: unknown }).error).slice(0,300);
           const isBudget = detail.includes('budget-exceeded') || detail.includes('TimeoutError') || detail.includes('AbortError');
-          const rec = { id, detectorId: id, schemaVersion: '1.0.0', facts: {}, evidencePointers: [], provenance: { tool: 'phase2', version: '1', flags: [], durationMs: 0 }, truncated: true, error: { kind: isBudget ? 'cap' : 'crash', detail }, root: '/', scanId } as unknown as FactRecord;
+          const rec = { id, detectorId: id, schemaVersion: '1.0.0', facts: {}, evidencePointers: [], provenance: { tool: 'phase2', version: toolVersion('phase2'), flags: [], durationMs: 0 }, truncated: true, error: { kind: isBudget ? 'cap' : 'crash', detail }, root: '/', scanId } as unknown as FactRecord;
           return { rec, trace: { detectorId: id, durationMs: r.durationMs, status: 'unknown' as const, errorKind: isBudget ? 'cap' as const : 'crash' as const } };
         });
         // store per-detector meta for outer yields
@@ -360,9 +376,9 @@ export async function* runUnifiedScan(repoUrl: string, opts: { token?: string; i
         const elapsedMs = Date.now() - start;
         const completedIds = [...ghFacts.filter(f => !f.error).map(f => f.detectorId), ...cloneFacts.filter(f => !f.error).map(f => f.detectorId)];
         const completedCost = completedIds.reduce((a, id) => a + (BUDGET_COST[INDICATOR_BUDGET_CLASS[id] ?? 'fast'] ?? 5000), 0);
-        const timePct = Math.min(elapsedMs / budgetMs, 1);
         const costPct = totalCost ? completedCost / totalCost : 0;
-        const pct = Math.min(99, Math.round((0.6 * timePct + 0.4 * costPct) * 100));
+        const countPct = ids.length ? completedIds.length / ids.length : 0;
+        const pct = Math.min(99, Math.round(((0.5 * costPct + 0.5 * countPct)) * 100));
         yield { type: 'progress', pct, elapsedMs, remainingMs: Math.max(0, budgetMs - elapsedMs), completedIds, completedCost, totalCost, milestone: `Clone detectors — ${cloneFacts.filter(f => !f.error).length}/${phase2Ids.filter(id => ids.includes(id)).length} complete` };
         yield { type: 'trace', ts: elapsedMs, elapsedMs, label: `Clone detectors — ${cloneFacts.filter(f => !f.error).length}/${phase2Ids.filter(id => ids.includes(id)).length} complete`, phase: 'clone' };
         // scoring milestone
@@ -373,7 +389,7 @@ export async function* runUnifiedScan(repoUrl: string, opts: { token?: string; i
       // Shallow clone failed — GH facts still seal, clone rows become unknown
       const detail = e instanceof Error ? e.message : String(e);
       const remainingPhase2 = phase2Ids.filter(id => ids.includes(id));
-      cloneFacts = remainingPhase2.map(id => ({ id, detectorId: id, schemaVersion: '1.0.0', facts: {}, evidencePointers: [], provenance: { tool: 'phase2', version: '1', flags: [], durationMs: 0 }, truncated: true, error: { kind: 'cap' as const, detail: detail.slice(0,300) }, root: '/', scanId } as unknown as FactRecord));
+      cloneFacts = remainingPhase2.map(id => ({ id, detectorId: id, schemaVersion: '1.0.0', facts: {}, evidencePointers: [], provenance: { tool: 'phase2', version: toolVersion('phase2'), flags: [], durationMs: 0 }, truncated: true, error: { kind: 'cap' as const, detail: detail.slice(0,300) }, root: '/', scanId } as unknown as FactRecord));
       {
         const elapsedMs = Date.now() - start;
         yield { type: 'progress', pct: 95, elapsedMs, remainingMs: Math.max(0, budgetMs - elapsedMs), completedIds: ghFacts.filter(f => !f.error).map(f => f.detectorId), completedCost: 0, totalCost, milestone: `Clone failed — ${detail.slice(0, 80)}` };
@@ -383,11 +399,16 @@ export async function* runUnifiedScan(repoUrl: string, opts: { token?: string; i
   }
 
   budget.cancel();
+  // Killer trip after clone work (4.1): fail loudly, seal nothing.
+  if (isKillerTrip(signal)) {
+    yield { type: 'run-failure', reason: 'budget-exceeded', detail: 'wall-clock killer fired before deterministic work completed — no headline sealed' };
+    return;
+  }
   const allFacts = [...ghFacts, ...cloneFacts];
   // Fill any requested id not yet covered (e.g. budget aborted mid-detector) as unknown budget-exceeded
   const covered = new Set(allFacts.map(f => f.detectorId));
   for (const id of ids) if (!covered.has(id)) {
-    allFacts.push({ id, detectorId: id, schemaVersion: '1.0.0', facts: {}, evidencePointers: [], provenance: { tool: 'budget', version: '1', flags: [], durationMs: 0 }, truncated: true, error: { kind: 'cap' as const, detail: 'budget-exceeded' }, root: '/', scanId } as unknown as FactRecord);
+    allFacts.push({ id, detectorId: id, schemaVersion: '1.0.0', facts: {}, evidencePointers: [], provenance: { tool: 'budget', version: toolVersion('budget'), flags: [], durationMs: 0 }, truncated: true, error: { kind: 'cap' as const, detail: 'budget-exceeded' }, root: '/', scanId } as unknown as FactRecord);
   }
   const scanned_commit = cloneFacts.find((f) => (f as FactRecord & { commitSha?: string }).commitSha && (f as FactRecord & { commitSha?: string }).commitSha !== 'unknown') ? (cloneFacts.find((f) => (f as FactRecord & { commitSha?: string }).commitSha && (f as FactRecord & { commitSha?: string }).commitSha !== 'unknown') as FactRecord & { commitSha?: string }).commitSha! : 'unknown';
   // scoring/seal trace before done

@@ -23,6 +23,7 @@ export type GateStatus =
   | "proven"
   | "not-proven"
   | "needs-verification"
+  | "unevaluable"
   | "not_applicable"
   | "not_implemented";
 
@@ -146,6 +147,15 @@ export interface Report {
   headline: {
     score: number;
     canonical_score?: number;
+    /** Legacy renormalized computation — reference only, never gated on. */
+    renormalized_score?: number;
+    /** Headline policy that sealed this score (frozen default, legacy escape hatch). */
+    score_policy?: string;
+    /** True when measured rows fell below the coverage floor: no headline number
+     * is presented; reference scores stay in JSON for diagnosis. */
+    suppressed?: boolean;
+    /** Explicit verdict when the headline is suppressed (`insufficient-signal`). */
+    verdict?: string;
     tier: string;
     tier_legacy?: string;
     ci_band: string;
@@ -178,6 +188,10 @@ export interface EnvelopeMeta {
   filename: string;
   coverage?: CoverageCounts;
   contractVersion: number;
+  /** Deterministic score fingerprint (deterministic-scoring 2.2): identical for
+   * identical target content + scanner release + flags; runId/scanned_at differ. */
+  score_fingerprint?: string;
+  fingerprint_version?: number;
 }
 
 export type TracePhase =
