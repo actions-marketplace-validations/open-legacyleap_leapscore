@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeTargetSlug } from '../surface/slug';
-import { buildToken, parseToken, renderTitle } from '../surface/identity';
-import { selectSurfaceRows, categoryOf } from '../surface/rows';
-import type { EnvelopeRow } from '../surface/rows';
-import { bandOf, splitHumanZone, parsePreviousStatus, renderGeneratedBody, renderBody, HUMAN_MARKER } from '../surface/body';
-import { labelsFor, categoryLabel, severityLabel } from '../surface/labels';
+import { normalizeTargetSlug } from '../src/slug';
+import { buildToken, parseToken, renderTitle } from '../src/identity';
+import { selectSurfaceRows, categoryOf } from '../src/rows';
+import type { EnvelopeRow } from '../src/rows';
+import { bandOf, splitHumanZone, parsePreviousStatus, renderGeneratedBody, renderBody, HUMAN_MARKER } from '../src/body';
+import { labelsFor, categoryLabel, severityLabel } from '../src/labels';
 
 describe('normalizeTargetSlug (1.1)', () => {
   it('maps owner/repo to owner-repo lowercase', () => {

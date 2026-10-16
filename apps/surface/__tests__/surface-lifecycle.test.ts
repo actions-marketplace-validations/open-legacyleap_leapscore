@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { planLifecycle } from '../surface/lifecycle';
-import type { PlanContext } from '../surface/lifecycle';
-import { checkSurfaceAllowed, GUARDRAIL_SKIP_REASON } from '../surface/guardrail';
-import { formatSummaryLine, formatStepSummary } from '../surface/summary';
-import { renderGeneratedBody } from '../surface/body';
-import { buildToken } from '../surface/identity';
-import type { EnvelopeRow } from '../surface/rows';
-import type { DiscoveredIssue } from '../surface/discover';
+import { planLifecycle } from '../src/lifecycle';
+import type { PlanContext } from '../src/lifecycle';
+import { checkSurfaceAllowed, GUARDRAIL_SKIP_REASON } from '../src/guardrail';
+import { formatSummaryLine, formatStepSummary } from '../src/summary';
+import { renderGeneratedBody } from '../src/body';
+import { buildToken } from '../src/identity';
+import type { EnvelopeRow } from '../src/rows';
+import type { DiscoveredIssue } from '../src/discover';
 
 const ctx: PlanContext = {
   target: 'django/django',

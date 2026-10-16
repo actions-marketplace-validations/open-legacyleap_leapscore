@@ -1,4 +1,4 @@
-/** packages/engine/surface/labels.ts — fixed label taxonomy (plan 15 §8) */
+/** apps/surface/src/labels.ts — fixed label taxonomy (plan 15 §8) */
 import { categoryOf } from './rows';
 import type { EnvelopeRow } from './rows';
 

@@ -1,4 +1,4 @@
-/** packages/engine/surface/lifecycle.ts — lifecycle diff planner (plan 15 §6) */
+/** apps/surface/src/lifecycle.ts — lifecycle diff planner (plan 15 §6) */
 import { renderTitle } from './identity';
 import { bandOf, splitHumanZone, parsePreviousStatus, renderBody } from './body';
 import type { PreviousStatus } from './body';

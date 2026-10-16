@@ -1,4 +1,4 @@
-/** packages/engine/surface/summary.ts — summary contract (plan 15 §9–§10) */
+/** apps/surface/src/summary.ts — summary contract (plan 15 §9–§10) */
 
 export type SurfaceCounts = {
   opened: number;

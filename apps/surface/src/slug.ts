@@ -1,4 +1,4 @@
-/** packages/engine/surface/slug.ts — target slug for labels/titles (plan 15 §3, §8) */
+/** apps/surface/src/slug.ts — target slug for labels/titles (plan 15 §3, §8) */
 
 export const MAX_SLUG_LEN = 64;
 

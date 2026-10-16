@@ -1,4 +1,4 @@
-/** packages/engine/surface/body.ts — ticket body render + human-zone split (plan 15 §7–§8) */
+/** apps/surface/src/body.ts — ticket body render + human-zone split (plan 15 §7–§8) */
 import { buildToken } from './identity';
 import type { EnvelopeRow } from './rows';
 

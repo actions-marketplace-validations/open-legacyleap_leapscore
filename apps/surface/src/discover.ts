@@ -1,4 +1,4 @@
-/** packages/engine/surface/discover.ts — label-scoped discovery map (plan 15 §7) */
+/** apps/surface/src/discover.ts — label-scoped discovery map (plan 15 §7) */
 import { parseToken } from './identity';
 import type { SurfaceRestClient, TrackedIssue } from './rest';
 

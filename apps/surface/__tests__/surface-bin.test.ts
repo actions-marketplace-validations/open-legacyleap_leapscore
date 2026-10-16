@@ -2,8 +2,8 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { mkdtempSync, writeFileSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { parseArgs, main } from '../bin/scan';
-import type { SurfaceRestClient } from '../surface/rest';
+import { parseArgs, main } from '../bin/surface';
+import type { SurfaceRestClient } from '../src/rest';
 
 function fixtureEnvelope() {
   return {
@@ -77,12 +77,12 @@ function fakeFactory(log: string[], opts: { fail?: boolean } = {}) {
 
 describe('surface CLI flags', () => {
   it('parses space and equals forms', () => {
-    expect(parseArgs(['--surface', '--repo-a', 'o/r', '--run-url', 'https://x'])).toMatchObject({
-      surface: true,
+    expect(parseArgs(['--from', 'env.json', '--repo-a', 'o/r', '--run-url', 'https://x'])).toMatchObject({
+      from: 'env.json',
       repoA: 'o/r',
       runUrl: 'https://x',
     });
-    expect(parseArgs(['--surface-from=f.json', '--repo-a=o/r'])).toMatchObject({ surfaceFrom: 'f.json', repoA: 'o/r' });
+    expect(parseArgs(['--from=env.json', '--repo-a=o/r'])).toMatchObject({ from: 'env.json', repoA: 'o/r' });
   });
 });
 
@@ -102,45 +102,37 @@ describe('surface main paths (no network)', () => {
     writeFileSync(p, JSON.stringify(fixtureEnvelope()));
     return p;
   }
-  it('flag-off parity: missing --out still exits 2', async () => {
+  it('missing --from exits 2', async () => {
     const r = await run(['--repo', 'a/b']);
     expect(r.code).toBe(2);
   });
   it('invalid --repo-a exits 2', async () => {
-    const r = await run(['--repo', 'a/b', '--repo-a', 'https://github.com/a/b', '--out', join(dir, 'o.json')]);
+    const p = envelopeFile();
+    const r = await run(['--from', p, '--repo', 'a/b', '--repo-a', 'https://github.com/a/b']);
     expect(r.code).toBe(2);
     expect(r.err.join('\n')).toMatch(/without https/);
   });
-  it('refused scan skips surface (factory never called)', async () => {
-    let called = false;
-    const r = await run(['--repo', 'a/b', '--sha', 'abc', '--out', join(dir, 'o.json'), '--surface'], () => {
-      called = true;
-      throw new Error('must not construct');
-    });
-    expect(r.code).toBe(2);
-    expect(called).toBe(false);
-  });
-  it('--surface-from syncs and leaves the envelope file untouched', async () => {
+  it('--from syncs and leaves the envelope file untouched', async () => {
     const p = envelopeFile();
     const before = readFileSync(p, 'utf8');
     const log: string[] = [];
-    const r = await run(['--surface-from', p, '--repo', 'a/b', '--repo-a', 'a/b'], fakeFactory(log));
+    const r = await run(['--from', p, '--repo', 'a/b', '--repo-a', 'a/b'], fakeFactory(log));
     expect(r.code).toBe(0);
     expect(r.out.join('\n')).toContain('surface: 1 opened / 0 commented / 0 closed / 0 skipped');
     expect(log).toContain('create');
     expect(readFileSync(p, 'utf8')).toBe(before);
   });
-  it('--surface-from derives target from meta.repo when --repo is absent', async () => {
+  it('--from derives target from meta.repo when --repo is absent', async () => {
     const p = envelopeFile();
     const log: string[] = [];
-    const r = await run(['--surface-from', p], fakeFactory(log));
+    const r = await run(['--from', p], fakeFactory(log));
     expect(r.code).toBe(0);
     expect(r.out.join('\n')).toContain('surface: 1 opened');
   });
   it('warn-only: write failures keep exit 0 with a zero summary', async () => {
     const p = envelopeFile();
     const log: string[] = [];
-    const r = await run(['--surface-from', p, '--repo', 'a/b'], fakeFactory(log, { fail: true }));
+    const r = await run(['--from', p, '--repo', 'a/b'], fakeFactory(log, { fail: true }));
     expect(r.code).toBe(0);
     expect(r.out.join('\n')).toContain('surface: 0 opened / 0 commented / 0 closed / 0 skipped');
     expect(r.err.join('\n')).toMatch(/surface warn/);
@@ -148,9 +140,9 @@ describe('surface main paths (no network)', () => {
   it('invalid envelope file exits 2', async () => {
     const p = join(dir, 'bad.json');
     writeFileSync(p, '{"nope": true}');
-    const r = await run(['--surface-from', p, '--repo', 'a/b'], fakeFactory([]));
+    const r = await run(['--from', p, '--repo', 'a/b'], fakeFactory([]));
     expect(r.code).toBe(2);
-    const r2 = await run(['--surface-from', join(dir, 'missing.json'), '--repo', 'a/b'], fakeFactory([]));
+    const r2 = await run(['--from', join(dir, 'missing.json'), '--repo', 'a/b'], fakeFactory([]));
     expect(r2.code).toBe(2);
   });
 });

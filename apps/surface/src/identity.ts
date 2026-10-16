@@ -1,4 +1,4 @@
-/** packages/engine/surface/identity.ts — machine token grammar + cosmetic titles (plan 15 §7) */
+/** apps/surface/src/identity.ts — machine token grammar + cosmetic titles (plan 15 §7) */
 
 export const TOKEN_VERSION = 'v1';
 

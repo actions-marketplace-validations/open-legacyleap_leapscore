@@ -1,5 +1,5 @@
 /**
- * packages/engine/surface/rest.ts — isolated REST client for issue sync (plan 15 §9).
+ * apps/surface/src/rest.ts — isolated REST client for issue sync (plan 15 §9).
  *
  * Separate from gh.ts on purpose: scan-reads use gh.ts rate-limit retry tuned for
  * short detector calls; writes need abuse-limit-aware backoff and must not inherit

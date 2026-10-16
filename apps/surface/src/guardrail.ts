@@ -1,4 +1,4 @@
-/** packages/engine/surface/guardrail.ts — private-target visibility guard (plan 15 §4) */
+/** apps/surface/src/guardrail.ts — private-target visibility guard (plan 15 §4) */
 
 export type GuardrailInput = {
   isSelf: boolean;

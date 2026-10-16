@@ -1,4 +1,4 @@
-/** packages/engine/surface/rows.ts — ticket scope from the sealed envelope (plan 15 §5) */
+/** apps/surface/src/rows.ts — ticket scope from the sealed envelope (plan 15 §5) */
 
 export type EnvelopeRow = {
   id: string;

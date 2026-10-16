@@ -1,5 +1,5 @@
 /**
- * packages/engine/surface/sync.ts — envelope-in / tracker-synced-out (plan 15 §11).
+ * apps/surface/src/sync.ts — envelope-in / tracker-synced-out (plan 15 §11).
  * Guardrail → discovery → plan → sequential throttled execute → summary.
  * Surfacing never throws for write failures: shortfalls are recorded (warn-only).
  */

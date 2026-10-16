@@ -50,10 +50,12 @@ jobs:
       - name: Surface issues
         # Warn-only: issue/label failures never rewrite the sealed scan verdict.
         # Runs only for sealed scans (success) with surface enabled (default true).
+        # Surfacing runs in the standalone apps/surface binary with its own
+        # issues:write token split (SURFACE_TOKEN, else GH_TOKEN/GITHUB_TOKEN).
         if: success() && inputs.surface == 'true'
-        run: npx -p tsx@4 -p "github:${{ github.repository }}#${LEAPSCORE_ENGINE_REF}" leapscore-scan --surface-from leapscore-report.json --repo "${{ inputs.target_repo || github.repository }}" --repo-a "${{ github.repository }}" --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" --engine-ref "${LEAPSCORE_ENGINE_REF}"
+        run: npx -p tsx@4 -p "github:${{ github.repository }}#${LEAPSCORE_ENGINE_REF}" surface --from leapscore-report.json --repo "${{ inputs.target_repo || github.repository }}" --repo-a "${{ github.repository }}" --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SURFACE_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/upload-artifact@v5
         if: always()
         with:

@@ -1,0 +1,22 @@
+{
+  "name": "@leapscore/surface",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "surface": "./bin/surface.ts"
+  },
+  "dependencies": {
+    "@leapscore/contracts": "^0.1.0",
+    "tsx": "^4.19.0"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "lint": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "typescript": "^5",
+    "vitest": "^4.1.11"
+  }
+}

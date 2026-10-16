@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { runSurface } from '../surface/sync';
-import type { SurfaceRestClient, TrackedIssue } from '../surface/rest';
-import type { EnvelopeRow } from '../surface/rows';
+import { runSurface } from '../src/sync';
+import type { SurfaceRestClient, TrackedIssue } from '../src/rest';
+import type { EnvelopeRow } from '../src/rows';
 
 /** In-memory GitHub issues stand-in: full SurfaceRestClient, zero network. */
 function fakeClient() {

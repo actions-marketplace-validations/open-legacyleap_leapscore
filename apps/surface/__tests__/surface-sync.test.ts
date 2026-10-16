@@ -3,10 +3,10 @@ import {
   createSurfaceRestClient,
   throttledWrite,
   isRateLimit,
-} from '../surface/rest';
-import type { FetchImpl } from '../surface/rest';
-import { buildDiscoveryMap } from '../surface/discover';
-import { buildToken } from '../surface/identity';
+} from '../src/rest';
+import type { FetchImpl } from '../src/rest';
+import { buildDiscoveryMap } from '../src/discover';
+import { buildToken } from '../src/identity';
 
 function headersOf(init?: Record<string, string>): Headers {
   return new Headers(init);
