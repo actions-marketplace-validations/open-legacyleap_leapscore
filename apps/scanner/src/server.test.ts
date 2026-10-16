@@ -1,38 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import path from "node:path";
 import { frame, refusedFrame, parseFrameLine, validatePermalinkRunId, PROTOCOL_VERSION } from "./protocol";
 import { AdmissionController } from "./admission";
-import { writeEnvelope, readEnvelope } from "./store";
-import { toScanUrl } from "./server";
-import { CONTRACT_VERSION } from "@leapscore/contracts";
-
-function envelope(runId: string) {
-  return {
-    meta: {
-      repo: "vercel/next.js",
-      repoUrl: "https://github.com/vercel/next.js",
-      repoSlug: "vercel__next.js",
-      engineSha7: "abc1234",
-      runId,
-      ranAt: "2026-08-29T05:33:00.123Z",
-      durationMs: 1000,
-      budgetMs: 5000,
-      repoSha: "unknown",
-      score: 60,
-      tier: "Moderate",
-      status: "complete",
-      engine_version: "unified/1.0",
-      rubric_version: "docs/rubric@tranche-a",
-      filename: `${runId}.json`,
-      contractVersion: CONTRACT_VERSION,
-    },
-    report: { headline: { score: 60, tier: "Moderate", ci_band: "complete" } },
-    trace: [{ ts: 0, elapsedMs: 0, label: "start" }],
-    contractVersion: CONTRACT_VERSION,
-  } as never;
-}
+import { createServer, toScanUrl } from "./server";
 
 describe("frame protocol", () => {
   it("every frame carries a protocol version", () => {
@@ -51,7 +20,7 @@ describe("frame protocol", () => {
 
 describe("scan URL normalization", () => {
   it("all three URL forms normalize to the same repoSlug", async () => {
-    const { repoSlugFromUrl } = await import("../../../packages/contracts/src/index.js");
+    const { repoSlugFromUrl } = await import("@leapscore/contracts");
     const a = repoSlugFromUrl(toScanUrl("vercel/next.js"));
     const b = repoSlugFromUrl(toScanUrl("https://github.com/vercel/next.js"));
     const c = repoSlugFromUrl(toScanUrl("github.com/vercel/next.js/tree/canary"));
@@ -87,32 +56,32 @@ describe("admission control", () => {
   });
 });
 
-describe("canonical store", () => {
-  it("writes atomically with no tmp residue; second write overwrites identically", async () => {
-    const dir = await mkdtemp(path.join(tmpdir(), "scanner-store-"));
+describe("stateless routing", () => {
+  async function withServer(fn: (base: string) => Promise<void>): Promise<void> {
+    const server = createServer();
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const addr = server.address();
+    const port = typeof addr === "object" && addr ? addr.port : 0;
     try {
-      const id = "vercel__next.js__abc1234__2026-08-29T053000-123Z";
-      await writeEnvelope(envelope(id), dir);
-      await writeEnvelope(envelope(id), dir);
-      const files = await readdir(dir);
-      expect(files).toEqual([`${id}.json`]);
-      const loaded = await readEnvelope(id, dir);
-      expect(loaded!.meta.runId).toBe(id);
-      // Stored parts equal what a terminal frame would carry.
-      const terminal = JSON.parse(frame("report", { report: loaded!.report, meta: loaded!.meta, trace: loaded!.trace }));
-      expect(terminal.report).toEqual(JSON.parse(await readFile(path.join(dir, `${id}.json`), "utf8")).report);
-      expect(terminal.meta).toEqual(JSON.parse(await readFile(path.join(dir, `${id}.json`), "utf8")).meta);
+      await fn(`http://127.0.0.1:${port}`);
     } finally {
-      await rm(dir, { recursive: true, force: true });
+      await new Promise<void>((resolve) => server.close(() => resolve()));
     }
+  }
+
+  it("serves /health without a store", async () => {
+    await withServer(async (base) => {
+      const res = await fetch(`${base}/health`);
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { ok: boolean };
+      expect(body.ok).toBe(true);
+    });
   });
-  it("traversal runId never touches the store", async () => {
-    const dir = await mkdtemp(path.join(tmpdir(), "scanner-store-"));
-    try {
-      expect(await readEnvelope("../../etc/passwd", dir)).toBeNull();
-      expect((await readdir(dir)).length).toBe(0);
-    } finally {
-      await rm(dir, { recursive: true, force: true });
-    }
+
+  it("has no report permalink — a formerly valid runId 404s", async () => {
+    await withServer(async (base) => {
+      const res = await fetch(`${base}/reports/vercel__next.js__abc1234__2026-08-29T053000-123Z`);
+      expect(res.status).toBe(404);
+    });
   });
 });

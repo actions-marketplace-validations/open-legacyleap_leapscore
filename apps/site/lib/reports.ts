@@ -1,7 +1,3 @@
-import path from "node:path";
-import { readdir, readFile } from "node:fs/promises";
-import type { Report } from "@/lib/types";
-// Single producer-owned grammar + envelope: no second implementation here.
 import {
   normalizeRepoForSlug,
   repoSlugFromNormalized,
@@ -14,10 +10,11 @@ import {
   isValidRunId,
   assertContractVersion,
   CONTRACT_VERSION,
-  type ReportMeta as ContractReportMeta,
+  type EnvelopeMeta as ContractReportMeta,
   type ReportEnvelope as ContractEnvelope,
   type TraceEntry as ContractTrace,
 } from "@leapscore/contracts";
+import sampleEnvelope from "./fixtures/django__django__506fc82__2026-08-12T000000-000Z.json";
 
 export {
   normalizeRepoForSlug,
@@ -34,104 +31,42 @@ export {
 };
 
 // ---------------------------------------------------------------------------
-// Reports build-input helpers (read-only; the website never writes envelopes)
+// Site-owned history (reports/run-history-ui).
+//
+// The scanner holds no store and serves no permalinks: its terminal `report`
+// frame is the sole artefact of a scan. History, if any, is owned here. The
+// v1 source is deliberately thin — a committed static fixture — until a
+// durable backend lands as a follow-up. No filesystem reads, no scanner
+// contact, no request-time scan work happens in this module.
 // ---------------------------------------------------------------------------
-
-export function getReportsDir(): string {
-  return path.join(process.cwd(), "reports");
-}
 
 export type ReportMeta = ContractReportMeta;
 export type TraceEntry = ContractTrace;
 export type ReportEnvelope = ContractEnvelope;
 
-export function buildMeta(args: {
-  repo: string;
-  repoSlug: string;
-  engineSha7: string;
-  runId: string;
-  ranAt: string;
-  durationMs: number;
-  budgetMs: number;
-  repoSha: string;
-  report: Report;
-}): ReportMeta {
-  const { repo, repoSlug, engineSha7, runId, ranAt, durationMs, budgetMs, repoSha, report } = args;
-  return {
-    repo,
-    repoUrl: `https://github.com/${repo}`,
-    repoSlug,
-    engineSha7,
-    runId,
-    ranAt,
-    durationMs,
-    budgetMs,
-    repoSha: repoSha || "unknown",
-    score: report.headline.score,
-    tier: report.headline.tier,
-    status: report.status,
-    engine_version: report.snapshot.engine_version,
-    rubric_version: report.snapshot.rubric_version,
-    filename: `${runId}.json`,
-    coverage: report.coverage,
-    contractVersion: CONTRACT_VERSION,
-  };
-}
-
-export async function readReportEnvelope(runId: string): Promise<ReportEnvelope | null> {
-  if (!isValidRunId(runId)) return null;
-  const dir = getReportsDir();
-  const filePath = path.join(dir, `${runId}.json`);
-  const resolved = path.resolve(filePath);
-  const resolvedDir = path.resolve(dir);
-  if (!resolved.startsWith(resolvedDir + path.sep)) return null;
+function asEnvelope(raw: unknown): ReportEnvelope | null {
+  const env = raw as ReportEnvelope;
+  if (!env || !env.meta || !env.report) return null;
   try {
-    const raw = await readFile(filePath, "utf8");
-    const parsed = JSON.parse(raw) as ReportEnvelope;
-    if (!parsed.meta || !parsed.report) return null;
-    try {
-      assertContractVersion(parsed);
-    } catch (e) {
-      console.warn(`[reports] skipping unsupported-version envelope ${runId}: ${(e as Error).message}`);
-      return null;
-    }
-    if (!Array.isArray(parsed.trace)) parsed.trace = [];
-    return parsed;
+    assertContractVersion(env);
   } catch {
     return null;
   }
+  if (!Array.isArray(env.trace)) env.trace = [];
+  return env;
+}
+
+const FIXTURES: ReportEnvelope[] = [asEnvelope(sampleEnvelope)].filter(
+  (e): e is ReportEnvelope => e !== null,
+);
+
+export async function readReportEnvelope(runId: string): Promise<ReportEnvelope | null> {
+  if (!isValidRunId(runId)) return null;
+  return FIXTURES.find((e) => e.meta.runId === runId) ?? null;
 }
 
 export async function listReportMetas(): Promise<ReportMeta[]> {
-  const dir = getReportsDir();
-  let entries: string[];
-  try {
-    entries = await readdir(dir);
-  } catch {
-    return [];
-  }
-  const metas: ReportMeta[] = [];
-  for (const name of entries) {
-    if (!name.endsWith(".json")) continue;
-    const runId = name.slice(0, -5);
-    if (!isValidRunId(runId)) continue;
-    try {
-      const raw = await readFile(path.join(dir, name), "utf8");
-      const parsed = JSON.parse(raw) as ReportEnvelope;
-      if (parsed.meta && parsed.meta.runId) {
-        try {
-          assertContractVersion(parsed);
-        } catch (e) {
-          console.warn(`[reports] skipping unsupported-version file ${name}: ${(e as Error).message}`);
-          continue;
-        }
-        metas.push(parsed.meta);
-      }
-    } catch (e) {
-      console.warn(`[reports] skipping invalid file ${name}: ${(e as Error).message}`);
-      continue;
-    }
-  }
-  metas.sort((a, b) => new Date(b.ranAt).getTime() - new Date(a.ranAt).getTime());
-  return metas;
+  return FIXTURES.map((e) => e.meta).sort(
+    (a, b) => new Date(b.ranAt).getTime() - new Date(a.ranAt).getTime(),
+  );
 }

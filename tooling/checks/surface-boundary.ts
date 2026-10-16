@@ -1,11 +1,11 @@
 /** tooling/checks/surface-boundary.ts — the issues:write app stays split from measurement (add-surface-app D4) */
 //
 // Three enforced graphs, three token scopes:
-// - packages/engine (contents:read measurement) must not reach apps/surface.
+// - apps/scanner (contents:read measurement) must not reach apps/surface.
 // - apps/site (present side, no token) must not reach apps/surface or hold an
 //   issues:write scope (SURFACE_TOKEN / issues:write strings outside workflow YAML).
-// - apps/surface (issues:write writer) must not reach packages/engine
-//   detectors/clone/budget — @leapscore/contracts is the only shared import.
+// - apps/surface (issues:write writer) must not reach apps/scanner scan/score
+//   internals — @leapscore/contracts is the only shared import.
 //
 // Text-grep precedent: tooling/checks/site-boundary.ts. Test files are exempt
 // (they wire fakes across boundaries on purpose).
@@ -13,7 +13,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const ROOT = join(import.meta.dirname ?? '.', '../..');
-const ENGINE = join(ROOT, 'packages/engine');
+const SCANNER = join(ROOT, 'apps/scanner');
 const SITE = join(ROOT, 'apps/site');
 const SURFACE = join(ROOT, 'apps/surface');
 
@@ -33,12 +33,12 @@ function importsFrom(text: string, targets: RegExp): boolean {
 }
 
 const SURFACE_APP = /apps\/surface|@leapscore\/surface/;
-const ENGINE_PKG = /packages\/engine|@leapscore\/engine/;
+const SCANNER_IMPL = /apps\/scanner|@leapscore\/scanner/;
 
 function isSiteExempt(rel: string): boolean {
   if (SITE_EXEMPT_DIRS.some((d) => rel.startsWith(d))) return true;
   if (isTestFile(rel)) return true;
-  if (rel === 'apps/site/lib/reports.ts') return true; // read-only build-input reader
+  if (rel === 'apps/site/lib/reports.ts') return true; // site-owned fixture-backed history reader
   return false;
 }
 
@@ -54,13 +54,13 @@ function* walk(dir: string): Generator<string> {
 
 const violations: string[] = [];
 
-// 1. Engine must not reach the surface app.
-for (const f of walk(ENGINE)) {
+// 1. Scanner must not reach the surface app.
+for (const f of walk(SCANNER)) {
   const rel = f.replace(ROOT + '/', '');
   if (isTestFile(rel)) continue;
   const text = readFileSync(f, 'utf-8');
   if (importsFrom(text, SURFACE_APP)) {
-    violations.push(`${rel}: engine reaches apps/surface — surfacing lives in the standalone app`);
+    violations.push(`${rel}: scanner reaches apps/surface — surfacing lives in the standalone app`);
   }
 }
 
@@ -77,13 +77,13 @@ for (const f of walk(SITE)) {
   }
 }
 
-// 3. Surface must not reach engine internals (only @leapscore/contracts is shared).
+// 3. Surface must not reach scanner internals (only @leapscore/contracts is shared).
 for (const f of walk(SURFACE)) {
   const rel = f.replace(ROOT + '/', '');
   if (isTestFile(rel)) continue;
   const text = readFileSync(f, 'utf-8');
-  if (importsFrom(text, ENGINE_PKG)) {
-    violations.push(`${rel}: surface reaches packages/engine — only @leapscore/contracts is shared`);
+  if (importsFrom(text, SCANNER_IMPL)) {
+    violations.push(`${rel}: surface reaches apps/scanner — only @leapscore/contracts is shared`);
   }
 }
 

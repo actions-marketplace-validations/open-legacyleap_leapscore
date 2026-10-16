@@ -3,7 +3,7 @@
   "name": "leapscore",
   "version": "0.1.0",
   "bin": {
-    "leapscore-scan": "./packages/engine/bin/scan.ts",
+    "leapscore-scan": "./apps/scanner/bin/scan.ts",
     "surface": "./apps/surface/bin/surface.ts"
   },
   "workspaces": [
@@ -19,8 +19,7 @@
     "check:detector-isolation": "tsx tooling/checks/detector-isolation.ts",
     "check:site-boundary": "tsx tooling/checks/site-boundary.ts",
     "check:surface-boundary": "tsx tooling/checks/surface-boundary.ts",
-    "compile:rubric": "tsx tooling/scripts/compile-rubric.ts",
-    "sync:reports": "tsx tooling/scripts/sync-reports.ts"
+    "compile:rubric": "tsx tooling/scripts/compile-rubric.ts"
   },
   "devDependencies": {
     "tsx": "^4.19.0",

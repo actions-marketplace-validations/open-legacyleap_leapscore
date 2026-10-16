@@ -5,12 +5,12 @@ export const metadata = {
   title: "Sample report",
 };
 
-// Committed sample runId — generated from SampleReportProvider with current git SHA
+// Committed sample runId — a static site-owned fixture (not a scanner permalink)
 const SAMPLE_RUN_ID = "django__django__506fc82__2026-08-12T000000-000Z";
 
 export default async function SampleRedirectPage() {
-  // Fast path: use known committed id (no filesystem read needed for happy path)
-  // Verify it still exists via listReportMetas fallback for robustness if filename ever changes
+  // Fast path: use known fixture id (no history read needed for happy path)
+  // Verify it still exists via listReportMetas fallback for robustness if the fixture ever changes
   const metas = await listReportMetas();
   const known = metas.find((m) => m.runId === SAMPLE_RUN_ID);
   if (known) {

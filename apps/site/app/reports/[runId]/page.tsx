@@ -4,9 +4,9 @@ import { listReportMetas, readReportEnvelope, isValidRunId } from "@/lib/reports
 import { ReportView } from "@/components/report-view";
 import { ScanTraceView } from "@/components/scan-trace-view";
 
-// Build-time prerender: exactly the ingested runIds. A grammatically valid
-// but un-ingested runId 404s at the edge; traversal is rejected 404 before
-// any store access. No request-time filesystem read.
+// Build-time prerender: exactly the site-owned history runIds. A grammatically
+// valid but unretained runId 404s at the edge; traversal is rejected 404 before
+// any history access. No request-time filesystem read, no scanner contact.
 export const dynamicParams = false;
 
 export async function generateStaticParams(): Promise<{ runId: string }[]> {

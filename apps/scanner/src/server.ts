@@ -1,7 +1,8 @@
 /**
- * Scanner HTTP service: GET /scan (versioned NDJSON), GET /reports/:runId
- * (stable permalink), GET /health. Cross-origin by default; per-client
- * admission control; atomic single-write persistence; disconnect-safe.
+ * Scanner HTTP service: GET /scan (versioned NDJSON), GET /health.
+ * Cross-origin by default; per-client admission control; stateless —
+ * no permanent disk, no report permalinks. The terminal `report` frame
+ * is the sole scan artefact.
  */
 import http from "node:http";
 import { execSync } from "node:child_process";
@@ -10,15 +11,13 @@ import {
   normalizeRepoForSlug,
   repoSlugFromUrl,
   resolveEngineSha7,
-  type ReportEnvelope,
 } from "@leapscore/contracts";
-import { runUnifiedScan } from "@leapscore/engine/orchestrator.js";
-import { sealScan } from "@leapscore/engine/seal.js";
-import type { FactRecord } from "@leapscore/engine/facts.js";
+import { runUnifiedScan } from "./scan/orchestrator.js";
+import { sealScan } from "./scan/scoring/seal.js";
+import type { FactRecord } from "./scan/facts.js";
 import { AdmissionController } from "./admission.js";
-import { CORS_HEADERS, NDJSON_HEADERS, frame, refusedFrame, validatePermalinkRunId } from "./protocol.js";
+import { CORS_HEADERS, NDJSON_HEADERS, frame, refusedFrame } from "./protocol.js";
 import { PROTOCOL_VERSION } from "./protocol.js";
-import { getStoreDir, readEnvelope, writeEnvelope } from "./store.js";
 
 const admission = new AdmissionController();
 
@@ -126,11 +125,10 @@ async function handleScan(req: http.IncomingMessage, res: http.ServerResponse, u
     }
   };
 
-  // Disconnect-safe: the scan runs to seal regardless; persistence is atomic
-  // and happens exactly once, so an abort can never leave a partial envelope.
-  req.on("close", () => {
-    // No-op: intentionally keep running to seal so the run stays permalinkable.
-  });
+  // Stateless: when the client goes away the sealed artefact is discarded
+  // with the closed stream — there is no store and no permalink to keep it
+  // reachable. In-flight engine work may be abandoned; the loop below already
+  // stops emitting once the response is closed.
 
   try {
     pushTrace(`Starting scan — ${repo}`, { type: "start" });
@@ -224,18 +222,6 @@ async function handleScan(req: http.IncomingMessage, res: http.ServerResponse, u
       scanId,
       repo,
     });
-    const envelope: ReportEnvelope = {
-      meta: sealed.meta,
-      report: sealed.report,
-      trace: sealed.traceToPersist as never,
-      contractVersion: CONTRACT_VERSION,
-    };
-    // Single atomic persist — exactly one envelope per runId.
-    try {
-      await writeEnvelope(envelope, getStoreDir());
-    } catch (e) {
-      console.warn("[scanner] persist failed", (e as Error).message);
-    }
     const result: SealedResult = {
       report: sealed.report,
       meta: sealed.meta,
@@ -248,7 +234,7 @@ async function handleScan(req: http.IncomingMessage, res: http.ServerResponse, u
       const elapsedMs = Date.now() - startMs;
       send(res, frame("progress", { pct: 100, elapsedMs, remainingMs: 0, completedCost: totalCost, totalCost, completedIds: [] }));
       // Terminal frame carries report + meta + ordered trace (self-sufficient;
-      // byte-identical to the stored envelope).
+      // it is the sole artefact — no store copy exists by construction).
       send(res, frame("report", { report: sealed.report, meta: sealed.meta, trace: sealed.traceToPersist }));
     }
     finish(() => res.end());
@@ -258,24 +244,6 @@ async function handleScan(req: http.IncomingMessage, res: http.ServerResponse, u
     rejectLeader(e);
     finish(() => res.end());
   }
-}
-
-async function handlePermalink(_req: http.IncomingMessage, res: http.ServerResponse, runIdRaw: string): Promise<void> {
-  const v = validatePermalinkRunId(runIdRaw);
-  if (!v.ok) {
-    const code = v.status;
-    res.writeHead(code, { "content-type": "application/json", ...CORS_HEADERS });
-    res.end(JSON.stringify({ error: code === 400 ? "invalid runId" : "not found" }));
-    return;
-  }
-  const env = await readEnvelope(v.runId, getStoreDir());
-  if (!env) {
-    res.writeHead(404, { "content-type": "application/json", ...CORS_HEADERS });
-    res.end(JSON.stringify({ error: "not found" }));
-    return;
-  }
-  res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store", ...CORS_HEADERS });
-  res.end(JSON.stringify(env));
 }
 
 export function createServer(): http.Server {
@@ -296,11 +264,6 @@ export function createServer(): http.Server {
       void handleScan(req, res, url);
       return;
     }
-    const m = url.pathname.match(/^\/reports\/(.+)$/);
-    if (m && req.method === "GET") {
-      void handlePermalink(req, res, m[1]);
-      return;
-    }
     res.writeHead(404, { "content-type": "application/json", ...CORS_HEADERS });
     res.end(JSON.stringify({ error: "not found" }));
   });
@@ -319,6 +282,6 @@ const port = Number(process.env.SCANNER_PORT ?? 4100);
 if (process.env.SCANNER_NO_LISTEN !== "1") {
   const server = createServer();
   server.listen(port, () => {
-    console.log(`[scanner] listening on :${port} store=${getStoreDir()} engine=${resolveScannerEngineSha7()}`);
+    console.log(`[scanner] listening on :${port} engine=${resolveScannerEngineSha7()}`);
   });
 }

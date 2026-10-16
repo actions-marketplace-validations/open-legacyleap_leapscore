@@ -1,11 +1,11 @@
-/** tooling/scripts/compile-rubric.ts — canonical markdown -> packages/engine/rubric.json + generated registry */
+/** tooling/scripts/compile-rubric.ts — canonical markdown -> apps/scanner rubric.json + generated registry */
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { createHash } from 'node:crypto';
 
 const ROOT = join(import.meta.dirname ?? '.', '../..');
 const RUBRIC_DIR = join(ROOT, 'docs/rubric');
-const OUT_JSON = join(ROOT, 'packages/engine/rubric.json');
+const OUT_JSON = join(ROOT, 'apps/scanner/src/scan/scoring/rubric.json');
 const OUT_TS = join(ROOT, 'apps/site/lib/generated/rubric.ts');
 
 type Remediation = {

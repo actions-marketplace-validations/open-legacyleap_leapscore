@@ -12,7 +12,6 @@
   },
   "dependencies": {
     "@leapscore/contracts": "^0.1.0",
-    "@leapscore/engine": "^0.1.0",
     "tsx": "^4.19.0"
   },
   "devDependencies": {

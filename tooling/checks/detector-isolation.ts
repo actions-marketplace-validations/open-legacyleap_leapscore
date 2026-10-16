@@ -4,20 +4,20 @@ import { join } from 'node:path';
 
 const ROOT = join(import.meta.dirname ?? '.', '../..');
 const ALLOWED_FETCH_FILES = new Set([
-  'packages/engine/gh.ts',
-  'packages/engine/orchestrator.phase1.ts',
+  'apps/scanner/src/scan/gh.ts',
+  'apps/scanner/src/scan/orchestrator.phase1.ts',
 ]);
 const ALLOWED_FS_FILES = new Set([
-  'packages/engine/clone.ts',
-  'packages/engine/store.ts',
-  'packages/engine/queue.ts',
-  'packages/engine/runner.ts',
-  'packages/engine/budget.ts',
-  'packages/engine/facts.ts',
-  'packages/engine/registry.ts',
-  'packages/engine/scorer/rollup.ts',
-  'packages/engine/seal.ts',
-  'packages/engine/bin/scan.ts',
+  'apps/scanner/src/scan/clone.ts',
+  'apps/scanner/src/scan/store.ts',
+  'apps/scanner/src/scan/queue.ts',
+  'apps/scanner/src/scan/runner.ts',
+  'apps/scanner/src/scan/budget.ts',
+  'apps/scanner/src/scan/facts.ts',
+  'apps/scanner/src/scan/registry.ts',
+  'apps/scanner/src/scan/scoring/scorer/rollup.ts',
+  'apps/scanner/src/scan/scoring/seal.ts',
+  'apps/scanner/bin/scan.ts',
 ]);
 
 function* walk(dir: string): Generator<string> {
@@ -31,7 +31,7 @@ function* walk(dir: string): Generator<string> {
 }
 
 let violations: string[] = [];
-for (const f of walk(join(ROOT, 'packages/engine'))) {
+for (const f of walk(join(ROOT, 'apps/scanner/src/scan'))) {
   const rel = f.replace(ROOT + '/', '');
   if (ALLOWED_FETCH_FILES.has(rel)) continue;
   if (rel.includes('__tests__')) continue;
@@ -62,5 +62,5 @@ if (violations.length) {
   console.error('detector-isolation violations:\n' + violations.map((v) => `  - ${v}`).join('\n'));
   process.exit(1);
 } else {
-  console.log('detector-isolation: ok (no raw fetch/fs outside engine/gh.ts)');
+  console.log('detector-isolation: ok (no raw fetch/fs outside apps/scanner/src/scan/gh.ts)');
 }

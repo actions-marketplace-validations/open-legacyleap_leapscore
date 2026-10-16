@@ -8,7 +8,10 @@ import { SampleFullTable } from "@/components/sample-full-table";
 import { tierForScore } from "@/lib/scoring";
 import type { Report } from "@/lib/types";
 import type { ReportMeta } from "@/lib/reports";
-import { scannerPermalinkUrl } from "@/lib/scanner";
+
+function rawJsonUrl(runId: string): string {
+  return `/reports/${encodeURIComponent(runId)}/raw`;
+}
 
 function tierLabel(color: ReturnType<typeof tierForScore>["color"]): string {
   const map: Record<string, string> = {
@@ -64,7 +67,7 @@ export function ReportView({
   const effectiveFooterExtra = persistedMeta ? (
     <span>
       Persisted {persistedMeta.ranAt} · engine {report.snapshot.engine_version} · rubric {report.snapshot.rubric_version} ·{" "}
-      <a href={scannerPermalinkUrl(persistedMeta.runId)} className="underline underline-offset-2 hover:text-foreground">
+      <a href={rawJsonUrl(persistedMeta.runId)} className="underline underline-offset-2 hover:text-foreground">
         raw JSON
       </a>
       <span> · </span>
@@ -153,7 +156,7 @@ export function ReportView({
               <div><span className="text-faint">RAN</span> <span className="ml-2 font-mono text-muted">{persistedMeta.ranAt.slice(0,19)}Z</span></div>
             </div>
             <div className="flex shrink-0 items-start gap-2 lg:flex-col lg:items-end">
-              <a href={scannerPermalinkUrl(persistedMeta.runId)} className="rounded border border-hairline bg-background px-2.5 py-1 font-mono text-xs text-muted hover:text-foreground">raw JSON</a>
+              <a href={rawJsonUrl(persistedMeta.runId)} className="rounded border border-hairline bg-background px-2.5 py-1 font-mono text-xs text-muted hover:text-foreground">raw JSON</a>
               <Link href={`/live?repo=${encodeURIComponent(persistedMeta.repo)}`} className="rounded bg-foreground px-2.5 py-1 text-xs font-medium text-background hover:opacity-90">rerun</Link>
             </div>
           </div>

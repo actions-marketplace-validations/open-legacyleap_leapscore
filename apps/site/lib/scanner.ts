@@ -15,10 +15,6 @@ export function scannerScanUrl(repo: string): string {
   return `${scannerBaseUrl()}/scan?repo=${encodeURIComponent(repo)}`;
 }
 
-export function scannerPermalinkUrl(runId: string): string {
-  return `${scannerBaseUrl()}/reports/${encodeURIComponent(runId)}`;
-}
-
 const REFUSED_COPY: Record<string, { title: string; body: string }> = {
   unsupported_host: {
     title: "Unsupported host",

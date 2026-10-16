@@ -63,7 +63,7 @@ The scanner SHALL emit exactly one terminal frame per scan: `report` when the sc
 
 ### Requirement: Terminal report frame is self-sufficient
 
-The `report` frame SHALL carry everything a client needs to render the sealed report — the report body, the envelope `meta`, and the ordered `trace` — so a client that never contacts the store can render a complete report, including the scan log.
+The `report` frame SHALL carry everything a client needs to render the sealed report — the report body, the envelope `meta`, and the ordered `trace` — and it SHALL be the sole artefact of a scan. There SHALL be no store round trip: no persisted envelope exists to compare against.
 
 #### Scenario: Live client renders without a store round trip
 
@@ -72,41 +72,27 @@ The `report` frame SHALL carry everything a client needs to render the sealed re
 
 #### Scenario: Frame matches the persisted envelope
 
-- **WHEN** the same run is later read from the scanner's store
-- **THEN** the stored envelope's `report`, `meta`, and `trace` are identical to what the terminal frame carried
+- **WHEN** a scan seals under stateless operation
+- **THEN** no persisted envelope exists to compare against: the terminal frame's `report`, `meta`, and `trace` are the canonical artefact, and there is no store copy by construction
 
-### Requirement: Report permalink
+#### Scenario: No post-scan retrieval exists
 
-The scanner SHALL expose a stable, shareable permalink for each sealed `runId` that returns that run's envelope. The permalink SHALL remain valid independently of whether any website build has ingested the run.
-
-#### Scenario: Fresh run is immediately shareable
-
-- **WHEN** a scan for `vercel/next.js` seals with `runId` `vercel__next.js__abc1234__2026-10-16T053000-123Z`
-- **THEN** requesting the scanner's permalink for that `runId` returns the sealed envelope without re-running the scan
-
-#### Scenario: Unknown runId is not found
-
-- **WHEN** the permalink is requested for a `runId` that was never sealed
-- **THEN** the scanner returns a not-found response and does not start a scan
-
-#### Scenario: Traversal is rejected
-
-- **WHEN** the permalink path contains `..`, `/`, or a segment not matching the `runId` grammar
-- **THEN** the request is rejected before any store access
+- **WHEN** a client discards the terminal `report` frame
+- **THEN** the sealed report is unrecoverable from the scanner and the scan must be re-run to see it again
 
 ### Requirement: Client disconnect semantics
 
-A client disconnect SHALL NOT corrupt or partially write the store. A scan that reaches a sealable state SHALL be persisted whether or not a client is still connected.
+A client disconnect SHALL NOT leave partial permanent state, because the scanner writes none. A scan that reaches a sealable state emits its terminal `report` frame on the open stream; when no client is still connected the sealed artefact is discarded.
 
 #### Scenario: Disconnect mid-scan does not corrupt
 
 - **WHEN** the browser aborts a scan that is 40 seconds into a 240-second budget
-- **THEN** no partial envelope is written and the store contains no truncated file for that run
+- **THEN** no partial envelope exists anywhere and no truncated file is left behind, because the scanner writes no permanent state at any point
 
 #### Scenario: Disconnect after seal still persists
 
 - **WHEN** the scan seals and the client aborts before reading the terminal frame
-- **THEN** the envelope is still persisted and is retrievable by its permalink
+- **THEN** the sealed report is discarded with the closed stream (no persistence, no permalink); a fresh scan is required to obtain it
 
 ### Requirement: Scan admission control
 

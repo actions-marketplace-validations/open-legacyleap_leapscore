@@ -8,7 +8,7 @@ import { ReportView } from "@/components/report-view";
 import { ScanTraceView } from "@/components/scan-trace-view";
 import type { Report } from "@/lib/types";
 import type { TraceEntry } from "@/lib/reports";
-import { refusedCopy, scannerPermalinkUrl, scannerScanUrl } from "@/lib/scanner";
+import { refusedCopy, scannerScanUrl } from "@/lib/scanner";
 
 type TimelineEntry = { ts: number; label: string };
 
@@ -347,14 +347,13 @@ export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
   }
 
   // Sealed — render the report in place from the terminal frame.
-  // No navigation: a fresh runId has no website page until ingest + build.
-  // The scanner's permalink is the shareable URL.
+  // No navigation: the scanner keeps no store, so a sealed run has no
+  // retrievable page. The terminal frame is the sole artefact.
   if (report) {
     const measured = report.coverage.measured;
     const totalForLabel = indicatorCount ?? (report.coverage.measured + report.coverage.unknown + report.coverage.estimated + report.coverage.not_applicable);
     const elapsedS = Math.floor(elapsedMs / 1000);
     const runId = persistedMeta?.runId ?? pendingRunId;
-    const permalink = runId ? scannerPermalinkUrl(runId) : null;
     return (
       <div className="mx-auto max-w-5xl px-4 py-10">
         <div className="sticky top-0 z-10 -mx-4 border-b border-hairline bg-background/80 px-4 py-3 backdrop-blur">
@@ -385,15 +384,10 @@ export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
         </div>
 
         <p className="mt-6 text-center text-xs text-faint">
-          {permalink ? (
-            <>
-              Shareable permalink (scanner, no re-scan):{" "}
-              <a href={permalink} className="font-mono underline underline-offset-2 hover:text-foreground">
-                {permalink}
-              </a>
-            </>
+          {runId ? (
+            <>Sealed as <span className="font-mono">{runId}</span> · re-run to see this report again</>
           ) : (
-            <>Preparing permalink… (report sealed, awaiting runId)</>
+            <>Report sealed · re-run to see this report again</>
           )}
         </p>
       </div>
