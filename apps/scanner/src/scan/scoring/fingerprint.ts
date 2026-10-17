@@ -2,8 +2,11 @@
 import { createHash } from 'node:crypto';
 import type { FactRecord } from '../facts';
 
-/** Fingerprint scheme version — bump when the hash input changes eras. */
-export const FINGERPRINT_VERSION = 1;
+/** Fingerprint scheme version — bump when the hash input changes eras.
+ * v2 (detector-honesty 4.4): measurement semantics — `measurement` +
+ * `unknownMeasurePath` join the normalized fact, so a pre-demotion constant row
+ * and a post-demotion unknown row hash differently. */
+export const FINGERPRINT_VERSION = 2;
 
 type FingerprintInput = {
   facts: FactRecord[];
@@ -42,6 +45,10 @@ function normalizedFact(f: FactRecord): unknown {
     provenance: provRest,
     truncated: rec.truncated,
     error: (rec as { error?: unknown }).error ?? null,
+    // v2: the detector's measurement verdict and its what-it-takes note are
+    // semantic (measured vs estimated vs unknown), never a machine artifact.
+    measurement: rec.measurement ?? null,
+    unknownMeasurePath: rec.unknownMeasurePath ?? null,
   };
 }
 

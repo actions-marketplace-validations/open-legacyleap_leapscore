@@ -177,7 +177,7 @@ describe('2.3 determinism: sorted outputs, commit identity', () => {
       expect(a.report.headline.score).toBe(b.report.headline.score);
       // deterministic-scoring 2.4: fingerprint-equality across repeat runs
       expect(a.meta.score_fingerprint).toBeTruthy();
-      expect(a.meta.fingerprint_version).toBe(1);
+      expect(a.meta.fingerprint_version).toBe(2);
       expect(a.meta.score_fingerprint).toBe(b.meta.score_fingerprint);
       expect(a.meta.runId).not.toBe(b.meta.runId);
       const pa = parseRunId(a.meta.runId);

@@ -2,7 +2,7 @@
 
 Global site chrome — header navigation and interactive affordance that is consistent across all pages.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Header without engine pill
 

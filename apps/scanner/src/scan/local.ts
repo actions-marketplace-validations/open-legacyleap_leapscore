@@ -6,6 +6,7 @@ import { join, resolve } from 'node:path';
 import { createBudgetControllerForIndicators, budgetForIndicators, BUDGET_COST, INDICATOR_BUDGET_CLASS, computeSampleN, partitionByteCap, isKillerTrip } from './budget';
 import { walkSortedTree } from './tree';
 import { buildToolVersions, toolVersion } from './detectors/common';
+import { snapshotVersions } from './snapshots';
 import { sniffEcosystems } from './ecosystem';
 import { classifyArchetype, classifyArchetypePerRoot } from './archetype';
 import { validateFact, type FactRecord } from './facts';
@@ -142,6 +143,11 @@ export async function resolveLocalCommit(absPath: string): Promise<string> {
 
 function statusForFact(f: FactRecord): 'measured' | 'estimated' | 'unknown' {
   if ((f as unknown as { error?: unknown }).error) return 'unknown';
+  // Detector-declared measurement status (detector-honesty): an `estimated`
+  // heuristic is reported as estimated, never promoted to measured.
+  const declared = (f as unknown as { measurement?: { status?: string } }).measurement?.status;
+  if (declared === 'estimated') return 'estimated';
+  if (declared === 'unknown') return 'unknown';
   return 'measured';
 }
 
@@ -237,9 +243,18 @@ export async function* runLocalScan(
     gh: undefined,
     manifests: manifests as ScanContext['manifests'],
     budgetLease: budget.lease(),
-    cache: { get: () => undefined, set: () => {} },
+    // Real per-scan cache (detector-honesty): a Map-backed store so detectors
+    // that share a read (e.g. cachedSourceImports) memoize within one scan while
+    // each scan starts cold.
+    cache: (() => {
+      const store = new Map<string, unknown>();
+      return { get: (key: string) => store.get(key), set: (key: string, value: unknown) => { store.set(key, value); } };
+    })(),
     toolVersions: buildToolVersions(),
     readFile,
+    // Deterministic scan instant: date-derived facts (EOL days, staleness,
+    // abandonment) reference the scan start, not each detector's wall clock.
+    scanMs: start,
   };
 
   let reqIds = ids;
@@ -364,6 +379,10 @@ export async function* runLocalScan(
     rubric_version: 'docs/rubric@tranche-a',
     scanned_commit: commitSha,
     local_path: absPath,
+    // Vendored-dataset version ids (detector-honesty 3.3): recorded in the report
+    // provenance and joined into the fingerprint so a dataset refresh changes the
+    // fingerprint while identical data does not.
+    snapshot_versions: snapshotVersions(),
   };
   if (archetypeResult) {
     snapshot.archetype = archetypeResult.archetype;

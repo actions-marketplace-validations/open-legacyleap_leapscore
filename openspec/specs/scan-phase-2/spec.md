@@ -101,7 +101,7 @@ The system SHALL emit ECOS-07 via `git ls-files` lockfile presence, pin ratio, s
 
 ### Requirement: SEC-01 unpatched vulns fact (G2)
 
-The system SHALL emit SEC-01 via `trivy` + `osv-scanner` over lockfiles, deduped by CVE, with `age_days` and `in_core_import_closure`, driving G2.
+The system SHALL emit SEC-01 by resolving locked dependency versions against a reference advisory source — the vendored offline snapshot by default, `trivy` + `osv-scanner` when online — deduped by CVE, with `age_days` and `in_core_import_closure`, driving G2. A dependency with no entry in the reference source SHALL be reported as unscanned for that dependency, never as clean.
 
 #### Scenario: Critical CVE >14d on core path
 - **WHEN** `CVE-2025-1234` on `urllib3` age 41d, `in_core_import_closure=true`
@@ -111,38 +111,63 @@ The system SHALL emit SEC-01 via `trivy` + `osv-scanner` over lockfiles, deduped
 - **WHEN** open critical age 5d or `in_core_import_closure=false` or scan truncated
 - **THEN** G2 remains `not-proven` (severity still reflected in SEC-01 score 2 vs 0 per encyclopedia Y/R) or `needs-verification` if evidence incomplete
 
+#### Scenario: Offline snapshot resolves without network
+- **WHEN** a locked dependency has an advisory in the vendored snapshot and the scan runs offline
+- **THEN** SEC-01 measures it, names the advisory identifier, and opens no socket
+
+#### Scenario: Dependency without an advisory entry is unscanned, not clean
+- **WHEN** a locked dependency has no entry in the reference advisory source
+- **THEN** it is reported as unscanned and does not contribute a clean result to SEC-01 or G2
+
 ### Requirement: SEC-06 transitive chains fact
-The system SHALL emit SEC-06 via `osv-scanner` depth≥2 chains plus import-closure reachability, distinguishing from SEC-01 depth≤1.
+
+The system SHALL emit SEC-06 from depth≥2 chains resolved out of the lockfile against the reference advisory source, plus import-closure reachability, distinguishing it from SEC-01's depth≤1. Where the release does not ship a transitive resolver, the row SHALL be `unknown` with a what-it-takes note, never a placeholder.
 
 #### Scenario: Vulnerable transitive reachable
 - **WHEN** `minimist@1.2.0` depth 4 via `mkdirp`, `reachable_from_core=true`
 - **THEN** fact `vulnerable_transitive` includes that entry and score maps to 0 when reachable
 
+#### Scenario: No resolver shipped yields unknown
+- **WHEN** the running release ships no transitive-chain resolver
+- **THEN** SEC-06 is `unknown` with `unknown_measure_path` naming the resolver, never a constant score
+
 ### Requirement: SEC-02 secrets fact (G1)
 
-The system SHALL emit SEC-02 via `gitleaks` tree + `--all` history (budgeted `--max-depth`), marking `verified_live` via trufflehog, driving G1.
+The system SHALL emit SEC-02 by scanning the target with the built-in, documented secret rule set — the tree always, git history where available — driving G1, and MAY widen or verify results with `gitleaks`/`trufflehog` when those tools are present. Findings SHALL name the rule that matched. Where history was not scanned, the report SHALL state that history is unscanned rather than presenting the result as clean.
 
 #### Scenario: Active secret in tree
-- **WHEN** `gitleaks` finds `aws-access-token` in `config/prod.py` current tree
+- **WHEN** the built-in rule set matches an `aws-access-token` pattern in `config/prod.py` in the current tree
 - **THEN** fact `tree_findings=[{rule:"aws-access-token"}]` and G1 `proven`
 
 #### Scenario: No tree/history scan stays needs-verification
-- **WHEN** SEC-02 detector has not run (GH-only scan) or scan truncated with no findings
-- **THEN** G1 is `needs-verification` with note `needs live secrets scan`; clean measured tree+history yields `not-proven`
+- **WHEN** the SEC-02 detector has not run (GH-only scan) or the scan truncated with no findings
+- **THEN** G1 is `needs-verification` with note `needs live secrets scan`; a clean measured tree with history scanned yields `not-proven`
+
+#### Scenario: Unscanned history is disclosed, not assumed clean
+- **WHEN** only the tree was scanned and history was not
+- **THEN** the report states history is unscanned and G1 is not `proven` on the strength of the tree scan alone
 
 ### Requirement: ARCH-01 complexity fact
-The system SHALL emit ARCH-01 via `lizard` (+ `radon` for Python) over non-vendored source, computing `pct_over_Y` and `god_classes`, joined to core-path.
+The system SHALL emit ARCH-01 from a complexity analyzer run over non-vendored source, computing `pct_over_Y` and `god_classes`, joined to core-path. Where the release ships no analyzer (a zero-dependency offline build), the row SHALL be `unknown` with a what-it-takes note naming the analyzer — never a placeholder score.
 
 #### Scenario: God class in core
-- **WHEN** `app/orders.py::process` `ccn` 38, `loc` 912, in core path
+- **WHEN** an analyzer reports `app/orders.py::process` `ccn` 38, `loc` 912, in core path
 - **THEN** fact `god_classes` includes it and score maps to 0 when `core_offenders_ratio > R`
 
+#### Scenario: No analyzer shipped yields unknown
+- **WHEN** the running release ships no complexity analyzer
+- **THEN** ARCH-01 is `unknown` with `unknown_measure_path` naming the analyzer, never a constant score
+
 ### Requirement: ARCH-08 duplication fact
-The system SHALL emit ARCH-08 via `jscpd` (min-tokens 50) over non-vendored source, computing `duplication_pct` and `security_critical_dup`, supporting dissolve via `sampleN`.
+The system SHALL emit ARCH-08 from a token-based duplication analyzer (min-tokens 50) run over non-vendored source, computing `duplication_pct` and `security_critical_dup`, supporting dissolve via `sampleN`. Where the release ships no analyzer, the row SHALL be `unknown` with a what-it-takes note — never a placeholder.
 
 #### Scenario: Duplication in core
-- **WHEN** `jscpd` reports `duplication_pct` 14.2 with cross-service cluster in core
+- **WHEN** the duplication analyzer reports `duplication_pct` 14.2 with a cross-service cluster in core
 - **THEN** fact drives score 0 per ARCH-08 predicate
+
+#### Scenario: No analyzer shipped yields unknown
+- **WHEN** the running release ships no duplication analyzer
+- **THEN** ARCH-08 is `unknown` with `unknown_measure_path` naming the analyzer, never a constant score
 
 ### Requirement: ARCH-05 churn hotspots fact
 The system SHALL emit ARCH-05 via `git log --name-only` churn + bugfix regex (`fix|bug|hotfix`) per file, computing `churn_top10_share` and `hotspots` joined to core.
@@ -166,10 +191,10 @@ The system SHALL emit TEST-05 via marker grep (`test.skip`, `xit`, `pytest.mark.
 - **THEN** fact `skip_ratio` 0.09 drives score 1 per TEST-05 predicate
 
 ### Requirement: Tranche A file-presence detectors (12 Tier-A measured, fast)
-The system SHALL emit 12 additional clone-lane facts using only static-src planes (tree enumeration, `rg` greps, YAML/JSON parse, lockfile parse, and a cached `endoflife.date` lookup) with `fast` budget class (DOCS-08 `api-budgeted` for optional releases API). Each detector SHALL report `measured` when the tree is enumerable, `unknown` when not enumerable (or `unknown "rate-limited"` for DOCS-08 on GH 403), and never `N/A` for scored repos; evidence pointers SHALL reference enumerated paths or the GH endpoint used.
+The system SHALL emit 12 additional clone-lane facts using only static-src planes (tree enumeration, greps, YAML/JSON parse, lockfile parse, and a vendored offline end-of-life snapshot) with `fast` budget class (DOCS-08 `api-budgeted` for optional releases API). A fact derived by enumerating or parsing the target — presence, counts, paths, parsed manifest values — SHALL be reported `measured`; any residual magnitude the detector did not derive from the target SHALL NOT be reported as `measured` (it is `estimated` where the indicator's spec defines a clamp, else `unknown`). A detector SHALL report `unknown` when the tree is not enumerable (or `unknown "rate-limited"` for DOCS-08 on GH 403), and never `N/A` for scored repos; evidence pointers SHALL reference enumerated paths, and evidence producers SHALL name the tool that actually ran.
 
 #### Scenario: DOCS-01 ADR inventory measured
-- **WHEN** scan clones a repo with `docs/adr/0001-record.md` and 14 ADRs, newest 40 days old, sampled majors documented
+- **WHEN** scan reads a repo with `docs/adr/0001-record.md` and 14 ADRs, newest 40 days old, sampled majors documented
 - **THEN** `docs01` fact `{adr_dir:"docs/adr", adr_count:14, newest_adr_days:40}` status `measured` and score maps per `docs-01_*.md §5` (candidate 3)
 
 #### Scenario: DOCS-03 runbooks presence measured
@@ -201,20 +226,24 @@ The system SHALL emit 12 additional clone-lane facts using only static-src plane
 - **THEN** `data01` fact `{migration_count:8, destructive_ops:0}` status `measured` and maps to score 3
 
 #### Scenario: ECOS-06 bloat via lockfile counts measured
-- **WHEN** `package-lock.json` parses to `transitive_total=142, pct_direct_unused=null` (no knip run) and duplicates empty
-- **THEN** `ecos06` fact carries those counts, provenance `tool:"lockfile+rg"`, status `measured` (counts exhaustive); scorer treats missing `pct_direct_unused` as absent signal, not `estimated` downgrade
+- **WHEN** `package-lock.json` parses to `transitive_total=142, pct_direct_unused=null` (no unused-dep tool run) and duplicates empty
+- **THEN** `ecos06` fact carries those counts, provenance `tool:"lockfile-parse"`, status `measured` (counts exhaustive); scorer treats missing `pct_direct_unused` as absent signal, not `estimated` downgrade
 
 #### Scenario: ECOS-08 framework lock-in measured via endoflife cache
-- **WHEN** `package.json` pins `react 18.2` and `endoflife.date` returns active support
-- **THEN** `ecos08` fact `{framework:"react", support_status:"active"}` status `measured`, reusing ECOS-01 cache
+- **WHEN** `package.json` pins `react 18.2` and the vendored snapshot returns active support
+- **THEN** `ecos08` fact `{framework:"react", support_status:"active"}` status `measured`, reusing the ECOS-01 snapshot
 
 #### Scenario: SEC-09 fuzz harness presence measured
 - **WHEN** tree contains ` fuzz/` harness or `cargo-fuzz` config
 - **THEN** `sec09` fact `{harness_present:true}` status `measured`
 
 #### Scenario: SEC-10 security testing in CI measured
-- **WHEN** CI YAML has `trivy`/`gitleaks` job with `continue-on-error:false`
+- **WHEN** CI YAML has a vulnerability/secret-scanning job with `continue-on-error:false`
 - **THEN** `sec10` fact `{sast_present:true, blocking:true}` status `measured` per spec, sharing parse cache with TEST-08
+
+#### Scenario: Residual magnitude is not measured
+- **WHEN** a Tranche A detector would report a magnitude it did not derive from the target (for example a literal "newest 40 days" with no timestamp read)
+- **THEN** the fact omits it or the row is `unknown` with `unknown_measure_path`, never `measured` on a placeholder
 
 #### Scenario: Missing repo tree degrades to unknown
 - **WHEN** clone step succeeded but tree not enumerable for DOCS detectors (e.g., shallow filter omitted docs)
@@ -232,15 +261,19 @@ The system SHALL compute `budgetMs` via the existing generic formula `baseMs + �
 - **THEN** `budgetMs` = `5s base + 11*5 + 1*10 = ~70s` (no slow, so base 5s) and progress reaches 100% at 70s, not 240s
 
 ### Requirement: Coverage and roll-up over 8 categories
-The system SHALL include the 12 new facts in category roll-ups (`DOCS` grows 0→5, `PERF` 0→2, `DATA` 0→1, `ECOS` 5→7, `SEC` 4→6) per `11_WEIGHTS_THRESHOLDS_CONFIG.md §2` (`Category% = Σ scores ÷ applicable×3 ×100`), and SHALL report `coverage {measured:31, estimated:0, unknown:71}` for the default 31 scan (and `measured:19` when MVP-only requested). Tier thresholds (`11 §3`) and gate caps (`G1/G2/G3/G8 proven` only) SHALL be unchanged.
+The system SHALL include the 12 new facts in category roll-ups (`DOCS` grows 0→5, `PERF` 0→2, `DATA` 0→1, `ECOS` 5→7, `SEC` 4→6) per `11_WEIGHTS_THRESHOLDS_CONFIG.md §2` (`Category% = Σ scores ÷ applicable×3 ×100`), and SHALL compute coverage from the rows actually measured, estimated, and unknown — not a fixed expectation. Rows demoted by measurement honesty count as `unknown`, so the historical expectation of 31 measured rows no longer holds; consumers SHALL read coverage from the report rather than assume a count. Tier thresholds (`11 §3`) and gate caps (`G1/G2/G3/G8 proven` only) SHALL be unchanged.
 
 #### Scenario: Report roll-up with Tranche A
-- **WHEN** scan completes 31 measured rows
-- **THEN** DOCS category % = sum(DOCS-01/03/04/08/09 scores)÷15×100, and headline = Σ(category% × base weight) over the 8 non-empty categories (DOCS 5%, PERF/PERF folded at base weights); `coverage` shows `31/102 measured`
+- **WHEN** scan completes with measured DOCS rows
+- **THEN** DOCS category % = sum(DOCS-01/03/04/08/09 scores)÷(applicable×3)×100, and headline = Σ(category% × base weight) over the non-empty categories (DOCS 5%, PERF/PERF folded at base weights); `coverage` reports the measured/estimated/unknown split actually produced
 
 #### Scenario: MVP-only request preserves old shape
 - **WHEN** `indicatorIds` is 19 MVP
-- **THEN** coverage reports `19/102 measured` and DOCS/PERF/DATA rows are `unknown` placeholders as before — no regression
+- **THEN** coverage reports the MVP measured count and DOCS/PERF/DATA rows are `unknown` placeholders as before — no regression
+
+#### Scenario: Demotion is reflected in coverage, not hidden
+- **WHEN** measurement honesty demotes a row that a previous release graded measured
+- **THEN** coverage's measured count drops and unknown rises by the same amount, and no fixed coverage constant is asserted anywhere
 
 ### Requirement: Empty-category categories are excluded from roll-up
 The system SHALL NOT emit a `CategoryScore` for a category that has zero indicator rows. `scoreMvp` SHALL group rows by `category_id` only from `allRows` and SHALL NOT inject phantom empty categories (`DATA/API/PERF/DOCS` fallback). When `applicable === 0` for a category (no `measured`/`estimated` rows), the category SHALL be omitted from `categories[]` and its weight SHALL NOT be applied as `0% * weight`; `weighted_contribution` is `0` and headline is sum over emitted categories.

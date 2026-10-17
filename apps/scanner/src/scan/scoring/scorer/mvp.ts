@@ -217,6 +217,228 @@ function reasonEcos08(score: number, f: Record<string, unknown>): string {
   return `${desc}; all active — per ECOS-08 Green: supported lifecycle — score 3.`;
 }
 
+// --- detector-honesty rows: spec §5 predicates (no constant grading) ---
+
+/** ECOS-01 — runtime EOL. Encyclopedia §ECOS-01; YELLOW_MARGIN 180d. */
+const ECOS01_YELLOW_MARGIN_DAYS = 180;
+const ECOS01_CORE_PIN = /dockerfile|workflow|ci|\.github/i;
+function scoreEcos01(f: Record<string, unknown>): number {
+  const runtimes = (f.runtimes as Array<{ days_until_eol?: number | null; is_past_eol?: boolean; pin_source?: string }>) ?? [];
+  if (runtimes.length === 0) return 2;
+  const past = runtimes.filter((r) => r.is_past_eol === true);
+  if (past.length) return past.some((r) => ECOS01_CORE_PIN.test(String(r.pin_source ?? ''))) ? 0 : 1;
+  const near = runtimes.some((r) => typeof r.days_until_eol === 'number' && r.days_until_eol <= ECOS01_YELLOW_MARGIN_DAYS);
+  return near ? 2 : 3;
+}
+function reasonEcos01(score: number, f: Record<string, unknown>): string {
+  const runtimes = (f.runtimes as Array<{ product?: string; version?: string; cycle?: string; days_until_eol?: number | null; is_past_eol?: boolean; pin_source?: string }>) ?? [];
+  const desc = runtimes.map((r) => `${r.product}@${r.version} (cycle ${r.cycle}, EOL ${r.is_past_eol ? 'PASSED' : `${r.days_until_eol}d`}, pin ${r.pin_source})`).join(', ') || 'no runtime pinned';
+  if (score === 0) return `${desc}; EOL runtime pinned on the core deploy path — per ECOS-01 Red flag: unpatched runtime in core logic (G3) — score 0.`;
+  if (score === 1) return `${desc}; EOL runtime confined outside core — per ECOS-01 Yellow flag: EOL in an isolated path — score 1.`;
+  if (score === 2) return `${desc}; within ${ECOS01_YELLOW_MARGIN_DAYS}d of EOL — per ECOS-01 Yellow flag: active version near EOL — score 2.`;
+  return `${desc}; all runtimes within support — per ECOS-01 Green: runtime current — score 3.`;
+}
+
+/** ECOS-02 — major package drift. Encyclopedia §ECOS-02; Y1 30 / R1 50. */
+const ECOS02_Y1 = 30;
+const ECOS02_R1 = 50;
+function scoreEcos02(f: Record<string, unknown>): number {
+  const pct1 = (f.pct_behind_1plus_major as number) ?? 0;
+  const gaps = (f.core_framework_gaps as Array<{ majors_behind?: number }>) ?? [];
+  const maxGap = gaps.reduce((a, g) => Math.max(a, g.majors_behind ?? 0), 0);
+  if (maxGap >= 3) return 0;
+  if (maxGap === 2 || pct1 >= ECOS02_R1) return 1;
+  if (pct1 >= ECOS02_Y1) return 2;
+  return 3;
+}
+function reasonEcos02(score: number, f: Record<string, unknown>): string {
+  const pct1 = (f.pct_behind_1plus_major as number) ?? 0;
+  const pct2 = (f.pct_behind_2plus_major as number) ?? 0;
+  const gaps = (f.core_framework_gaps as Array<{ name?: string; majors_behind?: number }>) ?? [];
+  const worst = gaps.length ? `; worst core gap ${gaps[0].name} ${gaps[0].majors_behind} major(s)` : '';
+  if (score === 0) return `${pct1}% ≥1 major behind, ${pct2}% ≥2${worst} — per ECOS-02 Red flag: core framework stuck ≥2 majors — score 0.`;
+  if (score === 1) return `${pct1}% ≥1 major behind, ${pct2}% ≥2${worst} — per ECOS-02 Red/Yellow: deep drift or core framework 2 majors behind — score 1.`;
+  if (score === 2) return `${pct1}% ≥1 major behind${worst} — per ECOS-02 Yellow flag: 30–50% drifting — score 2.`;
+  return `${pct1}% ≥1 major behind; core framework within a major — per ECOS-02 Green: minor drift only — score 3.`;
+}
+
+/** ECOS-03 — abandoned libraries. Encyclopedia §ECOS-03; Y 12mo / R 24mo. */
+const ECOS03_Y_MONTHS = 12;
+const ECOS03_R_MONTHS = 24;
+function scoreEcos03(f: Record<string, unknown>): number {
+  const abandoned = (f.abandoned as Array<{ months_since_release?: number; archived?: boolean; in_core_path?: boolean }>) ?? [];
+  if (abandoned.length === 0) return 3;
+  const coreFire = abandoned.some((a) => a.in_core_path === true && (a.archived === true || (a.months_since_release ?? 0) > ECOS03_R_MONTHS));
+  if (coreFire) return 0;
+  const bus = (f.bus_factor_1_count as number) ?? 0;
+  const peripheralBand = abandoned.some((a) => a.in_core_path !== true && (a.months_since_release ?? 0) >= ECOS03_Y_MONTHS && (a.months_since_release ?? 0) <= ECOS03_R_MONTHS);
+  if (peripheralBand || (bus > 0 && abandoned.every((a) => a.in_core_path !== true))) return 2;
+  return 1;
+}
+function reasonEcos03(score: number, f: Record<string, unknown>): string {
+  const abandoned = (f.abandoned as Array<{ name?: string; months_since_release?: number; in_core_path?: boolean }>) ?? [];
+  const total = (f.load_bearing_total as number) ?? 0;
+  const names = abandoned.slice(0, 4).map((a) => `${a.name} (${a.months_since_release}mo${a.in_core_path ? ', core' : ''})`).join(', ');
+  if (score === 0) return `${abandoned.length}/${total} load-bearing deps abandoned; core: ${names} — per ECOS-03 Red flag: unmaintained >24mo or archived in core — score 0.`;
+  if (score === 2) return `${abandoned.length}/${total} abandoned in peripheral scope: ${names} — per ECOS-03 Yellow flag: 12–24mo peripheral — score 2.`;
+  if (score === 1) return `${abandoned.length}/${total} abandoned: ${names} — per ECOS-03 Yellow flag: isolated/very-old abandonment — score 1.`;
+  return `all ${total} load-bearing deps maintained — per ECOS-03 Green: no abandonment — score 3.`;
+}
+
+/** ECOS-05 — license compliance. Encyclopedia §ECOS-05 (G8 reads copyleft+closed). */
+function scoreEcos05(f: Record<string, unknown>): number {
+  const strong = (f.copyleft_strong as unknown[]) ?? [];
+  const unknown = (f.license_unknown_count as number) ?? 0;
+  const sbom = (f.sbom_present_in_repo as boolean) ?? false;
+  const closed = (f.closed_source_distribution_likely as boolean) ?? false;
+  if (strong.length > 0 && closed) return 0;
+  if (strong.length > 0 || unknown > 0) return 1;
+  return sbom ? 3 : 2;
+}
+function reasonEcos05(score: number, f: Record<string, unknown>): string {
+  const strong = (f.copyleft_strong as Array<{ name?: string; license?: string }>) ?? [];
+  const unknown = (f.license_unknown_count as number) ?? 0;
+  const total = (f.packages_total as number) ?? 0;
+  const sbom = (f.sbom_present_in_repo as boolean) ?? false;
+  const closed = (f.closed_source_distribution_likely as boolean) ?? false;
+  if (score === 0) return `${strong.length} strong-copyleft of ${total} with closed-source distribution (${strong.map((s) => `${s.name} ${s.license}`).join(', ')}) — per ECOS-05 Red flag: copyleft in closed distribution (G8) — score 0.`;
+  if (score === 1) return `${unknown} unknown-license + ${strong.length} strong-copyleft of ${total} direct deps — per ECOS-05 Yellow flag: unknown/copyleft present — score 1 (estimated clamp [1,2]).`;
+  return `${total} direct deps, ${unknown} unknown, no strong copyleft; SBOM ${sbom ? 'present' : 'absent'} — per ECOS-05 ${sbom ? 'Green' : 'Yellow'}: ${sbom ? 'compliant' : 'clean but no SBOM'} — score ${score} (estimated clamp [1,2]).`;
+}
+
+/** ECOS-07 — lockfile integrity. Encyclopedia §ECOS-07; R_PIN 50. */
+const ECOS07_R_PIN = 50;
+function scoreEcos07(f: Record<string, unknown>): number {
+  const locks = (f.lockfiles as Array<{ stale?: boolean }>) ?? [];
+  const pin = (f.pin_ratio as number) ?? 0;
+  const enforced = (f.ci_immutable_install as { enforced?: boolean } | undefined)?.enforced ?? false;
+  const manifests = (f.manifests_total as number) ?? 0;
+  if (locks.length === 0 || pin < ECOS07_R_PIN) return 0;
+  if (locks.length < manifests) return 1;
+  const anyStale = locks.some((l) => l.stale === true);
+  return !anyStale && enforced ? 3 : 2;
+}
+function reasonEcos07(score: number, f: Record<string, unknown>): string {
+  const locks = (f.lockfiles as Array<{ path?: string; stale?: boolean; integrity_hashes?: boolean }>) ?? [];
+  const pin = (f.pin_ratio as number) ?? 0;
+  const enforced = (f.ci_immutable_install as { enforced?: boolean; evidence?: string } | undefined);
+  const manifests = (f.manifests_total as number) ?? 0;
+  const desc = locks.map((l) => `${l.path}${l.stale ? ' (stale)' : ''}${l.integrity_hashes ? '' : ' (no integrity)'}`).join(', ') || 'no lockfile';
+  if (score === 0) return `${desc}; pin_ratio ${pin}% — per ECOS-07 Red flag: no lockfile or floating pins — score 0.`;
+  if (score === 1) return `${locks.length}/${manifests} manifests locked (${desc}); pin_ratio ${pin}% — per ECOS-07 Yellow flag: partial coverage — score 1.`;
+  if (score === 2) return `${desc}; pin_ratio ${pin}%; CI immutable install ${enforced?.enforced ? 'enforced' : 'not enforced'} — per ECOS-07 Yellow flag: locked but stale/not enforced — score 2.`;
+  return `${desc}; pin_ratio ${pin}%; CI immutable (${enforced?.evidence}) — per ECOS-07 Green: lockfile + immutable CI — score 3.`;
+}
+
+/** ARCH-05 — churn vs defect hot spots. Encyclopedia §ARCH-05; Y_SHARE 0.5. */
+const ARCH05_Y_SHARE = 0.5;
+function scoreArch05(f: Record<string, unknown>): number {
+  const hotspots = (f.hotspots as Array<{ in_core_path?: boolean }>) ?? [];
+  if (hotspots.length === 0) return 3;
+  if (hotspots.some((h) => h.in_core_path === true)) return 0;
+  if (hotspots.length === 1) return 1;
+  const share = (f.churn_top10_share as number) ?? 0;
+  return share > ARCH05_Y_SHARE ? 2 : 2;
+}
+function reasonArch05(score: number, f: Record<string, unknown>): string {
+  const hotspots = (f.hotspots as Array<{ file?: string; churn_rank?: number; defect_rank?: number; in_core_path?: boolean }>) ?? [];
+  const share = (f.churn_top10_share as number) ?? 0;
+  const commits = (f.commits_analyzed as number) ?? 0;
+  const windowDays = (f.window_days as number) ?? 0;
+  const desc = hotspots.slice(0, 4).map((h) => `${h.file} (#${h.churn_rank} churn/#${h.defect_rank} defect${h.in_core_path ? ', core' : ''})`).join(', ');
+  if (score === 0) return `${commits} commits/${windowDays}d; top10% share ${share}; core hot spot(s): ${desc} — per ARCH-05 Red flag: hot spot on core path — score 0.`;
+  if (score === 1) return `${commits} commits/${windowDays}d; single isolated hot spot: ${desc} — per ARCH-05 Yellow flag: isolated hot spot — score 1.`;
+  if (score === 2) return `${commits} commits/${windowDays}d; top10% share ${share}; non-core hot spots: ${desc} — per ARCH-05 Yellow flag: churn concentrated, defect correlation mild — score 2.`;
+  return `${commits} commits/${windowDays}d; top10% share ${share}; no churn∩defect intersection — per ARCH-05 Green: no hot spots — score 3.`;
+}
+
+/** TEST-03 — pyramid inversion. Estimated-only: score ∈ {1,2} (spec §5). */
+function scoreTest03(f: Record<string, unknown>): number {
+  const unit = (f.unit as number) ?? 0;
+  const e2e = (f.e2e as number) ?? 0;
+  const share = (f.e2e_share_est as number) ?? 0;
+  if (unit === 0 || (e2e > 0 && unit < e2e) || share > 0.5) return 1;
+  return 2;
+}
+function reasonTest03(score: number, f: Record<string, unknown>): string {
+  const unit = (f.unit as number) ?? 0;
+  const integration = (f.integration as number) ?? 0;
+  const e2e = (f.e2e as number) ?? 0;
+  const share = (f.e2e_share_est as number) ?? 0;
+  const desc = `unit/integration/e2e = ${unit}/${integration}/${e2e}; e2e share ~${Math.round(share * 100)}%`;
+  if (score === 1) return `${desc} — per TEST-03 Yellow/Red: E2E-dominant or no unit layer — score 1 (estimated clamp [1,2]).`;
+  return `${desc} — per TEST-03 Yellow flag: overweight E2E but unit layer exists — score 2 (estimated clamp [1,2]; 3 unreachable by construction).`;
+}
+
+/** TEST-05 — skipped tests. Encyclopedia §TEST-05; gold <2%, yellow 5–10%, red >10% or aged >6mo. */
+const TEST05_GOLD_RATIO = 0.02;
+const TEST05_RED_RATIO = 0.10;
+const TEST05_AGED_DAYS = 180;
+function scoreTest05(f: Record<string, unknown>): number {
+  const ratio = (f.skip_ratio as number) ?? 0;
+  const aged = (f.aged_skips as Array<{ age_days?: number }>) ?? [];
+  if (ratio > TEST05_RED_RATIO || aged.some((a) => (a.age_days ?? 0) > TEST05_AGED_DAYS)) return 1;
+  if (ratio < TEST05_GOLD_RATIO) return 3;
+  return 2;
+}
+function reasonTest05(score: number, f: Record<string, unknown>): string {
+  const total = (f.total_tests_est as number) ?? 0;
+  const skipped = (f.skipped_total as number) ?? 0;
+  const ratio = (f.skip_ratio as number) ?? 0;
+  const aged = (f.aged_skips as Array<{ age_days?: number }>) ?? [];
+  const agedMax = aged.reduce((a, x) => Math.max(a, x.age_days ?? 0), 0);
+  const desc = `${skipped}/${total} skipped (${Math.round(ratio * 100)}%${agedMax ? `, oldest ${agedMax}d` : ''})`;
+  if (score === 1) return `${desc} — per TEST-05 Red flag: >10% skipped or skips aged >6mo — score 1.`;
+  if (score === 3) return `${desc} — per TEST-05 Green: <2% skipped — score 3.`;
+  return `${desc} — per TEST-05 Yellow flag: 2–10% skipped — score 2.`;
+}
+
+/** SEC-01 — unpatched vulnerabilities. Encyclopedia §SEC-01 (G2 reads critical>14d reachable). */
+const SEC01_CRITICAL_DAYS = 14;
+const SEC01_HIGH_YELLOW_DAYS = 30;
+function scoreSec01(f: Record<string, unknown>): number {
+  const findings = (f.findings as Array<{ severity?: string; age_days?: number; in_core_import_closure?: boolean }>) ?? [];
+  const crits = findings.filter((x) => x.severity === 'CRITICAL');
+  const critFire = crits.some((c) => (c.age_days ?? 0) > SEC01_CRITICAL_DAYS && c.in_core_import_closure !== false);
+  if (critFire) return 0;
+  if (crits.length > 0) return 1;
+  const highs = findings.filter((x) => x.severity === 'HIGH');
+  if (highs.length === 0) return 3;
+  return highs.some((h) => (h.age_days ?? 0) > SEC01_HIGH_YELLOW_DAYS) ? 1 : 2;
+}
+function reasonSec01(score: number, f: Record<string, unknown>): string {
+  const findings = (f.findings as Array<{ id?: string; pkg?: string; severity?: string; age_days?: number; fix_available?: boolean; in_core_import_closure?: boolean }>) ?? [];
+  const desc = findings.slice(0, 4).map((x) => `${x.id} on ${x.pkg} (${x.severity}, ${x.age_days}d${x.in_core_import_closure ? ', core-reachable' : ''})`).join(', ') || 'no findings';
+  const crits = findings.filter((x) => x.severity === 'CRITICAL').length;
+  const highs = findings.filter((x) => x.severity === 'HIGH').length;
+  if (score === 0) return `${crits} critical, ${highs} high open: ${desc} — per SEC-01 Red flag: exposed critical >14d (G2) — score 0.`;
+  if (score === 1) return `${crits} critical, ${highs} high open: ${desc} — per SEC-01 Yellow flag: critical isolated or aged highs — score 1.`;
+  if (score === 2) return `${highs} high open within 30d: ${desc} — per SEC-01 Yellow flag: high within band — score 2.`;
+  return `zero open high/critical — per SEC-01 Green: SLAs met — score 3.`;
+}
+
+/** SEC-02 — hardcoded secrets. Encyclopedia §SEC-02 (G1 reads verified/tree/history). */
+const SEC02_CORE_PATH = /(^|\/)(config|conf|env|deploy|deployment|k8s|helm|terraform|secrets?|\.env|auth|ci|\.github)(\/|\.|$)/i;
+function scoreSec02(f: Record<string, unknown>): number {
+  const tree = (f.tree_findings as Array<{ file?: string; verified?: boolean }>) ?? [];
+  const hist = (f.history_only_findings as number) ?? 0;
+  const verified = (f.verified_live as number) ?? 0;
+  if (verified > 0) return 0;
+  if (tree.length === 0) return hist > 0 ? 2 : 3;
+  if (tree.some((t) => SEC02_CORE_PATH.test(String(t.file ?? '')))) return 0;
+  return 1;
+}
+function reasonSec02(score: number, f: Record<string, unknown>): string {
+  const tree = (f.tree_findings as Array<{ rule?: string; file?: string }>) ?? [];
+  const hist = (f.history_only_findings as number) ?? 0;
+  const verified = (f.verified_live as number) ?? 0;
+  const desc = tree.slice(0, 4).map((t) => `${t.rule}@${t.file}`).join(', ') || 'clean tree';
+  if (score === 0) return `${tree.length} tree finding(s) (${verified} verified-live): ${desc} — per SEC-02 Red flag: active secret in core/prod (G1) — score 0.`;
+  if (score === 2) return `clean tree; ${hist} history-only finding(s) — per SEC-02 Yellow flag: rotated secrets in history — score 2.`;
+  if (score === 1) return `${tree.length} unverified finding(s) in isolated paths: ${desc} — per SEC-02 Yellow flag: isolated unverified secret — score 1.`;
+  return `zero findings (clean tree + history) — per SEC-02 Green: no secrets — score 3.`;
+}
+
 function scoreSec09(f: Record<string, unknown>): number {
   const parsers = (f.parser_surface_detected as unknown[]) ?? [];
   const harnesses = (f.harnesses as unknown[]) ?? [];
@@ -259,6 +481,16 @@ function reasonSec10(score: number, f: Record<string, unknown>): string {
 }
 
 const TRANCHE_SCORERS: Record<string, (f: Record<string, unknown>) => number> = {
+  'ECOS-01': scoreEcos01,
+  'ECOS-02': scoreEcos02,
+  'ECOS-03': scoreEcos03,
+  'ECOS-05': scoreEcos05,
+  'ECOS-07': scoreEcos07,
+  'SEC-01': scoreSec01,
+  'SEC-02': scoreSec02,
+  'ARCH-05': scoreArch05,
+  'TEST-03': scoreTest03,
+  'TEST-05': scoreTest05,
   'DOCS-01': scoreDocs01,
   'DOCS-03': scoreDocs03,
   'DOCS-04': scoreDocs04,
@@ -273,6 +505,16 @@ const TRANCHE_SCORERS: Record<string, (f: Record<string, unknown>) => number> = 
   'SEC-10': scoreSec10,
 };
 const TRANCHE_REASONS: Record<string, (score: number, f: Record<string, unknown>) => string> = {
+  'ECOS-01': reasonEcos01,
+  'ECOS-02': reasonEcos02,
+  'ECOS-03': reasonEcos03,
+  'ECOS-05': reasonEcos05,
+  'ECOS-07': reasonEcos07,
+  'SEC-01': reasonSec01,
+  'SEC-02': reasonSec02,
+  'ARCH-05': reasonArch05,
+  'TEST-03': reasonTest03,
+  'TEST-05': reasonTest05,
   'DOCS-01': reasonDocs01,
   'DOCS-03': reasonDocs03,
   'DOCS-04': reasonDocs04,
@@ -285,6 +527,20 @@ const TRANCHE_REASONS: Record<string, (score: number, f: Record<string, unknown>
   'ECOS-08': reasonEcos08,
   'SEC-09': reasonSec09,
   'SEC-10': reasonSec10,
+};
+
+/** Clamp applied when a detector declares `measurement.status === 'estimated'`
+ * (spec clamp [1,2]): an estimate may not claim the Green or the Red end. */
+const ESTIMATED_CLAMP: Record<string, [number, number]> = {
+  'ECOS-01': [1, 2],
+  'ECOS-02': [1, 2],
+  'ECOS-03': [1, 2],
+  'ECOS-05': [1, 2],
+  'ECOS-06': [1, 2],
+  'ECOS-08': [1, 2],
+  'SEC-01': [1, 2],
+  'TEST-03': [1, 2],
+  'ARCH-05': [1, 2],
 };
 
 const MVP_IDS = ['VEL-06','VEL-09','VEL-08','VEL-10','SEC-07','TEST-08','ECOS-01','ECOS-02','ECOS-03','ECOS-05','ECOS-07','SEC-01','SEC-06','SEC-02','ARCH-01','ARCH-08','ARCH-05','TEST-03','TEST-05'];
@@ -323,23 +579,48 @@ export function scoreMvp(facts: FactRecord[], opts: { archetype?: string; planeI
     const cat = lookupCategory(id);
     const name = lookupName(id);
     const effort = lookupEffort(id);
-    if (!f || f.error) {
-      extraRows.push({ id, name, category_id: cat, status: 'unknown', unknown_measure_path: `what it takes: ${id} failed`, effort } as unknown as ReturnType<typeof phase1Rows>[number]);
-    } else {
-      const flat = flattenFacts(f.facts as Record<string, unknown>, id);
-      const scorer = TRANCHE_SCORERS[id];
-      const reasonFn = TRANCHE_REASONS[id];
-      const score = scorer ? scorer(flat) : 2;
-      const reason = reasonFn ? reasonFn(score, flat) : `${name} — evidence via ${f.provenance.tool} — score ${score}.`;
-      const remediation = lookupRemediation(id);
-      extraRows.push({ id, name, category_id: cat, status: 'measured', score, reason, evidence: { tool: f.provenance.tool, pointers: f.evidencePointers as unknown as [], facts: flat }, effort, remediation } as unknown as ReturnType<typeof phase1Rows>[number]);
+    const scorer = TRANCHE_SCORERS[id];
+    // No fact, an errored fact, or no scorer → `unknown` (never a constant
+    // fallback: a row the slice cannot grade must not be graded from `2`).
+    if (!f || f.error || !scorer) {
+      const whatItTakes = (f as unknown as { unknownMeasurePath?: string } | undefined)?.unknownMeasurePath
+        ?? `what it takes: ${id} failed`;
+      extraRows.push({ id, name, category_id: cat, status: 'unknown', unknown_measure_path: whatItTakes, effort } as unknown as ReturnType<typeof phase1Rows>[number]);
+      continue;
     }
+    const flat = flattenFacts(f.facts as Record<string, unknown>, id);
+    const reasonFn = TRANCHE_REASONS[id];
+    // Detector-declared measurement status (detector-honesty measure-or-unknown):
+    // `estimated` rows carry the spec's clamp so an estimate cannot claim Green/Red.
+    const measurementStatus = (f as unknown as { measurement?: { status?: string } }).measurement?.status ?? 'measured';
+    let score = scorer(flat);
+    if (measurementStatus === 'estimated') {
+      const clamp = ESTIMATED_CLAMP[id];
+      if (clamp) score = Math.min(clamp[1], Math.max(clamp[0], score));
+    }
+    const status = measurementStatus === 'estimated' ? ('estimated' as const) : ('measured' as const);
+    const reason = reasonFn ? reasonFn(score, flat) : `${name} — evidence via ${f.provenance.tool} — score ${score}.`;
+    const remediation = lookupRemediation(id);
+    extraRows.push({ id, name, category_id: cat, status, score, reason, evidence: { tool: f.provenance.tool, tool_version: f.provenance.version, pointers: f.evidencePointers as unknown as [], facts: flat }, effort, remediation } as unknown as ReturnType<typeof phase1Rows>[number]);
+  }
+  // Data-dependent N/A (detector-honesty D6): ECOS-08 with zero detected
+  // frameworks has no support surface to grade (spec `na_when`). Every other
+  // absent-data case (no manifest / unsupported ecosystem) stays `unknown`.
+  const dataNotApplicable = new Set<string>();
+  {
+    const ecos08 = extraRows.find(r => r.id === 'ECOS-08') as unknown as { evidence?: { facts?: { frameworks?: unknown[] } } } | undefined;
+    const frameworks = ecos08?.evidence?.facts?.frameworks;
+    if (Array.isArray(frameworks) && frameworks.length === 0) dataNotApplicable.add('ECOS-08');
   }
   // 5-state precedence: not_implemented > not_applicable > unknown > estimated > measured
   const IMPLEMENTED_SET = new Set(ALL_MEASURED_IDS);
   const allRowsWithApplicability = [...phase1, ...extraRows].map(r => {
     if (!IMPLEMENTED_SET.has(r.id)) {
       return { ...r, status: 'not_implemented' as const, score: undefined, reason: 'detector not implemented in this slice', unknown_measure_path: `What it takes: ${r.id} — detector pending; see rubric`, evidence: undefined, not_applicable: false };
+    }
+    if (dataNotApplicable.has(r.id)) {
+      const why = 'no framework/support surface detected — ECOS-08 not applicable for this target';
+      return { ...r, status: 'not_applicable' as const, score: undefined, reason: why, unknown_measure_path: why, evidence: undefined, not_applicable: true };
     }
     const evalRes = evaluateApplicability(r.id, archetype, plane as never);
     if (evalRes.notApplicable) {
@@ -446,11 +727,12 @@ export function scoreMvp(facts: FactRecord[], opts: { archetype?: string; planeI
   const totalApplicable = measured + estimated + unknown;
   const coverage = { measured, estimated, unknown, not_applicable, not_implemented, measured_pct: `${Math.round(measured/(totalApplicable||1)*100)}%`, estimated_pct: `${Math.round(estimated/(totalApplicable||1)*100)}%`, unknown_pct: `${Math.round(unknown/(totalApplicable||1)*100)}%`, not_applicable_pct: `${Math.round(not_applicable/102*100)}%`, not_implemented_pct: `${Math.round(not_implemented/102*100)}%` };
   const status = (measured === ALL_MEASURED_IDS.length || measured === MVP_IDS.length) ? 'complete' as const : 'degraded' as const;
-  // Coverage floor (3.2): fewer than half of requested rows measured → suppress the
-  // headline with an explicit insufficient-signal verdict instead of a number.
+  // Coverage floor (3.2, D6): fewer than half of requested rows measured **or
+  // estimated** → suppress the headline with an explicit insufficient-signal
+  // verdict instead of a number. An `estimated` row counts toward the floor.
   // Requested ≈ rows the scan attempted (measured + estimated + unknown).
   const requested = measured + estimated + unknown;
-  const suppressed = requested > 0 && measured < requested * COVERAGE_FLOOR;
+  const suppressed = requested > 0 && measured + estimated < requested * COVERAGE_FLOOR;
   const verdict = suppressed ? ('insufficient-signal' as const) : undefined;
   const rawGates = evaluateGates(facts);
   // Gate corollary (D5/3.3): a gate with NO measured/estimated source row is

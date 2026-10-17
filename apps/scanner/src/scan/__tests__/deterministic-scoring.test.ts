@@ -59,7 +59,7 @@ describe('1.2 sampleN threaded through the lease', () => {
     expect(ctrl.lease().sampleN).toBe(500);
     ctrl.cancel();
   });
-  it('fixture exceeding the shard threshold yields sampled (truncated) slow detectors', async () => {
+  it('large fixture: demoted rows stay unknown with a what-it-takes note', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'leapscore-big-'));
     try {
       writeFileSync(join(dir, 'package.json'), JSON.stringify({ name: 'big', version: '1.0.0' }));
@@ -69,12 +69,19 @@ describe('1.2 sampleN threaded through the lease', () => {
       const done = events.find((e) => e.type === 'done');
       expect(done).toBeDefined();
       const facts = (done!.facts as FactRecord[]) ?? [];
-      for (const id of ['ARCH-01', 'ARCH-08', 'ECOS-05']) {
+      // Demoted rows (ARCH-01/ARCH-08) are never graded from a constant — they
+      // are `unknown` with an explicit what-it-takes note (detector-honesty 4.2).
+      for (const id of ['ARCH-01', 'ARCH-08']) {
         const f = facts.find((x) => x.detectorId === id);
         expect(f, id).toBeDefined();
-        expect(f!.truncated, id).toBe(true);
-        expect(String((f!.error as { detail?: string } | undefined)?.detail)).toMatch(/sampled/);
+        expect((f as unknown as { measurement?: { status?: string } }).measurement?.status, id).toBe('unknown');
+        expect(String((f as unknown as { unknownMeasurePath?: string }).unknownMeasurePath), id).toMatch(/what it takes|analyzer|scanner/i);
       }
+      // A bounded/absent-data detector surfaces truncation rather than a silent guess.
+      const ecos05 = facts.find((x) => x.detectorId === 'ECOS-05');
+      expect(ecos05).toBeDefined();
+      expect(ecos05!.truncated).toBe(true);
+      expect(String((ecos05 as unknown as { unknownMeasurePath?: string }).unknownMeasurePath)).toMatch(/manifest|license/i);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -106,11 +113,11 @@ describe('1.3 partitioned byte budgets', () => {
 
 describe('2.1 per-detector tool versions', () => {
   it('every detector tool has a version and changed detectors are bumped', () => {
-    for (const tool of ['adr-inventory', 'lizard', 'jscpd', 'syft', 'gh-api', 'phase2', 'budget']) {
+    for (const tool of ['adr-inventory', 'lockfile-parse', 'eol-snapshot', 'advisory-snapshot', 'gh-api', 'phase2', 'budget']) {
       expect(toolVersion(tool)).toMatch(/^\d+\.\d+$/);
     }
     expect(DETECTOR_TOOL_VERSIONS['adr-inventory']).toBe('1.1');
-    expect(buildToolVersions().get('syft')).toBe('1.1');
+    expect(buildToolVersions().get('lockfile-parse')).toBe('1.0');
   });
   it('versions appear in provenance output on a real scan', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'leapscore-prov-'));
@@ -148,7 +155,7 @@ describe('2.2 score fingerprint', () => {
     const b = computeScoreFingerprint({ ...base, facts: mk(9876) });
     expect(a).toBe(b);
     expect(a).toHaveLength(64);
-    expect(FINGERPRINT_VERSION).toBe(1);
+    expect(FINGERPRINT_VERSION).toBe(2);
   });
   it('flag change changes the fingerprint', () => {
     const facts = [fake('DOCS-01', { docs01: { adr_count: 1 } })];
@@ -162,7 +169,7 @@ describe('2.2 score fingerprint', () => {
     const s1 = sealScan({ facts, snapshot: snap(), budgetMs: 10_000, startMs: Date.now(), trace: [], subjectSlug: 'x', engineRef: 'abc1234' });
     const s2 = sealScan({ facts, snapshot: snap(), budgetMs: 10_000, startMs: Date.now(), trace: [], subjectSlug: 'x', engineRef: 'abc1234' });
     expect(s1.meta.score_fingerprint).toBeTruthy();
-    expect(s1.meta.fingerprint_version).toBe(1);
+    expect(s1.meta.fingerprint_version).toBe(2);
     expect(s1.meta.score_fingerprint).toBe(s2.meta.score_fingerprint);
     expect(s1.runId).not.toBe(s2.runId);
   });

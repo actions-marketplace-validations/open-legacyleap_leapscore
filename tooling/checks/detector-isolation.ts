@@ -15,6 +15,9 @@ const ALLOWED_FS_FILES = new Set([
   'apps/scanner/src/scan/budget.ts',
   'apps/scanner/src/scan/facts.ts',
   'apps/scanner/src/scan/registry.ts',
+  // git.ts is the sole module allowed to spawn the one external binary (`git`);
+  // it degrades to null so callers report `unknown`, never a guess.
+  'apps/scanner/src/scan/git.ts',
   'apps/scanner/src/scan/scoring/scorer/rollup.ts',
   'apps/scanner/src/scan/scoring/seal.ts',
   'apps/scanner/src/scan/local.ts',

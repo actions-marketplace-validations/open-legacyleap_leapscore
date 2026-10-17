@@ -19,6 +19,5 @@ export function score(_facts: FactRecord[], _rubricVersion: string): Report {
     top_blockers: [],
     deep_dive_scope: [],
     full_table: [],
-    sample: true,
   };
 }

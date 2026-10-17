@@ -10,6 +10,7 @@ import { detectVel10 } from './detectors/vel10';
 import { detectSec07 } from './detectors/sec07';
 import { detectTest08 } from './detectors/test08';
 import type { Phase1ScanContext } from './detector';
+import { toolVersion } from './detectors/common';
 import { factsToRows, scorePhase1 } from './scoring/scorer/phase1';
 import { tierForScore } from './scoring/seal';
 
@@ -40,7 +41,7 @@ export async function runPhase1Scan(repoUrl: string, opts: { token?: string; fet
   if (!ingest.ok) return { status: 'snapshot_refused', reason: ingest.reason, detail: ingest.detail };
   const { owner, repo, normalized } = ingest;
 
-  const ctx: Phase1ScanContext = { owner, repo, gh, signal, toolVersions: new Map([['gh-api', 'phase1']]) };
+  const ctx: Phase1ScanContext = { owner, repo, gh, signal, toolVersions: new Map([['gh-api', toolVersion('gh-api')]]) };
 
   // Parallel detectors under budget
   const detectors = [detectVel06, detectVel09, detectVel08, detectVel10, detectSec07, detectTest08];
@@ -59,7 +60,7 @@ export async function runPhase1Scan(repoUrl: string, opts: { token?: string; fet
       return rec;
     }
     const detail = r.reason instanceof Error ? r.reason.message : String(r.reason);
-    return { id, detectorId: id, schemaVersion: '1.0.0', facts: {}, evidencePointers: [], provenance: { tool: 'gh-api', version: 'phase1', flags: [], durationMs: 0 }, truncated: true, error: { kind: 'crash' as const, detail: detail.slice(0, 300) }, root: '/', scanId } as FactRecord;
+    return { id, detectorId: id, schemaVersion: '1.0.0', facts: {}, evidencePointers: [], provenance: { tool: 'gh-api', version: toolVersion('gh-api'), flags: [], durationMs: 0 }, truncated: true, error: { kind: 'crash' as const, detail: detail.slice(0, 300) }, root: '/', scanId } as FactRecord;
   });
 
   const rows = factsToRows(facts);

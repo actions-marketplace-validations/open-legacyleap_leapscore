@@ -13,7 +13,7 @@ export type Phase1Row = {
   status: 'measured' | 'unknown';
   score?: number;
   reason?: string;
-  evidence?: { tool: string; args?: string; pointers: Array<Record<string, string | number>>; facts: Record<string, unknown> };
+  evidence?: { tool: string; tool_version?: string; args?: string; pointers: Array<Record<string, string | number>>; facts: Record<string, unknown> };
   unknown_measure_path?: string;
   not_applicable?: boolean;
   effort: string;
@@ -188,7 +188,7 @@ export function factsToRows(facts: FactRecord[]): Phase1Row[] {
     return {
       id: d.id, name: d.name, category_id: d.cat, status: 'measured' as const, score,
       reason: reasonFor(d.id, score, flat),
-      evidence: { tool: f.provenance.tool, pointers: f.evidencePointers as unknown as Array<Record<string, string | number>>, facts: flat },
+      evidence: { tool: f.provenance.tool, tool_version: f.provenance.version, pointers: f.evidencePointers as unknown as Array<Record<string, string | number>>, facts: flat },
       effort: d.effort,
       remediation: lookupRemediation(d.id),
     };

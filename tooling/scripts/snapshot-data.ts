@@ -1,0 +1,211 @@
+/** tooling/scripts/snapshot-data.ts — curated source for the vendored offline
+ * datasets (detector-honesty D3). This file is the single source of truth: the
+ * refresh script (refresh-snapshots.ts) compiles it to versioned JSON under
+ * apps/scanner/src/scan/snapshots/. Never hand-edit the generated JSON.
+ *
+ * Scope (design D3): (a) runtime/framework end-of-life, (b) a pinned advisory
+ * subset for the ecosystems whose manifests the sniffer parses, (c) a small
+ * package metadata table (latest major, last release, license) so major-drift,
+ * abandonment and direct-dependency license facts can be measured offline.
+ *
+ * Data is deliberately curated and small — the release-packaging size budget
+ * owns the final size; this is the interface, not the number.
+ */
+
+export type EolCycle = { cycle: string; eol: string | null; latest?: string };
+export type EolRuntime = { aliases?: string[]; cycles: EolCycle[] };
+export type EolFramework = {
+  latest_major: number;
+  support_status: 'active' | 'maintenance' | 'eol';
+  eol_date?: string | null;
+  aliases?: string[];
+};
+export type PkgMeta = { latest_major: number; last_release: string; license: string };
+export type AdvisorySeverity = 'CRITICAL' | 'HIGH' | 'MODERATE' | 'LOW';
+export type Advisory = {
+  id: string;
+  ecosystem: string;
+  package: string;
+  severity: AdvisorySeverity;
+  /** Lower bound (inclusive); usually "0.0.0". */
+  introduced: string;
+  /** Fixed version (exclusive upper bound). Absent when no fix exists yet. */
+  fixed?: string;
+  published: string;
+  title: string;
+};
+
+export const EOL_SOURCE = {
+  source: 'curated endoflife.date cycle tables + per-ecosystem package registries (offline subset)',
+  data_date: '2026-10-17',
+  runtimes: {
+    node: {
+      aliases: ['nodejs', 'node-js', 'io.js'],
+      cycles: [
+        { cycle: '10', eol: '2021-04-30', latest: '10.24.1' },
+        { cycle: '12', eol: '2022-04-30', latest: '12.22.12' },
+        { cycle: '14', eol: '2023-04-30', latest: '14.21.3' },
+        { cycle: '16', eol: '2023-09-11', latest: '16.20.2' },
+        { cycle: '18', eol: '2025-04-30', latest: '18.20.4' },
+        { cycle: '20', eol: '2026-04-30', latest: '20.18.0' },
+        { cycle: '22', eol: '2027-04-30', latest: '22.11.0' },
+        { cycle: '24', eol: '2028-04-30', latest: '24.1.0' },
+      ],
+    },
+    python: {
+      aliases: ['python3', 'cpython'],
+      cycles: [
+        { cycle: '3.6', eol: '2021-12-23', latest: '3.6.15' },
+        { cycle: '3.7', eol: '2023-06-27', latest: '3.7.17' },
+        { cycle: '3.8', eol: '2024-10-07', latest: '3.8.20' },
+        { cycle: '3.9', eol: '2025-10-31', latest: '3.9.20' },
+        { cycle: '3.10', eol: '2026-10-31', latest: '3.10.15' },
+        { cycle: '3.11', eol: '2027-10-31', latest: '3.11.10' },
+        { cycle: '3.12', eol: '2028-10-31', latest: '3.12.7' },
+        { cycle: '3.13', eol: '2029-10-31', latest: '3.13.0' },
+      ],
+    },
+    java: {
+      aliases: ['jdk', 'openjdk', 'temurin'],
+      cycles: [
+        { cycle: '8', eol: '2030-12-31', latest: '8u432' },
+        { cycle: '11', eol: '2026-09-30', latest: '11.0.25' },
+        { cycle: '17', eol: '2029-09-30', latest: '17.0.12' },
+        { cycle: '21', eol: '2031-09-30', latest: '21.0.5' },
+      ],
+    },
+    go: {
+      aliases: ['golang'],
+      cycles: [
+        { cycle: '1.19', eol: '2023-08-08', latest: '1.19.13' },
+        { cycle: '1.20', eol: '2024-02-06', latest: '1.20.14' },
+        { cycle: '1.21', eol: '2024-08-13', latest: '1.21.13' },
+        { cycle: '1.22', eol: '2025-02-11', latest: '1.22.12' },
+        { cycle: '1.23', eol: '2025-08-12', latest: '1.23.8' },
+        { cycle: '1.24', eol: '2026-02-10', latest: '1.24.0' },
+      ],
+    },
+    ruby: {
+      aliases: ['mri'],
+      cycles: [
+        { cycle: '2.7', eol: '2023-03-31', latest: '2.7.8' },
+        { cycle: '3.0', eol: '2024-03-31', latest: '3.0.7' },
+        { cycle: '3.1', eol: '2025-03-31', latest: '3.1.6' },
+        { cycle: '3.2', eol: '2026-03-31', latest: '3.2.6' },
+        { cycle: '3.3', eol: '2027-03-31', latest: '3.3.6' },
+      ],
+    },
+    php: {
+      cycles: [
+        { cycle: '7.4', eol: '2022-11-28', latest: '7.4.33' },
+        { cycle: '8.0', eol: '2023-11-26', latest: '8.0.30' },
+        { cycle: '8.1', eol: '2025-12-31', latest: '8.1.29' },
+        { cycle: '8.2', eol: '2026-12-31', latest: '8.2.24' },
+        { cycle: '8.3', eol: '2027-12-31', latest: '8.3.13' },
+      ],
+    },
+  } as Record<string, EolRuntime>,
+  frameworks: {
+    react: { latest_major: 19, support_status: 'active' },
+    'react-native': { latest_major: 0, support_status: 'active' },
+    vue: { latest_major: 3, support_status: 'active' },
+    angular: { latest_major: 18, support_status: 'active' },
+    angularjs: { latest_major: 1, support_status: 'eol', eol_date: '2021-12-31' },
+    svelte: { latest_major: 5, support_status: 'active' },
+    next: { latest_major: 15, support_status: 'active' },
+    nuxt: { latest_major: 3, support_status: 'active' },
+    express: { latest_major: 5, support_status: 'maintenance' },
+    nestjs: { latest_major: 10, support_status: 'active' },
+    ember: { latest_major: 5, support_status: 'maintenance' },
+    django: { latest_major: 5, support_status: 'active' },
+    flask: { latest_major: 3, support_status: 'active' },
+    fastapi: { latest_major: 0, support_status: 'active' },
+    rails: { latest_major: 8, support_status: 'active' },
+    'spring-boot': { latest_major: 3, support_status: 'active' },
+    quarkus: { latest_major: 3, support_status: 'active' },
+    laravel: { latest_major: 11, support_status: 'active' },
+    gin: { latest_major: 1, support_status: 'active' },
+  } as Record<string, EolFramework>,
+  packages: {
+    js: {
+      lodash: { latest_major: 4, last_release: '2020-08-13', license: 'MIT' },
+      express: { latest_major: 5, last_release: '2024-10-01', license: 'MIT' },
+      react: { latest_major: 19, last_release: '2024-12-05', license: 'MIT' },
+      'react-dom': { latest_major: 19, last_release: '2024-12-05', license: 'MIT' },
+      axios: { latest_major: 1, last_release: '2024-11-13', license: 'MIT' },
+      qs: { latest_major: 6, last_release: '2025-01-01', license: 'BSD-3-Clause' },
+      minimist: { latest_major: 1, last_release: '2022-02-02', license: 'MIT' },
+      chokidar: { latest_major: 4, last_release: '2024-09-24', license: 'MIT' },
+      moment: { latest_major: 2, last_release: '2023-01-01', license: 'MIT' },
+      'left-pad': { latest_major: 1, last_release: '2016-03-22', license: 'WTFPL' },
+      request: { latest_major: 2, last_release: '2020-02-11', license: 'Apache-2.0' },
+      colors: { latest_major: 1, last_release: '2022-01-10', license: 'MIT' },
+      webpack: { latest_major: 5, last_release: '2024-06-01', license: 'MIT' },
+      typescript: { latest_major: 5, last_release: '2024-11-22', license: 'Apache-2.0' },
+      vitest: { latest_major: 2, last_release: '2024-12-01', license: 'MIT' },
+      jest: { latest_major: 29, last_release: '2024-08-01', license: 'MIT' },
+    },
+    py: {
+      django: { latest_major: 5, last_release: '2024-12-04', license: 'BSD-3-Clause' },
+      flask: { latest_major: 3, last_release: '2024-11-01', license: 'BSD-3-Clause' },
+      fastapi: { latest_major: 0, last_release: '2024-12-01', license: 'MIT' },
+      requests: { latest_major: 2, last_release: '2024-05-29', license: 'Apache-2.0' },
+      urllib3: { latest_major: 2, last_release: '2024-09-01', license: 'MIT' },
+      pyyaml: { latest_major: 6, last_release: '2024-08-01', license: 'MIT' },
+      numpy: { latest_major: 2, last_release: '2025-01-01', license: 'BSD-3-Clause' },
+      sqlalchemy: { latest_major: 2, last_release: '2024-10-01', license: 'MIT' },
+      celery: { latest_major: 5, last_release: '2024-06-01', license: 'BSD-3-Clause' },
+      psycopg2: { latest_major: 2, last_release: '2023-10-01', license: 'LGPL-3.0-or-later' },
+      mysqlclient: { latest_major: 2, last_release: '2024-06-01', license: 'GPL-2.0' },
+      'pdfkit': { latest_major: 1, last_release: '2021-05-01', license: 'MIT' },
+      paramiko: { latest_major: 3, last_release: '2024-09-01', license: 'LGPL-2.1' },
+    },
+    go: {
+      'github.com/gin-gonic/gin': { latest_major: 1, last_release: '2024-08-01', license: 'MIT' },
+      'golang.org/x/text': { latest_major: 0, last_release: '2024-10-01', license: 'BSD-3-Clause' },
+      'github.com/stretchr/testify': { latest_major: 1, last_release: '2024-09-01', license: 'MIT' },
+      'github.com/gogo/protobuf': { latest_major: 1, last_release: '2021-04-01', license: 'BSD-3-Clause' },
+      'github.com/spf13/cobra': { latest_major: 1, last_release: '2024-08-01', license: 'Apache-2.0' },
+    },
+    rust: {
+      serde: { latest_major: 1, last_release: '2024-09-01', license: 'MIT OR Apache-2.0' },
+      tokio: { latest_major: 1, last_release: '2024-10-01', license: 'MIT' },
+      regex: { latest_major: 1, last_release: '2024-09-01', license: 'MIT OR Apache-2.0' },
+      rand: { latest_major: 0, last_release: '2024-03-01', license: 'MIT OR Apache-2.0' },
+    },
+    java: {
+      'org.springframework.boot:spring-boot-starter-web': { latest_major: 3, last_release: '2024-11-21', license: 'Apache-2.0' },
+      'com.google.guava:guava': { latest_major: 33, last_release: '2024-09-01', license: 'Apache-2.0' },
+      'org.apache.logging.log4j:log4j-core': { latest_major: 2, last_release: '2024-08-01', license: 'Apache-2.0' },
+      'org.junit.jupiter:junit-jupiter': { latest_major: 5, last_release: '2024-09-01', license: 'EPL-2.0' },
+      'org.hibernate:hibernate-core': { latest_major: 6, last_release: '2024-10-01', license: 'LGPL-2.1' },
+      'mysql:mysql-connector-java': { latest_major: 8, last_release: '2023-10-01', license: 'GPL-2.0' },
+    },
+    ruby: {
+      rails: { latest_major: 8, last_release: '2024-11-07', license: 'MIT' },
+      sinatra: { latest_major: 4, last_release: '2024-09-01', license: 'MIT' },
+      nokogiri: { latest_major: 1, last_release: '2024-10-01', license: 'MIT' },
+      rake: { latest_major: 13, last_release: '2024-06-01', license: 'MIT' },
+    },
+    php: {
+      'laravel/framework': { latest_major: 11, last_release: '2024-11-01', license: 'MIT' },
+      'guzzlehttp/guzzle': { latest_major: 7, last_release: '2024-09-01', license: 'MIT' },
+      'symfony/console': { latest_major: 7, last_release: '2024-11-01', license: 'MIT' },
+    },
+  } as Record<string, Record<string, PkgMeta>>,
+};
+
+export const ADVISORY_SOURCE = {
+  source: 'pinned advisory subset (GHSA/OSV/CVE) scoped to parsed ecosystems — offline snapshot',
+  data_date: '2026-10-17',
+  advisories: [
+    { id: 'CVE-2020-8203', ecosystem: 'js', package: 'lodash', severity: 'HIGH', introduced: '0.0.0', fixed: '4.17.21', published: '2020-07-15', title: 'Prototype pollution in lodash' },
+    { id: 'CVE-2023-29017', ecosystem: 'js', package: 'vm2', severity: 'CRITICAL', introduced: '0.0.0', fixed: '3.9.17', published: '2023-03-28', title: 'Sandbox escape in vm2' },
+    { id: 'CVE-2021-44906', ecosystem: 'js', package: 'minimist', severity: 'HIGH', introduced: '0.0.0', fixed: '1.2.6', published: '2021-11-22', title: 'Prototype pollution in minimist' },
+    { id: 'CVE-2024-29041', ecosystem: 'js', package: 'express', severity: 'MODERATE', introduced: '0.0.0', fixed: '4.19.2', published: '2024-03-25', title: 'Open redirect in express' },
+    { id: 'CVE-2021-44228', ecosystem: 'java', package: 'org.apache.logging.log4j:log4j-core', severity: 'CRITICAL', introduced: '2.0.0', fixed: '2.17.0', published: '2021-12-10', title: 'Log4Shell remote code execution' },
+    { id: 'CVE-2023-32681', ecosystem: 'py', package: 'requests', severity: 'MODERATE', introduced: '0.0.0', fixed: '2.31.0', published: '2023-05-26', title: 'Proxy-Authorization header leak' },
+    { id: 'CVE-2023-45803', ecosystem: 'py', package: 'urllib3', severity: 'HIGH', introduced: '0.0.0', fixed: '2.0.7', published: '2023-10-02', title: 'Request body leak on redirect' },
+    { id: 'CVE-2024-38875', ecosystem: 'py', package: 'django', severity: 'MODERATE', introduced: '0.0.0', fixed: '4.2.14', published: '2024-06-04', title: 'Denial of service in Django' },
+  ] as Advisory[],
+};

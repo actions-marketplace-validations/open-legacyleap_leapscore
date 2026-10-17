@@ -51,6 +51,21 @@ export {
 
 const ARCH_ALLOW = new Set(['library', 'service', 'cli', 'infra', 'docs', 'agent-skills', 'mixed', 'unknown']);
 
+/** The runnable-producer manifest (report-envelope / detector-honesty 1.3):
+ * every producer that produced a graded row's evidence, each with its version,
+ * derived from the sealed rows themselves so it can never be a stale static list. */
+function buildToolManifest(rows: Array<{ evidence?: { tool?: string; tool_version?: string } }>): Array<{ tool: string; version: string }> {
+  const seen = new Map<string, string>();
+  for (const r of rows) {
+    const tool = r.evidence?.tool;
+    if (!tool || seen.has(tool)) continue;
+    seen.set(tool, r.evidence?.tool_version ?? '');
+  }
+  return [...seen.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([tool, version]) => ({ tool, version }));
+}
+
 function deriveTopBlockers(cats: unknown): Array<{ row: string; name: string; points_lost: number; weight_pp: string; summary: string; evidence_file?: string; rule?: string }> {
   const out: Array<{ row: string; name: string; points_lost: number; weight_pp: string; summary: string; evidence_file?: string; rule?: string }> = [];
   for (const c of cats as Array<{
@@ -207,12 +222,14 @@ export function sealScan(input: SealInput): SealOutput {
     coverage: mvp.coverage,
     status: mvp.status,
     gates: mvp.gates,
-    provenance: { tool_manifest: [] },
+    provenance: {
+      tool_manifest: buildToolManifest(mvp.rows as Array<{ evidence?: { tool?: string; tool_version?: string } }>),
+      snapshot_versions: (rawSnapshot.snapshot_versions as Record<string, string> | undefined) ?? {},
+    },
     top_blockers: topBlockers,
     deep_dive_scope: deepDiveScope,
     full_table: mvp.rows,
     report_schema: '1',
-    sample: true,
   } as unknown as SealOutput['report'];
 
   const trace: SealTraceEntry[] = [...input.trace];

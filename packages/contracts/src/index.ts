@@ -37,6 +37,8 @@ export interface EvidencePointer {
 
 export interface Evidence {
   tool: string;
+  /** Version of the producer that emitted the fact, from the single runnable-producer registry. */
+  tool_version?: string;
   args?: string;
   pointers: EvidencePointer[];
   facts: Record<string, string | number | boolean>;
@@ -166,7 +168,15 @@ export interface Report {
   top_blockers: TopBlocker[];
   deep_dive_scope: DeepDiveScopeEntry[];
   full_table: IndicatorRow[];
-  sample: true;
+  /** Provenance of the sealed run (report-envelope): the producers that actually
+   * ran and the vendored snapshot version ids that joined the fingerprint. */
+  provenance?: {
+    tool_manifest: Array<{ tool: string; version: string }>;
+    snapshot_versions?: Record<string, string>;
+  };
+  /** True only for authored demo/sample data; a scan of a real target omits it
+   * or sets it false (detector-honesty report self-description). */
+  sample?: boolean;
 }
 
 export interface EnvelopeMeta {

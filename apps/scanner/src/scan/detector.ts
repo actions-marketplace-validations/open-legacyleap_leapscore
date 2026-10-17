@@ -26,6 +26,10 @@ export type ScanContext = {
   toolVersions: Map<string, string>;
   llm?: LlmProxy;
   readFile(path: string): Promise<Buffer | null>;
+  /** Deterministic scan instant (ms epoch) — the reference point for date-derived
+   * facts (EOL days, staleness, abandonment). Defaults to `Date.now()` when the
+   * orchestrator does not thread it (detector-honesty: repeat-run determinism). */
+  scanMs?: number;
 };
 
 export type EcosystemManifest = { root: string; ecosystem: Ecosystem; lockfile: string; manifest: string };
@@ -38,6 +42,19 @@ export type RawFact = {
   provenance: { tool: string; version: string; flags: string[]; durationMs: number; promptHash?: string; model?: string; tokens?: number };
   truncated: boolean;
   error?: { kind: 'timeout' | 'cap' | 'crash' | 'rate-limit'; detail: string };
+  /** "What it takes to measure" — set when a detector could not derive the
+   * magnitude from tree/git/snapshot and the row must be `unknown` (detector-honesty). */
+  unknownMeasurePath?: string;
+  /** Detector-declared measurement status (detector-honesty measure-or-unknown).
+   * The scorer owns the final status; this only carries the detector's verdict.
+   * `measured` = produced by a named producer that ran over this target;
+   * `estimated` = clamped heuristic the indicator's own spec defines;
+   * `unknown` = not derivable from tree ∪ git ∪ vendored snapshots. */
+  measurement?: {
+    status: 'measured' | 'estimated' | 'unknown';
+    confidence?: 'low' | 'medium';
+    scopeLimited?: boolean;
+  };
 };
 
 export type Evidence = { file?: string; line?: number; detail?: string; commit?: string; endpoint?: string };
@@ -72,6 +89,7 @@ export function toScanContext(phase1: Phase1ScanContext, opts: Partial<ScanConte
     cache: { get: () => undefined, set: () => {} },
     toolVersions: phase1.toolVersions,
     readFile: async () => null,
+    scanMs: Date.now(),
     ...opts,
   };
 }

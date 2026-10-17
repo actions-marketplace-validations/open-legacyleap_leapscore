@@ -1,0 +1,88 @@
+{
+  "version": "adv-2026.10-27250b321626",
+  "generated_at": "2026-10-17T00:00:00.000Z",
+  "source": "pinned advisory subset (GHSA/OSV/CVE) scoped to parsed ecosystems — offline snapshot",
+  "data_date": "2026-10-17",
+  "advisories": [
+    {
+      "id": "CVE-2020-8203",
+      "ecosystem": "js",
+      "package": "lodash",
+      "severity": "HIGH",
+      "introduced": "0.0.0",
+      "fixed": "4.17.21",
+      "published": "2020-07-15",
+      "title": "Prototype pollution in lodash"
+    },
+    {
+      "id": "CVE-2023-29017",
+      "ecosystem": "js",
+      "package": "vm2",
+      "severity": "CRITICAL",
+      "introduced": "0.0.0",
+      "fixed": "3.9.17",
+      "published": "2023-03-28",
+      "title": "Sandbox escape in vm2"
+    },
+    {
+      "id": "CVE-2021-44906",
+      "ecosystem": "js",
+      "package": "minimist",
+      "severity": "HIGH",
+      "introduced": "0.0.0",
+      "fixed": "1.2.6",
+      "published": "2021-11-22",
+      "title": "Prototype pollution in minimist"
+    },
+    {
+      "id": "CVE-2024-29041",
+      "ecosystem": "js",
+      "package": "express",
+      "severity": "MODERATE",
+      "introduced": "0.0.0",
+      "fixed": "4.19.2",
+      "published": "2024-03-25",
+      "title": "Open redirect in express"
+    },
+    {
+      "id": "CVE-2021-44228",
+      "ecosystem": "java",
+      "package": "org.apache.logging.log4j:log4j-core",
+      "severity": "CRITICAL",
+      "introduced": "2.0.0",
+      "fixed": "2.17.0",
+      "published": "2021-12-10",
+      "title": "Log4Shell remote code execution"
+    },
+    {
+      "id": "CVE-2023-32681",
+      "ecosystem": "py",
+      "package": "requests",
+      "severity": "MODERATE",
+      "introduced": "0.0.0",
+      "fixed": "2.31.0",
+      "published": "2023-05-26",
+      "title": "Proxy-Authorization header leak"
+    },
+    {
+      "id": "CVE-2023-45803",
+      "ecosystem": "py",
+      "package": "urllib3",
+      "severity": "HIGH",
+      "introduced": "0.0.0",
+      "fixed": "2.0.7",
+      "published": "2023-10-02",
+      "title": "Request body leak on redirect"
+    },
+    {
+      "id": "CVE-2024-38875",
+      "ecosystem": "py",
+      "package": "django",
+      "severity": "MODERATE",
+      "introduced": "0.0.0",
+      "fixed": "4.2.14",
+      "published": "2024-06-04",
+      "title": "Denial of service in Django"
+    }
+  ]
+}
