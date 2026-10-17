@@ -21,7 +21,7 @@
 | G7 | Data-rescue risk, restore never proven (DATA-06) | ☐ Y ☐ N | |
 | G8 | Copyleft in closed-source distribution (ECOS-05) | ☐ Y ☐ N | |
 
-> Any ☐ Y → verdict capped at **High Risk / Obsolete** (unless the numeric score is already below 27%, then Critical).
+> Any ☐ Y → verdict capped at **High** (unless the numeric score is already below 27%, then Critical).
 
 ---
 
@@ -67,13 +67,15 @@
 
 ## Part D — Verdict
 
+Band labels follow the canonical `11` §3 (Low / Moderate / High / Critical).
+
 | Tier | Threshold | Result |
 |------|-----------|:------:|
-| Healthy | ≥ 80% | ☐ |
-| Moderate Technical Debt | 53–79% | ☐ |
-| High Risk / Obsolete | 27–52% | ☐ |
-| Critical Risk / Legacy Failure | < 27% | ☐ |
-| **Gate override** (any G1–G8 Red Flag → cap at High Risk) | | ☐ Applied ☐ Not applicable |
+| Low | ≥ 80% | ☐ |
+| Moderate | 53–79% | ☐ |
+| High | 27–52% | ☐ |
+| Critical | < 27% | ☐ |
+| **Gate override** (any G1–G8 Red Flag → cap at High) | | ☐ Applied ☐ Not applicable |
 
 **FINAL VERDICT:** ______
 

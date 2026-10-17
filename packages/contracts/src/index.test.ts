@@ -14,6 +14,7 @@ import {
   localSlugFromPath,
   assessmentUrlForBand,
   assessmentCtaForBand,
+  POSITIONING_LINE,
 } from "./index";
 
 describe("runId grammar", () => {
@@ -96,6 +97,14 @@ describe("local path slugs", () => {
   it("rejects / and ..", () => {
     expect(isValidRunId("a/b__c__2026-08-29T053000-123Z")).toBe(false);
     expect(isValidRunId("..__c__2026-08-29T053000-123Z")).toBe(false);
+  });
+});
+
+describe("positioning line", () => {
+  it("holds the exact release sentence", () => {
+    expect(POSITIONING_LINE).toBe(
+      "LeapScore sees the structure. The assessment understands what the code does.",
+    );
   });
 });
 

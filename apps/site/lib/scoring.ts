@@ -32,14 +32,29 @@ export const BASE_WEIGHTS: Record<CategoryId, number> = {
   DOCS: 5,
 };
 
+/** Public band vocabulary (spec: release-funnel) — Low/Moderate/High/Critical.
+ *  `color` keys are internal (CSS token names) and stay stable. */
 export const TIERS = [
-  { label: "Healthy", min: 80, color: "healthy" },
+  { label: "Low", min: 80, color: "healthy" },
   { label: "Moderate", min: 53, color: "moderate" },
-  { label: "High Risk", min: 27, color: "high" },
+  { label: "High", min: 27, color: "high" },
   { label: "Critical", min: 0, color: "critical" },
 ] as const;
 
 export type TierColor = (typeof TIERS)[number]["color"];
+
+/** One-release legacy aliases carried by stored/newer envelopes' `tier` field. */
+const LEGACY_TIER_ALIASES: Record<string, string> = {
+  Healthy: "Low",
+  "High Risk": "High",
+};
+
+/** Public label for any sealed or stored tier string; null when unrecognised. */
+export function publicTierLabel(tier: string | null | undefined): string | null {
+  if (!tier) return null;
+  const mapped = LEGACY_TIER_ALIASES[tier] ?? tier;
+  return TIERS.some((t) => t.label === mapped) ? mapped : null;
+}
 
 export function tierForScore(score: number): (typeof TIERS)[number] {
   for (const t of TIERS) {

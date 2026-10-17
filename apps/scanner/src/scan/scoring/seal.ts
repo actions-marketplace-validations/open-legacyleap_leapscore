@@ -122,15 +122,23 @@ export function truncateTrace(trace: SealTraceEntry[]): SealTraceEntry[] {
   return sealEntry ? [sentinel, ...kept, sealEntry] : [sentinel, ...kept];
 }
 
-export function formatStdout(report: { headline: { score: number; tier: string; suppressed?: boolean; verdict?: string }; gates: unknown[]; coverage: { measured: number; estimated: number; unknown: number } }): string {
+/** Single stdout composer. One line: status fields (score/band, gates, coverage,
+ * threshold state when a threshold is set) then the band-specific next-step
+ * sentence and the tracked assessment URL as the final token — exactly once. */
+export function formatStdout(
+  report: { headline: { score: number; tier: string; suppressed?: boolean; verdict?: string }; gates: unknown[]; coverage: { measured: number; estimated: number; unknown: number } },
+  opts: { thresholdState?: string } = {},
+): string {
   const gates = report.gates as Array<{ status?: string }>;
   const fired = gates.filter((g) => g.status === 'fired' || (g as unknown as { fired?: boolean }).fired || (g as unknown as { status?: string }).status === 'proven').length;
   const unevaluable = gates.filter((g) => g.status === 'unevaluable').length;
   const gatePart = unevaluable ? `gates:${fired}/${report.gates.length} unevaluable:${unevaluable}/${report.gates.length}` : `gates:${fired}/${report.gates.length}`;
-  if (report.headline.suppressed) {
-    return `insufficient-signal ${gatePart} coverage:${report.coverage.measured}m/${report.coverage.estimated}e/${report.coverage.unknown}u ${assessmentUrlForBand(report.headline.tier)}`;
-  }
-  return `${report.headline.score}/${report.headline.tier} ${gatePart} coverage:${report.coverage.measured}m/${report.coverage.estimated}e/${report.coverage.unknown}u ${assessmentUrlForBand(report.headline.tier)}`;
+  const thresholdPart = opts.thresholdState ?? '';
+  const coveragePart = `coverage:${report.coverage.measured}m/${report.coverage.estimated}e/${report.coverage.unknown}u`;
+  const prefix = report.headline.suppressed
+    ? `insufficient-signal ${gatePart} ${coveragePart}${thresholdPart}`
+    : `${report.headline.score}/${report.headline.tier} ${gatePart} ${coveragePart}${thresholdPart}`;
+  return `${prefix} — ${assessmentCtaForBand(report.headline.tier)} ${assessmentUrlForBand(report.headline.tier)}`;
 }
 
 export type SealInput = {

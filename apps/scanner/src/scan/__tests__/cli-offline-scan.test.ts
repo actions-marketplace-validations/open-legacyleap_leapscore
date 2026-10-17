@@ -7,7 +7,7 @@ import { main } from '../../../bin/scan';
 import { runLocalScan, GH_ONLY_IDS, LOCAL_IDS } from '../local';
 import { createStrictFetch, StrictOfflineError, assertAllowlistedUrl } from '../offline';
 import { sealScan, tierForScore, tierLegacyFor, localSlugFromPath } from '../scoring/seal';
-import { assessmentUrlForBand, assessmentCtaForBand, parseRunId } from '@leapscore/contracts';
+import { assessmentUrlForBand, assessmentCtaForBand, parseRunId, POSITIONING_LINE } from '@leapscore/contracts';
 import { renderHtml, renderMarkdown } from '../render';
 import type { FactRecord } from '../facts';
 
@@ -111,25 +111,44 @@ describe('1.2 exit map with --fail-under', () => {
 });
 
 describe('1.3 + 5.3 single stdout line with tracked link', () => {
-  it('prints one line with score/band and the assessment URL exactly once', async () => {
+  it('prints one line: status prefix, then the band sentence with the tracked URL once as the final token', async () => {
     const dir = makeFixture();
     const outDir = mkdtempSync(join(tmpdir(), 'leapscore-out-'));
     try {
       const r = await runCli(['scan', dir, '--out', outDir]);
       expect(r.code).toBe(0);
       expect(r.out).toHaveLength(1);
-      expect(r.out[0]).toMatch(/\d+(\.\d+)?\/(Low|Moderate|High|Critical)/);
-      const matches = r.out[0].match(/utm_campaign=cli-scan-v1/g) ?? [];
-      expect(matches).toHaveLength(1);
-      // identical link appears in stdout raw, and (HTML-escaped) in HTML and raw in Markdown
-      const url = assessmentUrlForBand(/Low|Moderate|High|Critical/.exec(r.out[0])![0]);
+      const line = r.out[0];
+      // status fields keep their order (score/band, gates [unevaluable], coverage) and stay first
+      expect(line).toMatch(/^\d+(\.\d+)?\/(Low|Moderate|High|Critical) gates:\d+\/\d+( unevaluable:\d+\/\d+)? coverage:\d+m\/\d+e\/\d+u — /);
+      const band = /(Low|Moderate|High|Critical)/.exec(line)![0];
+      const sentence = assessmentCtaForBand(band);
+      const url = assessmentUrlForBand(band);
+      expect(line.split(sentence)).toHaveLength(2); // next-step sentence printed once
+      expect(line.split(url)).toHaveLength(2); // tracked URL printed once
+      expect(line.endsWith(url)).toBe(true); // URL is the line's final token
+      expect(line.match(/utm_campaign=cli-scan-v1/g)).toHaveLength(1);
+      // the same tracked link lands in the report files
       const html = readFileSync(join(outDir, 'report.html'), 'utf8');
       const md = readFileSync(join(outDir, 'report.md'), 'utf8');
-      expect(r.out[0]).toContain(url);
       expect(html).toContain(url.replace(/&/g, '&amp;'));
       expect(md).toContain(url);
-      expect(html.match(/utm_campaign=cli-scan-v1/g)!.length).toBeGreaterThanOrEqual(1);
-      expect(md.match(/utm_campaign=cli-scan-v1/g)!.length).toBeGreaterThanOrEqual(1);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+      rmSync(outDir, { recursive: true, force: true });
+    }
+  }, 120_000);
+
+  it('--fail-under keeps threshold state inside the status prefix, before the sentence', async () => {
+    const dir = makeFixture();
+    const outDir = mkdtempSync(join(tmpdir(), 'leapscore-out-'));
+    try {
+      const r = await runCli(['scan', dir, '--out', outDir, '--fail-under', '100']);
+      expect(r.code).toBe(3);
+      expect(r.out).toHaveLength(1);
+      expect(r.out[0]).toMatch(/coverage:\d+m\/\d+e\/\d+u threshold:trip\(fail-under 100\) — /);
+      expect(r.out[0].match(/utm_campaign=cli-scan-v1/g)).toHaveLength(1);
+      expect(r.out[0].endsWith(assessmentUrlForBand(/Low|Moderate|High|Critical/.exec(r.out[0])![0]))).toBe(true);
     } finally {
       rmSync(dir, { recursive: true, force: true });
       rmSync(outDir, { recursive: true, force: true });
@@ -330,5 +349,22 @@ describe('5.1 + 5.2 emitters', () => {
       expect(md).toContain(assessmentCtaForBand(tier));
       expect(md).toContain(assessmentUrlForBand(tier));
     }
+  });
+  it('both emitters close with methodology link, band CTA, and the positioning line; tracked URL once', () => {
+    const html = renderHtml(base);
+    const md = renderMarkdown(base);
+    const url = assessmentUrlForBand(base.tier);
+    const htmlUrl = url.replace(/&/g, '&amp;');
+    for (const [doc, link] of [[html, htmlUrl], [md, url]] as const) {
+      expect(doc.match(/utm_campaign=cli-scan-v1/g) ?? []).toHaveLength(1);
+      expect(doc).toContain('https://leapscore.dev/methodology');
+      expect(doc).toContain(assessmentCtaForBand(base.tier));
+      expect(doc).toContain(POSITIONING_LINE);
+      expect(doc.indexOf(link)).toBeLessThan(doc.indexOf(POSITIONING_LINE));
+    }
+    // the positioning line is the final content of each document
+    expect(html.trimEnd()).toMatch(new RegExp(`<p class="positioning">${POSITIONING_LINE.replace(/\./g, '\\.')}</p>\\s*</body>\\s*</html>$`));
+    const mdLines = md.trimEnd().split('\n').filter((l) => l.trim() !== '');
+    expect(mdLines[mdLines.length - 1]).toBe(POSITIONING_LINE);
   });
 });

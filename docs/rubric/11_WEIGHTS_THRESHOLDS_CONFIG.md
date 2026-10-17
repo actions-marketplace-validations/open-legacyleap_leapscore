@@ -66,12 +66,14 @@ Category% = (sum of applicable row scores ÷ applicable row count × 3) × 100
 
 | Tier | Score | Verdict |
 |------|-------|---------|
-| Healthy | ≥ 80% | Maintain continuous refactoring & incremental updates |
-| Moderate Technical Debt | 53–79% | Dedicated refactoring sprints; fix security & EOL first |
-| High Risk / Obsolete | 27–52% | Modernization initiative required; isolate core domain behind a facade |
-| Critical Risk / Legacy Failure | < 27% | Immediate modernization mandatory; system impedes business continuity |
+| Low | ≥ 80% | Maintain continuous refactoring & incremental updates |
+| Moderate | 53–79% | Dedicated refactoring sprints; fix security & EOL first |
+| High | 27–52% | Modernization initiative required; isolate core domain behind a facade |
+| Critical | < 27% | Immediate modernization mandatory; system impedes business continuity |
 
-**Gate override:** if any gating kill-switch (see `00_EXECUTIVE_RUBRIC.md` Part 0; G1–G8) is Red Flag, the verdict is capped at **High Risk / Obsolete** — the numeric score is informational only, unless it is already < 27%, in which case **Critical Risk / Legacy Failure** wins.
+> **Band naming (one release only):** the Low band shipped previously as "Healthy" and the High band as "High Risk / Obsolete"; thresholds are unchanged (80/53/27). The legacy names survive **only** as machine aliases carried in the sealed envelope (`headline.tier_legacy`: Low→Healthy, High→High Risk) and are never displayed as band labels.
+
+**Gate override:** if any gating kill-switch (see `00_EXECUTIVE_RUBRIC.md` Part 0; G1–G8) is Red Flag, the verdict is capped at **High** — the numeric score is informational only, unless it is already < 27%, in which case **Critical** wins.
 
 ---
 

@@ -111,12 +111,12 @@ export default async function Home() {
             Built on a written 102-indicator rubric — not a black box.
           </p>
           <nav className="flex flex-wrap gap-5 text-sm">
-            <a
-              href="../rubric/README.md"
+            <Link
+              href="/rubric"
               className="text-ink transition-colors hover:text-foreground"
             >
               Read the rubric
-            </a>
+            </Link>
             <Link
               href="/method"
               className="text-ink transition-colors hover:text-foreground"

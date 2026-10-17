@@ -10,7 +10,7 @@ The reusable scoring template. Print this sheet, score every row 0–3 (or N/A),
 
 ## Part 0 — Gating kill-switches (read first)
 
-If **any** of the following is Red Flag, the verdict is **capped at "High Risk / Obsolete"** no matter the numeric total. These are debts that make the system *unsafe or impossible to modernize incrementally*.
+If **any** of the following is Red Flag, the verdict is **capped at "High"** no matter the numeric total. These are debts that make the system *unsafe or impossible to modernize incrementally*.
 
 | # | Gate | Red Flag trigger | Encyclopedia entry |
 |---|------|------------------|--------------------|
@@ -23,7 +23,7 @@ If **any** of the following is Red Flag, the verdict is **capped at "High Risk /
 | G7 | Data-rescue risk | No backups, or restore never successfully performed / untestable, in a system holding critical data | DATA-06 |
 | G8 | Copyleft in closed-source distribution | GPL/AGPL (or equivalent copyleft) detected in a proprietary, closed-source distribution | ECOS-05 |
 
-> **Escalation semantics:** a gate in Red Flag means the numeric score is *informational only* — the reported verdict is "High Risk / Obsolete" (or "Critical Risk / Legacy Failure" if the score is also < 27% — the stricter verdict wins).
+> **Escalation semantics:** a gate in Red Flag means the numeric score is *informational only* — the reported verdict is "High" (or "Critical" if the score is also < 27% — the stricter verdict wins).
 
 ---
 
@@ -219,16 +219,18 @@ Weights come from **`11_WEIGHTS_THRESHOLDS_CONFIG.md`** — the **base set** whe
 
 ### 3d. Tiers
 
+Band labels follow the canonical `11` §3 (Low / Moderate / High / Critical); thresholds are unchanged.
+
 | Tier | Score | Verdict |
 |------|-------|---------|
-| **Healthy** | ≥ 80% | Maintain continuous refactoring & incremental dependency updates |
-| **Moderate Technical Debt** | 53–79% | Dedicated refactoring sprints; prioritize security & EOL dependencies |
-| **High Risk / Obsolete** | 27–52% | Modernization initiative required; isolate core domain behind a facade before rewrite/refactor |
-| **Critical Risk / Legacy Failure** | < 27% | Immediate modernization mandatory; impedes business continuity, security, delivery |
+| **Low** | ≥ 80% | Maintain continuous refactoring & incremental dependency updates |
+| **Moderate** | 53–79% | Dedicated refactoring sprints; prioritize security & EOL dependencies |
+| **High** | 27–52% | Modernization initiative required; isolate core domain behind a facade before rewrite/refactor |
+| **Critical** | < 27% | Immediate modernization mandatory; impedes business continuity, security, delivery |
 
 ### 3e. Gate override
 
-If any gating kill-switch (G1–G8, Part 0) is Red Flag → verdict = **High Risk / Obsolete** minimum, regardless of total. If total < 27%, the stricter verdict (Critical) wins.
+If any gating kill-switch (G1–G8, Part 0) is Red Flag → verdict = **High** minimum, regardless of total. If total < 27%, the stricter verdict (Critical) wins.
 
 ---
 

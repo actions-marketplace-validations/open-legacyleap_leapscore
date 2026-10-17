@@ -31,12 +31,12 @@ export function Footer() {
           >
             Sample report
           </Link>
-          <a
-            href="../rubric/README.md"
+          <Link
+            href="/rubric"
             className="transition-colors hover:text-foreground"
           >
             Rubric
-          </a>
+          </Link>
           <a
             href="mailto:hello@leapscore.dev"
             className="transition-colors hover:text-foreground"
@@ -47,8 +47,9 @@ export function Footer() {
       </div>
       <div className="mx-auto max-w-5xl px-4 pb-6 text-xs text-faint">
         <p>
-          Audits are illustrative until the live engine ships — see the Method
-          page for what is and isn&apos;t measured.
+          Sample reports are illustrative; local CLI scans and live scans are
+          available today — see the Method page for what is and isn&apos;t
+          measured.
         </p>
       </div>
     </footer>

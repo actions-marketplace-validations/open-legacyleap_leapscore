@@ -1,5 +1,5 @@
 /** apps/scanner/src/scan/render.ts — self-contained HTML + Markdown emitters (spec: report-rendering) */
-import { assessmentUrlForBand, assessmentCtaForBand } from '@leapscore/contracts';
+import { assessmentUrlForBand, assessmentCtaForBand, POSITIONING_LINE } from '@leapscore/contracts';
 
 export type RenderInput = {
   score: number;
@@ -58,7 +58,6 @@ h2{margin-top:2rem}ul{padding-left:1.2rem}
 <body>
 ${headline}
 <p class="meta">${esc(r.repo)} · commit ${esc(commitShort)} · ${esc(r.scannedAt)} · ${esc(r.runId)} · ${esc(r.status)} · coverage ${r.coverage.measured}m/${r.coverage.estimated}e/${r.coverage.unknown}u${r.fingerprint ? ` · fingerprint ${esc(r.fingerprint.slice(0, 12))}` : ''}</p>
-<div class="cta"><strong>Next step:</strong> ${esc(cta)}<br><a href="${esc(url)}">${esc(url)}</a></div>
 <h2>Top risks</h2>
 <ul>${risks || '<li>No deductions — clean scan.</li>'}</ul>
 <h2>Detail</h2>
@@ -66,7 +65,9 @@ ${headline}
 <ul>${gates}</ul>
 <h3>Categories</h3>
 <ul>${cats}</ul>
-<p class="meta">Methodology: <a href="${METHODOLOGY_URL}">${METHODOLOGY_URL}</a> · <a href="${esc(url)}">${esc(url)}</a></p>
+<p class="meta">Methodology: <a href="${METHODOLOGY_URL}">${METHODOLOGY_URL}</a></p>
+<div class="cta"><strong>Next step:</strong> ${esc(cta)}<br><a href="${esc(url)}">Continue to the assessment</a></div>
+<p class="positioning">${esc(POSITIONING_LINE)}</p>
 </body>
 </html>`;
 }
@@ -80,10 +81,6 @@ export function renderMarkdown(r: RenderInput): string {
   lines.push(r.suppressed ? `# LeapScore: insufficient signal — ${r.repo}` : `# LeapScore: ${r.score}/${r.tier} — ${r.repo}`);
   lines.push(``);
   lines.push(`commit ${commitShort} · ${r.scannedAt} · \`${r.runId}\` · ${r.status} · coverage ${r.coverage.measured}m/${r.coverage.estimated}e/${r.coverage.unknown}u${r.fingerprint ? ` · fingerprint \`${r.fingerprint.slice(0, 12)}\`` : ''}`);
-  lines.push(``);
-  lines.push(`> Next step: ${cta}`);
-  lines.push(`>`);
-  lines.push(`> ${url}`);
   lines.push(``);
   lines.push(`## Top 5 risks`);
   if (!r.topBlockers.length) {
@@ -106,7 +103,11 @@ export function renderMarkdown(r: RenderInput): string {
   lines.push(``);
   lines.push(`Methodology: ${METHODOLOGY_URL}`);
   lines.push(``);
-  lines.push(`${url}`);
+  lines.push(`> Next step: ${cta}`);
+  lines.push(`>`);
+  lines.push(`> ${url}`);
+  lines.push(``);
+  lines.push(POSITIONING_LINE);
   lines.push(``);
   return lines.join('\n');
 }

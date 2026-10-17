@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { listReportMetas } from "@/lib/reports";
+import { publicTierLabel } from "@/lib/scoring";
 
 export const metadata: Metadata = {
   title: "Reports · LeapScore",
@@ -23,9 +24,12 @@ function fmtDuration(ms: number): string {
 }
 
 function tierColor(tier: string): string {
+  // Legacy alias keys stay valid for stored envelopes; display labels are public.
   const map: Record<string, string> = {
+    Low: "text-tier-healthy",
     Healthy: "text-tier-healthy",
     Moderate: "text-tier-moderate",
+    High: "text-tier-high",
     "High Risk": "text-tier-high",
     Critical: "text-tier-critical",
   };
@@ -84,7 +88,7 @@ export default async function ReportsPage() {
               <tr key={m.runId} className="hover:bg-panel/30">
                 <td className="px-3 py-2 font-mono text-xs text-foreground">{m.repo}</td>
                 <td className="px-3 py-2 font-mono tabular-nums">{m.score}</td>
-                <td className={`px-3 py-2 text-xs ${tierColor(m.tier)}`}>{m.tier}</td>
+                <td className={`px-3 py-2 text-xs ${tierColor(m.tier)}`}>{publicTierLabel(m.tier) ?? m.tier}</td>
                 <td className="px-3 py-2 text-xs text-muted" title={m.ranAt}>
                   {relativeTime(m.ranAt)}
                 </td>

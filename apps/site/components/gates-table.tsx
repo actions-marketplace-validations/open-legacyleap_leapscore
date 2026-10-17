@@ -85,7 +85,7 @@ export function GatesTable({ gates }: { gates: Gate[] }) {
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h3 className="text-sm font-medium text-ink">Kill-switch gates</h3>
-              <p className="mt-0.5 text-xs text-faint">G1–G8 red-flag checks. Any proven gate caps the verdict at High Risk.</p>
+              <p className="mt-0.5 text-xs text-faint">G1–G8 red-flag checks. Any proven gate caps the verdict at High.</p>
             </div>
             <CollapsibleTrigger
               aria-label={open ? "Hide kill-switch gates" : `Show kill-switch gates (${gates.length})`}

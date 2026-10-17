@@ -5,7 +5,7 @@ import { stat } from 'node:fs/promises';
 import { resolve, basename } from 'node:path';
 import { runUnifiedScan } from '../src/scan/orchestrator';
 import { runLocalScan } from '../src/scan/local';
-import { sealScan, CONTRACT_VERSION, localSlugFromPath, assessmentUrlForBand } from '../src/scan/scoring/seal';
+import { sealScan, CONTRACT_VERSION, localSlugFromPath, formatStdout } from '../src/scan/scoring/seal';
 import { renderHtml, renderMarkdown } from '../src/scan/render';
 
 export const USAGE = `leapscore-scan [scan] [<path> | --repo <owner/repo>] --out <dir> [--strict] [--fail-under <0-100>] [--sha <sha>] [--engine-ref <sha>] [--score-policy frozen|legacy]
@@ -21,7 +21,7 @@ export const USAGE = `leapscore-scan [scan] [<path> | --repo <owner/repo>] --out
   --help                  Print this usage
 
   Exits: 0 pass · 1 crash · 2 usage-or-refused · 3 threshold trip (--fail-under)
-  Stdout: one line with score/band, gates, coverage, threshold state, plus the tracked assessment URL once.
+  Stdout: one line — score/band, gates, coverage, threshold state, then the band-specific next step with the tracked assessment URL once (final token).
 
   Issue surfacing moved to the standalone app: use \`surface --from <dir>/report.json --repo <owner/repo>\`
   (apps/surface) instead of the removed --surface / --surface-from flags.`;
@@ -455,11 +455,10 @@ async function writeReportsAndExit(
   // presented number: with a threshold set the run trips fail-closed (exit 3).
   const tripped = threshold != null && (suppressed || report.headline.score < threshold);
   const thresholdState = threshold != null ? ` threshold:${tripped ? 'trip' : 'pass'}(fail-under ${threshold})` : '';
-  // Single stdout line: score/band, gates, coverage, threshold state + assessment URL exactly once.
-  const line = `${sealed.stdoutLine}${thresholdState}`;
-  const url = assessmentUrlForBand(report.headline.tier);
-  const finalLine = line.includes(url) ? line : `${line} ${url}`;
-  o.stdout(finalLine);
+  // Single stdout line, composed by the one composer: status fields (score/band,
+  // gates, coverage, threshold state) then the band next-step sentence with the
+  // tracked assessment URL as the final token, appearing exactly once.
+  o.stdout(formatStdout(report, { thresholdState }));
   if (tripped) {
     o.stderr(suppressed ? `threshold trip: headline suppressed (insufficient signal) < --fail-under ${threshold}` : `threshold trip: score ${report.headline.score} < --fail-under ${threshold}`);
     return EXIT_THRESHOLD;

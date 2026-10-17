@@ -43,19 +43,21 @@ Each scoring sheet row links to its encyclopedia entry by ID (e.g., `SEC-03`).
 - Each row is scored, **N/A'd** (excluded from both numerator and denominator), or left blank for deep-dive rows not run.
 - **Category score** = Σ(applicable row scores) ÷ (applicable count × 3), expressed as a percentage.
 - **System score** = Σ (category % × category weight). Category weights come from `11_WEIGHTS_THRESHOLDS_CONFIG.md` — the base set normally, the **FE-active set** (FE 10%, others ×0.9) when the repo has a user-facing client.
-- **Gating kill-switches (G1–G8)** cap the verdict regardless of total (any Red Flag gate = verdict never higher than "High Risk / Obsolete").
+- **Gating kill-switches (G1–G8)** cap the verdict regardless of total (any Red Flag gate = verdict never higher than "High").
 - **Deep-dive rows count.** In a deep audit, executed deep-dive rows join their category's applicable set, changing the category % honestly. The deep-audit number is not the standard-audit number with extra rows bolted on.
 
 ## Tiers
 
+Band labels follow the canonical `11` §3 (Low / Moderate / High / Critical); thresholds are unchanged.
+
 | Tier | Score | Verdict |
 |------|-------|---------|
-| Healthy | ≥ 80% | Maintain continuous refactoring & incremental updates |
-| Moderate Technical Debt | 53–79% | Schedule dedicated refactoring sprints; fix security & EOL first |
-| High Risk / Obsolete | 27–52% | Modernization initiative required; isolate core domain behind a facade before rewriting |
-| Critical Risk / Legacy Failure | < 27% | Immediate modernization mandatory; system impedes business continuity |
+| Low | ≥ 80% | Maintain continuous refactoring & incremental updates |
+| Moderate | 53–79% | Schedule dedicated refactoring sprints; fix security & EOL first |
+| High | 27–52% | Modernization initiative required; isolate core domain behind a facade before rewriting |
+| Critical | < 27% | Immediate modernization mandatory; system impedes business continuity |
 
-> **Gate override:** if any gating kill-switch (G1–G8) is Red Flag, the verdict is capped at "High Risk / Obsolete" even if the numeric score says otherwise.
+> **Gate override:** if any gating kill-switch (G1–G8) is Red Flag, the verdict is capped at "High" even if the numeric score says otherwise.
 
 Weights and thresholds are **asserted defaults subject to calibration** — see `11` §4 (calibration schedule) and §5 (calibration log).
 

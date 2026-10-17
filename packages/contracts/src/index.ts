@@ -343,6 +343,14 @@ export function localSlugFromPath(raw: string): string {
 // Assessment funnel — the only telemetry is the click on this tracked link.
 // ---------------------------------------------------------------------------
 
+/**
+ * Positioning line — the single source for the sentence every human-readable
+ * report ends with (CLI report.html/report.md and site report surfaces).
+ * Verbatim, never re-typed in an emitter or component.
+ */
+export const POSITIONING_LINE =
+  "LeapScore sees the structure. The assessment understands what the code does.";
+
 export const ASSESSMENT_BASE_URL = "https://leapscore.dev/assessment";
 export const ASSESSMENT_CAMPAIGN = "cli-scan-v1";
 

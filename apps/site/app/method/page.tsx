@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 import { CATEGORIES, weightFor } from "@/lib/categories";
 import { TIERS } from "@/lib/scoring";
@@ -117,11 +118,20 @@ export default function MethodPage() {
       <section className="mt-10">
         <h2 className="text-lg font-semibold">Where we are now</h2>
         <p className="mt-3 text-sm leading-relaxed text-muted">
-          The site runs on sample data today (an authored, evidence-backed read
-          of <span className="font-mono text-ink">django/django</span>). The
-          live detection engine — the part that turns a pasted URL into scored
-          rows — is in development behind the waitlist. The sample report is
-          honest about this: it is stamped{" "}
+          Two scan paths are available today: the{" "}
+          <span className="font-mono text-ink">local CLI scan</span> (runs
+          against a checkout on your machine and writes the JSON, HTML, and
+          Markdown reports) and the{" "}
+          <span className="font-mono text-ink">live scan</span> (a public GitHub
+          repo, via the{" "}
+          <Link
+            href="/live"
+            className="underline underline-offset-2 hover:text-foreground"
+          >
+            live page
+          </Link>
+          ). Sample surfaces on this site stay illustrative — the sample report
+          is stamped{" "}
           <span className="font-mono text-xs text-faint">
             illustrative sample
           </span>{" "}

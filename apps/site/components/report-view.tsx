@@ -4,6 +4,7 @@ import { DeepDiveScope, TopBlockers } from "@/components/blockers";
 import { CategorySection } from "@/components/category-section";
 import { DialGauge } from "@/components/dial-gauge";
 import { GatesTable } from "@/components/gates-table";
+import { ReportNextStep } from "@/components/report-next-step";
 import { SampleFullTable } from "@/components/sample-full-table";
 import { tierForScore } from "@/lib/scoring";
 import type { Report } from "@/lib/types";
@@ -232,6 +233,7 @@ export function ReportView({
           ? ` · commit ${(report.snapshot as unknown as { scanned_commit: string }).scanned_commit.slice(0, 7)}`
           : ""}
       </p>
+      <ReportNextStep tier={report.headline.tier} score={report.headline.score} />
     </div>
   );
 }

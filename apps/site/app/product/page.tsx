@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 import { UrlBox } from "@/components/url-box";
 import { WaitlistForm } from "@/components/waitlist-form";
@@ -161,12 +162,12 @@ export default function ProductPage() {
             method
           </a>{" "}
           page; the rubric it runs against is{" "}
-          <a
-            href="../rubric/README.md"
+          <Link
+            href="/rubric"
             className="text-ink transition-colors hover:text-foreground"
           >
             published, all 102 indicators
-          </a>
+          </Link>
           .
         </p>
       </section>
