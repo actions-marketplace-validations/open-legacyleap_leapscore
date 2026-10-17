@@ -16,7 +16,7 @@ type EolDoc = {
   generated_at: string;
   source: string;
   data_date: string;
-  runtimes: Record<string, { aliases?: string[]; cycles: EolCycle[] }>;
+  runtimes: Record<string, { aliases?: string[]; cycles: EolCycle[]; /** Exact cycle matching only — no nearest-lower fallback (version-graded vendor releases, e.g. Delphi). */ exact_cycles?: boolean }>;
   frameworks: Record<string, { latest_major: number; support_status: 'active' | 'maintenance' | 'eol'; eol_date?: string | null; aliases?: string[] }>;
   packages: Record<string, Record<string, { latest_major: number; last_release: string; license: string }>>;
 };
@@ -42,6 +42,9 @@ type AdvisoryDoc = {
 
 export const EOL_SNAPSHOT_VERSION: string = (eolJson as unknown as EolDoc).version;
 export const ADVISORY_SNAPSHOT_VERSION: string = (advisoryJson as unknown as AdvisoryDoc).version;
+/** The datasets' documented selection rules, as shipped in their source field. */
+export const EOL_SNAPSHOT_SOURCE: string = (eolJson as unknown as EolDoc).source;
+export const ADVISORY_SNAPSHOT_SOURCE: string = (advisoryJson as unknown as AdvisoryDoc).source;
 
 /** Version ids of every vendored dataset — the fingerprint inputs (3.3). */
 export function snapshotVersions(): Record<string, string> {
@@ -99,13 +102,16 @@ function normalizeProduct(product: string): string | null {
   return null;
 }
 
-function cycleFor(version: string, cycles: EolCycle[]): EolCycle | null {
+function cycleFor(version: string, cycles: EolCycle[], exact = false): EolCycle | null {
   const parts = String(version).split(/[.\-+_]/).filter((x) => x !== '');
   const candidates = [version, parts.slice(0, 2).join('.'), parts[0]].filter(Boolean);
   for (const c of candidates) {
     const hit = cycles.find((x) => x.cycle === c);
     if (hit) return hit;
   }
+  // exact-cycle datasets (version-graded vendor releases): unmappable → null,
+  // never a lower-cycle guess
+  if (exact) return null;
   // fallback: nearest lower cycle by numeric compare
   const lower = cycles
     .filter((x) => cmpVersion(x.cycle, version) <= 0)
@@ -123,13 +129,24 @@ export type RuntimeResolution = {
   latest?: string;
 };
 
+/** Pre-9 Java versions are named 1.x ("1.6", "1.8.0_292") — normalize to the
+ * cycle naming so legacy-era pins resolve against the java cycles. */
+function normalizeRuntimeVersion(product: string, version: string): string {
+  if (product === 'java') {
+    const v = version.trim();
+    if (/^1\.\d/.test(v)) return v.slice(2);
+  }
+  return version;
+}
+
 /** Resolve a (runtime product, pinned version) to an EOL cycle. `null` when the
  * product is unknown to the snapshot (caller → `unknown`, never "in support"). */
 export function resolveRuntime(product: string, version: string, scanMs: number): RuntimeResolution | null {
   const canonical = normalizeProduct(product);
   if (!canonical) return null;
   const doc = eolJson as unknown as EolDoc;
-  const cycle = cycleFor(version, doc.runtimes[canonical].cycles);
+  const runtime = doc.runtimes[canonical];
+  const cycle = cycleFor(normalizeRuntimeVersion(canonical, version), runtime.cycles, runtime.exact_cycles === true);
   if (!cycle) return null;
   const days = daysUntil(cycle.eol, scanMs);
   return {
@@ -152,14 +169,18 @@ export type FrameworkResolution = {
 };
 
 /** Resolve a framework to its support status. `null` when the snapshot has no
- * entry for it (niche/vendor framework → `unknown`). */
+ * entry for it (niche/vendor framework → `unknown`). The returned `name` is the
+ * canonical dataset key, so alias hits are visible to the caller. */
 export function resolveFramework(name: string, version: string): FrameworkResolution | null {
   const doc = eolJson as unknown as EolDoc;
   const key = name.trim().toLowerCase();
-  const entry = doc.frameworks[key] ?? doc.frameworks[Object.keys(doc.frameworks).find((k) => (doc.frameworks[k].aliases ?? []).includes(key)) ?? ''];
-  if (!entry) return null;
+  const canonical = doc.frameworks[key]
+    ? key
+    : Object.keys(doc.frameworks).find((k) => (doc.frameworks[k].aliases ?? []).includes(key));
+  if (!canonical) return null;
+  const entry = doc.frameworks[canonical];
   return {
-    name: key,
+    name: canonical,
     version,
     support_status: entry.support_status,
     eol_date: entry.eol_date ?? null,
@@ -169,21 +190,24 @@ export function resolveFramework(name: string, version: string): FrameworkResolu
 
 export type PackageResolution = { ecosystem: string; name: string; latest_major: number; last_release: string; license: string };
 
-const ECOSYSTEM_ALIASES: Record<string, string> = { npm: 'js', javascript: 'js', node: 'js', pypi: 'py', pip: 'py', python: 'py', gomod: 'go', golang: 'go', crates: 'rust', maven: 'java', gradle: 'java', mavencentral: 'java', gem: 'ruby', bundler: 'ruby', packagist: 'php', composer: 'php' };
+const ECOSYSTEM_ALIASES: Record<string, string> = { npm: 'js', javascript: 'js', node: 'js', pypi: 'py', pip: 'py', python: 'py', gomod: 'go', golang: 'go', crates: 'rust', maven: 'java', gradle: 'java', mavencentral: 'java', gem: 'ruby', bundler: 'ruby', packagist: 'php', composer: 'php', nuget: 'csharp' };
 
 function normalizeEcosystem(ecosystem: string): string {
   const e = ecosystem.trim().toLowerCase();
   return ECOSYSTEM_ALIASES[e] ?? e;
 }
 
-/** Package metadata (latest major, last release, license). `null` when absent. */
+/** Package metadata (latest major, last release, license). `null` when absent.
+ * Lookup is case-tolerant: exact key, then lowercased key, then a
+ * case-insensitive scan (NuGet package IDs are case-insensitive by spec). */
 export function lookupPackage(ecosystem: string, name: string): PackageResolution | null {
   const doc = eolJson as unknown as EolDoc;
   const eco = normalizeEcosystem(ecosystem);
   const bucket = doc.packages[eco];
   if (!bucket) return null;
   const key = name.trim();
-  const entry = bucket[key] ?? bucket[key.toLowerCase()];
+  const entry = bucket[key] ?? bucket[key.toLowerCase()]
+    ?? Object.entries(bucket).find(([k]) => k.toLowerCase() === key.toLowerCase())?.[1];
   if (!entry) return null;
   return { ecosystem: eco, name: key, ...entry };
 }

@@ -123,6 +123,17 @@ export function partitionByteCap(totalByteCap: number, detectorCount: number): n
   return Math.max(256 * 1024, Math.floor(totalByteCap / detectorCount));
 }
 
+/** True when a read failed because a byte budget was exceeded — the readFile
+ * wrappers (clone.ts/local.ts) throw `QuotaExceededError` with a 'byteCap'
+ * message. Budget truncation must be disclosed by the consumer, never swallowed
+ * into a partial verdict (legacy-stacks 8.1). */
+export function isReadBudgetError(e: unknown): boolean {
+  const name = (e as { name?: string } | null)?.name;
+  if (name === 'QuotaExceededError') return true;
+  const msg = e instanceof Error ? e.message : String(e ?? '');
+  return /bytecap|read budget/i.test(msg);
+}
+
 /** Helper: race a promise against an AbortSignal with cap semantics */
 export function withBudget<T>(promise: Promise<T>, signal: AbortSignal): Promise<T> {
   if (signal.aborted) return Promise.reject(signal.reason ?? new DOMException('Aborted', 'AbortError'));

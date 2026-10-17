@@ -16,13 +16,13 @@
 - **Planes:** static-src + gh-api (CI config)
 - **Tools:** git tree enumeration; lockfile/manifest parsers; CI YAML parser
 - **Rate-cost:** none
-- **Ecosystems:** npm/yarn/pnpm (`package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`) · pip/poetry/uv (`poetry.lock`, `requirements*.txt` pin-scan, `uv.lock`) · `go.sum` · `Gemfile.lock` · Maven (`maven-shade-plugin` versions, no true lockfile → flag) · Gradle (`gradle.lockfile`)
+- **Ecosystems:** npm/yarn/pnpm (`package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`) · pip/poetry/uv (`poetry.lock`, `requirements*.txt` pin-scan, `uv.lock`) · `go.sum` · `Gemfile.lock` · Maven (`maven-shade-plugin` versions, no true lockfile → flag) · Gradle (`gradle.lockfile`) · NuGet (`packages.lock.json` is lock evidence; classic `packages.config` has **no lockfile mechanism** → disclosed as structural, generalizing the Maven precedent)
 - **Applicability:** `na_when: zero manifests of any kind` → unknown, never N/A (a build exists even unpinned). Actually: clause-b N/A when tree contains zero build/config files at all (docs-only repo).
 
 ## 2. Detection recipe
 
-1. `git ls-files` → lockfile presence per ecosystem.
-2. Pin ratio: % of manifest entries with exact pins vs ranges (`>=`, `*`, `latest`, floating tags).
+1. `git ls-files` → lockfile presence per ecosystem; an ecosystem with no lockfile mechanism (Maven, classic NuGet `packages.config`) is recorded in `lockfile_mechanism_absent` — absence is structural, never scored as a missing lockfile.
+2. Pin ratio: % of manifest entries with exact pins vs ranges (`>=`, `*`, `latest`, floating tags) — for mechanism-absent ecosystems this is the primary reproducibility signal.
 3. Staleness: lockfile mtime vs manifest mtime in git history (lock older than last manifest change = stale).
 4. CI immutability scan: install commands matching immutable set (`npm ci`, `pip install --require-hashes`, `--frozen-lockfile`, `yarn --immutable`, `go mod download` w/ go.sum) vs mutable (`npm install`, bare `pip install -r`).
 5. Registry-pin checks: integrity-hash fields present in lockfile schema version.
@@ -31,7 +31,8 @@
 
 ```json
 {"ecos07": {
-  "lockfiles": [{"path": "package-lock.json", "ecosystem": "npm", "stale": false, "integrity_hashes": true}],
+  "lockfiles": [{"path": "packages.lock.json", "ecosystem": "csharp", "stale": false, "integrity_hashes": true, "packages": 42}],
+  "lockfile_mechanism_absent": ["csharp:packages.config"],
   "pin_ratio": 96.2,
   "ci_immutable_install": {"enforced": true, "evidence": ".github/workflows/ci.yml:31 npm ci"},
   "mutable_install_sites": []}}
@@ -45,7 +46,7 @@ estimated_when: never                             # this row is fully decidable 
 unknown_when:   zero build/config files AND zero manifests (clause-b -> na instead) or tree un-enumerable
 na_when:        docs-only/no-build tree (clause-b, reason recorded)
 clamp:          [1,2]                             # n/a — measured-only row
-confidence:     medium
+confidence:     medium; low when git history is unavailable (staleness dropped)
 ```
 
 ## 5. Score mapping (predicates)
@@ -57,6 +58,8 @@ Thresholds/criteria: see encyclopedia §ECOS-07.
 - `1`: some services/dirs locked, others not (multi-manifest partial coverage)
 - `0`: no lockfile for a prod manifest ∨ `pin_ratio < R_PIN%` ∨ mutable CI installs on prod path
 
+Mechanism-absent ecosystems (`lockfile_mechanism_absent`: Maven, classic NuGet) are exempt from the missing-lockfile limb of `0` — absence is structural; their pin ratio carries the reproducibility judgment.
+
 ## 6. Gate hooks
 
 none.
@@ -65,11 +68,13 @@ none.
 
 - Budget class: `fast`
 - History unavailable (shallow clone budget) → staleness check dropped, note in evidence; status stays measured (presence facts intact)
+- A mechanism-absent ecosystem demotes nothing; the disclosure travels in `lockfile_mechanism_absent` + a basis pointer
 
 ## 8. Evidence string
 
 ```
-evidence: "git+ci-parse: lockfile={present|absent} ({paths}); pin_ratio={p}%; ci={'npm ci' @ ci.yml:31}"
+evidence: "lockfile-parse: lockfile={present|absent} ({paths}); pin_ratio={p}%; ci={'npm ci' @ ci.yml:31}"
+basis:    "lockfile-parse: no lockfile mechanism for {ecosystems} — absence is structural"
 ```
 
 ## 9. Scope/overlaps echo

@@ -1,5 +1,5 @@
 import type { ScanContext, RawFact } from '../detector';
-import { ghErrorKind, filePointer, basisPointer, measuredFact, unknownFact } from './common';
+import { ghErrorKind, filePointer, basisPointer, measuredFact, unknownFact, readBudgetNote } from './common';
 import { scanDependencies, uniqueDirect, type DirectDep } from '../deps';
 import { lookupPackage, snapshotVersions } from '../snapshots';
 import { cachedSourceImports, isDependencyImported } from '../sourcefiles';
@@ -32,6 +32,9 @@ export async function detectEcos03(ctx: ScanContext, signal: AbortSignal): Promi
   try {
     if (signal.aborted) return unknownFact('ECOS-03', 'lockfile-parse', started, WHAT_IT_TAKES);
     const scan = await scanDependencies(ctx);
+    if (scan.readBudgetExhausted) {
+      return unknownFact('ECOS-03', 'lockfile-parse', started, readBudgetNote(scan.manifests, scan.manifestsTotal, 'dependency manifests'));
+    }
     if (scan.manifests === 0) {
       return unknownFact('ECOS-03', 'lockfile-parse', started, `${WHAT_IT_TAKES}; no dependency manifest was found (na_when clause-b)`);
     }
@@ -76,6 +79,7 @@ export async function detectEcos03(ctx: ScanContext, signal: AbortSignal): Promi
         abandoned,
         bus_factor_1_count: 0,
         unresolvable: unresolvable.length,
+        unresolvable_names: unresolvable.slice().sort((a, b) => a.localeCompare(b)),
         resolvable_ratio: Math.round(ratio * 1000) / 1000,
       },
     };
@@ -88,7 +92,7 @@ export async function detectEcos03(ctx: ScanContext, signal: AbortSignal): Promi
         `every load-bearing dependency is unresolvable against the vendored package-metadata table (${total} deps)`,
         { pointers, facts: facts as unknown as Record<string, unknown> });
     }
-    const measurement = ratio >= 0.7
+    const measurement = ratio >= 0.7 && !imports.truncated
       ? { status: 'measured' as const, confidence: 'medium' as const }
       : { status: 'estimated' as const, confidence: 'low' as const, scopeLimited: true };
     return measuredFact({
@@ -98,7 +102,7 @@ export async function detectEcos03(ctx: ScanContext, signal: AbortSignal): Promi
       facts: facts as unknown as Record<string, unknown>,
       pointers,
       measurement,
-      truncated: ratio < 0.7,
+      truncated: ratio < 0.7 || imports.truncated,
     });
   } catch (e) {
     return { detectorId: 'ECOS-03', schemaVersion: '1.0.0', facts: {}, evidencePointers: [], provenance: { tool: 'lockfile-parse', version: '1.0', flags: ['lockfile-parse'], durationMs: Date.now() - started }, truncated: true, error: ghErrorKind(e) };

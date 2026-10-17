@@ -14,18 +14,18 @@
 ## 1. Inputs
 
 - **Planes:** static-src
-- **Tools:** test-file classifier: path conventions (`e2e/`, `integration/`, `__tests__`, `test_*.py`, `*.spec.ts`), framework markers (playwright/cypress/selenium imports, `@SpringBootTest`, Django `LiveServerTestCase`), runtime-shape hints (network/db client imports in test files)
+- **Tools:** test-file classifier: path conventions (`e2e/`, `integration/`, `__tests__`, `test_*.py`, `*.spec.ts`, case-tolerant `Tests?/` dirs, `*Tests?.cs|vb` file names, dotted `*.Tests/` project dirs as high-confidence `unit` conventions — legacy-stacks 8.3), framework markers (playwright/cypress/selenium imports, `@SpringBootTest`, Django `LiveServerTestCase`, MSTest/NUnit/xUnit attributes — C# `[TestMethod]`/`[TestCase]`/`[Test]`/`[Fact]`/`[Theory]`, VB `<TestMethod>` forms), runtime-shape hints (network/db client imports in test files, `WebApplicationFactory`/`Testcontainers`)
 - **Rate-cost:** none
 - **Ecosystems:** agnostic
 - **Applicability:** `na_when: zero test files of any kind` → score-0 territory belongs to TEST rows generally; here N/A (no pyramid to invert) with reason recorded. Decision: **N/A allowed** — a repo with zero tests has no pyramid shape; TEST-05/08 carry the zero-test signal instead.
 
 ## 2. Detection recipe
 
-1. Enumerate test files; classify tier per file: unit / integration / e2e via markers above; ambiguous → `unclassified`.
+1. Enumerate test files; classify tier per file: unit / integration / e2e via markers above; ambiguous → `unclassified`. .NET convention paths with no e2e/integration marker classify `unit` at high confidence: dotted `*.Tests/` project directories and `*Test.cs|vb` / `*Tests.cs|vb` file names (legacy-stacks 8.3). A bare `Tests/`-style directory alone remains a low-confidence hint — its tier still comes from content.
 2. Compute counts and estimated runtime share (E2E share heuristic: e2e_count × typical weight when no timing data).
 3. Ratio metrics: `unit:e2e count ratio`, `e2e share`.
 
-Preconditions: tree enumerated.
+Preconditions: tree enumerated. A bounded test-file read (file-count or per-file byte cap) sets `truncated`; the row is then emitted estimated + scope-limited rather than measured over a partial surface.
 
 ## 3. Fact schema
 
@@ -45,6 +45,7 @@ unknown_when:   <60% classifiable
 na_when:        zero test files (reason: no shape)
 clamp:          [1,2]
 confidence:     medium when high-confidence classification dominates
+scope_limited:  test-file read bound hit (file count / per-file bytes) -> estimated + scope-limited
 ```
 
 ## 5. Score mapping (predicates)

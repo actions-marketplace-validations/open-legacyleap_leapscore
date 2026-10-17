@@ -1,5 +1,5 @@
 import type { ScanContext, RawFact } from '../detector';
-import { ghErrorKind, filePointer, measuredFact, unknownFact } from './common';
+import { ghErrorKind, filePointer, measuredFact, unknownFact, readBudgetNote } from './common';
 import { scanDependencies } from '../deps';
 
 const WHAT_IT_TAKES =
@@ -18,6 +18,9 @@ export async function detectEcos06(ctx: ScanContext, signal: AbortSignal): Promi
   try {
     if (signal.aborted) return unknownFact('ECOS-06', 'lockfile-parse', started, WHAT_IT_TAKES);
     const scan = await scanDependencies(ctx);
+    if (scan.readBudgetExhausted) {
+      return unknownFact('ECOS-06', 'lockfile-parse', started, readBudgetNote(scan.manifests, scan.manifestsTotal, 'dependency manifests'));
+    }
     if (scan.manifests === 0) {
       return unknownFact('ECOS-06', 'lockfile-parse', started, `${WHAT_IT_TAKES}; no dependency manifest found (na_when clause-b)`);
     }
@@ -27,10 +30,10 @@ export async function detectEcos06(ctx: ScanContext, signal: AbortSignal): Promi
 
     const byName = new Map<string, Set<string>>();
     for (const l of scan.lockfiles) {
-      for (const d of l.duplicates) {
-        const set = byName.get(d.name) ?? new Set<string>();
-        for (const v of d.versions) set.add(v);
-        byName.set(d.name, set);
+      for (const [name, versions] of Object.entries(l.versions)) {
+        const set = byName.get(name) ?? new Set<string>();
+        for (const v of versions) set.add(v);
+        byName.set(name, set);
       }
     }
     const duplicates = [...byName.entries()]

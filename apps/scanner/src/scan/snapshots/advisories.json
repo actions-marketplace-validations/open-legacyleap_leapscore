@@ -1,7 +1,7 @@
 {
-  "version": "adv-2026.10-27250b321626",
-  "generated_at": "2026-10-17T00:00:00.000Z",
-  "source": "pinned advisory subset (GHSA/OSV/CVE) scoped to parsed ecosystems — offline snapshot",
+  "version": "adv-2026.10-ad855d8189da",
+  "generated_at": "2026-10-17T00:00:00Z",
+  "source": "pinned advisory subset (OSV/GHSA/CVE) scoped to the ecosystems whose manifests the sniffer parses — offline snapshot. Selection rule: load-bearing legacy CVEs (remote-exploitable or framework-integral) with a known fixed release on dependencies the legacy pilots pin; the affected range is approximated as the interval [introduced, fixed), where `fixed` is the fix on the newest maintained branch — older-branch backports can read as affected (a deliberate false-positive bias: this is a legacy-estate check, and it must not report a vulnerable pin as clean)",
   "data_date": "2026-10-17",
   "advisories": [
     {
@@ -53,6 +53,56 @@
       "fixed": "2.17.0",
       "published": "2021-12-10",
       "title": "Log4Shell remote code execution"
+    },
+    {
+      "id": "CVE-2017-5638",
+      "ecosystem": "java",
+      "package": "org.apache.struts:struts2-core",
+      "severity": "CRITICAL",
+      "introduced": "2.3.5",
+      "fixed": "2.5.10.1",
+      "published": "2017-03-11",
+      "title": "Struts Jakarta multipart parser OGNL RCE (S2-045)"
+    },
+    {
+      "id": "CVE-2022-22965",
+      "ecosystem": "java",
+      "package": "org.springframework:spring-core",
+      "severity": "CRITICAL",
+      "introduced": "0.0.0",
+      "fixed": "5.3.18",
+      "published": "2022-04-01",
+      "title": "Spring4Shell data-binding RCE"
+    },
+    {
+      "id": "CVE-2020-36518",
+      "ecosystem": "java",
+      "package": "com.fasterxml.jackson.core:jackson-databind",
+      "severity": "HIGH",
+      "introduced": "2.0.0",
+      "fixed": "2.13.2.1",
+      "published": "2022-03-24",
+      "title": "Deeply nested objects denial of service in jackson-databind"
+    },
+    {
+      "id": "CVE-2018-1285",
+      "ecosystem": "csharp",
+      "package": "log4net",
+      "severity": "HIGH",
+      "introduced": "0.0.0",
+      "fixed": "2.0.8",
+      "published": "2020-05-14",
+      "title": "XXE in log4net configuration parsing"
+    },
+    {
+      "id": "CVE-2021-26701",
+      "ecosystem": "csharp",
+      "package": "System.Text.Encodings.Web",
+      "severity": "HIGH",
+      "introduced": "4.0.0",
+      "fixed": "4.7.2",
+      "published": "2021-02-25",
+      "title": "Remote code execution in System.Text.Encodings.Web"
     },
     {
       "id": "CVE-2023-32681",

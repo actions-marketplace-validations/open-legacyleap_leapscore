@@ -244,6 +244,31 @@ describe('2.3 lockfile/manifest parsing (ECOS-02/06/07) across ecosystems', () =
     }
   });
 
+  it('ECOS-06 detects a duplicate version nested in one npm lockfile', async () => {
+    // Regression guard (legacy-stacks 4.3): the resolution map collapses to one
+    // version per name, so duplicates must come from the multi-version record.
+    const dir = dirWith({
+      'package.json': JSON.stringify({ name: 'f', version: '1.0.0', dependencies: { lodash: '4.17.20' } }),
+      'package-lock.json': JSON.stringify({
+        name: 'f',
+        lockfileVersion: 3,
+        packages: {
+          '': { name: 'f', version: '1.0.0' },
+          'node_modules/lodash': { version: '4.17.20', integrity: 'sha512-x' },
+          'node_modules/foo/node_modules/lodash': { version: '4.17.15', integrity: 'sha512-y' },
+        },
+      }),
+    });
+    try {
+      const fact = await detectEcos06(await makeCtx(dir), SIG);
+      expect(fact.measurement?.status).toBe('measured');
+      const e = (fact.facts as Record<string, unknown>).ecos06 as { duplicates: Array<{ name: string; versions: string[] }> };
+      expect(e.duplicates).toEqual([{ name: 'lodash', versions: ['4.17.15', '4.17.20'] }]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it('ECOS-07 reports lockfile presence + pin ratio', async () => {
     const dir = jsFixture();
     try {

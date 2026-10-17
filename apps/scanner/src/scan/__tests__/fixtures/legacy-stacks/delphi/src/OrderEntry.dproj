@@ -1,0 +1,11 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <ProjectGuid>{44444444-4444-4444-4444-444444444444}</ProjectGuid>
+    <ProjectVersion>17.2</ProjectVersion>
+    <FrameworkType>VCL</FrameworkType>
+  </PropertyGroup>
+  <ItemGroup>
+    <DCCReference Include="Main.pas" />
+    <DCCReference Include="Orders.pas" />
+  </ItemGroup>
+</Project>

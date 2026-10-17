@@ -14,18 +14,17 @@
 ## 1. Inputs
 
 - **Planes:** static-src
-- **Tools:** `syft >= 0.100` (dir mode, no container build) → SBOM/CycloneDX; `licensee`-class classifier or `scancode` license DB; `pip-licenses` fallback for Python-only trees
-- **Rate-cost:** none (local; license DB shipped with engine, pinned version)
-- **Ecosystems:** agnostic (syft catalogers) with lockfile-priority parsing
+- **Tools:** direct-dep license resolution from the vendored package-metadata table (registry-derived `license` field; part of the eol snapshot); repo surfacing checks (SBOM file presence, CI license-gate grep, packaging/Dockerfile posture). The SBOM-scanner path (`syft` etc.) is out of scope for the offline release — a transitive-license surface needs a scanner this build does not run.
+- **Rate-cost:** none (offline; license table pinned per scan)
+- **Ecosystems:** agnostic with lockfile-priority parsing; legacy-stacks adds NuGet (`packages.config`, `PackageReference`, `packages.lock.json`)
 - **Applicability:** `na_when: ECOS-02 clause-b fired` (no manifests → nothing to license). Else applicable.
 
 ## 2. Detection recipe
 
-1. `syft scan dir:{clone} --scope all-layers -o cyclonedx-json` (file-mode; never builds/never runs repo code).
-2. Normalize package licenses via classifier; mark `unknown` when absent/custom.
-3. Classify: `copyleft_strong` (GPL-2/3, AGPL), `copyleft_weak` (LGPL, MPL), `permissive`, `unknown`.
-4. Detect distribution posture hints: packaging configs (pyproject wheel/build, pkg binary targets, Dockerfile FROM scratch copies) → `closed_source_distribution_likely` unless LICENSE states AGPL-compatible OSS release.
-5. Vendored-code sweep: dirs lacking upstream license headers adjacent to manifest-absence.
+1. Parse the manifest/lockfile surface; select direct deps (prod scope first).
+2. Classify each dep's license from the vendored table: `copyleft_strong`, `copyleft_weak`, `permissive`, `unknown`; a dep the table does not cover is counted `license_unknown_count` and named in `license_unknown_names` — never guessed.
+3. Detect distribution posture hints: packaging configs (`package.json#bin`, `pyproject` build-system, Dockerfile `FROM scratch` copies) → `closed_source_distribution_likely` unless the repo's own LICENSE is copyleft.
+4. Repo surfacing sweep: SBOM file presence, CI license-gate step, vendored-code license headers.
 
 Preconditions: none beyond tree enumeration.
 
@@ -34,7 +33,8 @@ Preconditions: none beyond tree enumeration.
 ```json
 {"ecos05": {
   "packages_total": 412, "license_unknown_count": 9,
-  "copyleft_strong": [{"name": "libfoo", "version": "1.2", "license": "GPL-3.0", "direct": false}],
+  "license_unknown_names": ["internal-billing-client"],
+  "copyleft_strong": [{"name": "libfoo", "version": "1.2", "license": "GPL-3.0", "direct": true}],
   "copyleft_weak_count": 2,
   "sbom_present_in_repo": false, "ci_license_gate_present": false,
   "closed_source_distribution_likely": true}}
@@ -43,13 +43,13 @@ Preconditions: none beyond tree enumeration.
 ## 4. Statusing rules
 
 ```yaml
-measured_when:  syft completed and packages_total > 0
-estimated_when: syft partial failure but >=1 lockfile parsed manually   # clamp [1,2], confidence low
-unknown_when:   zero packages discovered in a tree that has source files
+measured_when:  an SBOM-class scan completes over the enumerated tree and packages_total > 0   # not reachable in the offline release (direct-dep table only)
+estimated_when: direct-dep license table with >=1 license classified                            # clamp [1,2], confidence low; the release's default
+unknown_when:   zero packages discovered in a tree that has source files, or none of the direct deps covered by the table
 na_when:        applicability fired
 clamp:          [1,2]
-confidence:     medium (exhaustive SBOM surface)
-scope_limited:  vendored-dir exclusion -> estimated + scope-limited
+confidence:     low (direct-dep surface only; transitive licenses need the unshipped SBOM path)
+scope_limited:  license_unknown_count > 0 -> estimated + scope-limited
 ```
 
 ## 5. Score mapping (predicates)
@@ -69,13 +69,13 @@ Thresholds/criteria: see encyclopedia §ECOS-05.
 
 ## 7. Failure & budget semantics
 
-- Budget class: `slow-dissolvable` (dissolve → lockfile-direct-deps license lookup only + confidence low)
+- Budget class: `slow-dissolvable` — in the offline release the dissolved path IS the shipped path: direct-dep license table only, confidence low
 - Classifier DB load failure → abort row to `unknown`; never guess licenses
 
 ## 8. Evidence string
 
 ```
-evidence: "syft {ver}: {n} packages; {u} unknown licenses; GPL-3.0 in {names} ({paths})"
+evidence: "lockfile-parse: {n} direct deps; {u} unknown licenses; strong copyleft in {names} ({paths})"
 ```
 
 ## 9. Scope/overlaps echo

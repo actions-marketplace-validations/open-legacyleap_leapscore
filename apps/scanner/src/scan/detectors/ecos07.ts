@@ -1,5 +1,5 @@
 import type { ScanContext, RawFact } from '../detector';
-import { ghErrorKind, filePointer, basisPointer, measuredFact, unknownFact } from './common';
+import { ghErrorKind, filePointer, basisPointer, measuredFact, unknownFact, readBudgetNote } from './common';
 import { scanDependencies, uniqueDirect, pinRatio } from '../deps';
 import { isGitRepo, gitFileLastCommitMs } from '../git';
 import { cachedWorkflows } from '../sourcefiles';
@@ -32,6 +32,9 @@ export async function detectEcos07(ctx: ScanContext, signal: AbortSignal): Promi
   try {
     if (signal.aborted) return unknownFact('ECOS-07', 'lockfile-parse', started, WHAT_IT_TAKES);
     const scan = await scanDependencies(ctx);
+    if (scan.readBudgetExhausted) {
+      return unknownFact('ECOS-07', 'lockfile-parse', started, readBudgetNote(scan.manifests, scan.manifestsTotal, 'dependency manifests'));
+    }
     if (scan.manifests === 0) {
       return unknownFact('ECOS-07', 'lockfile-parse', started, `${WHAT_IT_TAKES}; no manifest found (na_when clause-b)`);
     }
@@ -59,6 +62,7 @@ export async function detectEcos07(ctx: ScanContext, signal: AbortSignal): Promi
     const facts = {
       ecos07: {
         lockfiles,
+        lockfile_mechanism_absent: scan.noLockfileMechanism,
         pin_ratio: pinRatio(direct),
         ci_immutable_install: ciImmutable,
         mutable_install_sites: mutableSites,
@@ -67,6 +71,9 @@ export async function detectEcos07(ctx: ScanContext, signal: AbortSignal): Promi
     };
     const pointers = [
       ...lockfiles.slice(0, 4).map((l) => filePointer(String(l.path), `${l.integrity_hashes ? 'integrity hashes present' : 'no integrity hashes'}${l.stale ? '; lockfile older than manifest' : ''}`)),
+      ...(scan.noLockfileMechanism.length
+        ? [basisPointer('lockfile-parse', `no lockfile mechanism for ${scan.noLockfileMechanism.join(', ')} — absence is structural, not a coverage gap; pinning is assessed from the manifest declarations`)]
+        : []),
       ...(git ? [basisPointer('git', 'lockfile staleness from git last-commit dates')] : [basisPointer('scan', 'no git history — staleness check dropped, presence facts stand')]),
     ];
     return measuredFact({

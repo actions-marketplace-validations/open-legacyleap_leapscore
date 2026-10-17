@@ -117,7 +117,7 @@ describe('2.1 per-detector tool versions', () => {
       expect(toolVersion(tool)).toMatch(/^\d+\.\d+$/);
     }
     expect(DETECTOR_TOOL_VERSIONS['adr-inventory']).toBe('1.1');
-    expect(buildToolVersions().get('lockfile-parse')).toBe('1.0');
+    expect(buildToolVersions().get('lockfile-parse')).toBe('1.1');
   });
   it('versions appear in provenance output on a real scan', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'leapscore-prov-'));

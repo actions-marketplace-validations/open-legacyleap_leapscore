@@ -9,7 +9,7 @@
 import { walkSortedTree } from './tree';
 import type { ScanContext } from './detector';
 
-const SOURCE_EXT = /\.(m|c)?[jt]sx?$|\.py$|\.go$|\.java$|\.rb$|\.php$|\.rs$|\.kt$|\.scala$|\.cs$/;
+const SOURCE_EXT = /\.(m|c)?[jt]sx?$|\.py$|\.go$|\.java$|\.rb$|\.php$|\.rs$|\.kt$|\.scala$|\.cs$|\.vb$/;
 const MAX_SOURCE_FILES = 400;
 const MAX_BYTES_PER_FILE = 256 * 1024;
 
@@ -30,17 +30,17 @@ export type ImportScan = {
   tokens: Set<string>;
 };
 
-async function readText(ctx: ScanContext, path: string, max = MAX_BYTES_PER_FILE): Promise<string | null> {
+async function readText(ctx: ScanContext, path: string, max = MAX_BYTES_PER_FILE): Promise<{ text: string; capped: boolean } | null> {
   try {
     const buf = await ctx.readFile(path);
     if (!buf) return null;
-    return buf.subarray(0, max).toString('utf8');
+    return { text: buf.subarray(0, max).toString('utf8'), capped: buf.length > max };
   } catch {
     return null;
   }
 }
 
-/** Extract imported module tokens from one source file (JS/TS, Py, Go, Java, Ruby, PHP, Rust). */
+/** Extract imported module tokens from one source file (JS/TS, Py, Go, Java, Ruby, PHP, Rust, C#/VB). */
 export function extractImports(text: string): string[] {
   const out: string[] = [];
   const push = (t: string | undefined) => {
@@ -70,6 +70,17 @@ export function extractImports(text: string): string[] {
   for (const m of text.matchAll(/^\s*use\s+([A-Za-z0-9_\\]+)/gm)) push(m[1].split('\\').slice(0, 2).join('/'));
   // Rust: use x::y;  extern crate x;
   for (const m of text.matchAll(/^\s*use\s+([A-Za-z0-9_]+)::/gm)) push(m[1]);
+  // C# (legacy-stacks 5.3): usings name namespaces/types — keep the full token.
+  // `using System.Web;` · `global using Foo.Bar;` · `using static System.Math;`
+  for (const m of text.matchAll(/^\s*(?:global\s+)?using\s+(?:static\s+)?([A-Za-z_][A-Za-z0-9_.]*)\s*;/gm)) push(m[1]);
+  // C# alias: `using EF = Microsoft.EntityFrameworkCore;` — the target namespace matters
+  for (const m of text.matchAll(/^\s*using\s+[A-Za-z_]\w*\s*=\s*([A-Za-z_][A-Za-z0-9_.]*)\s*;/gm)) push(m[1]);
+  // VB: `Imports System.Web` · comma lists · alias `Imports EF = Microsoft.EntityFrameworkCore`
+  // capture to end of line, then drop a trailing `'` comment
+  for (const m of text.matchAll(/^\s*Imports\s+([^<\r\n][^\r\n]*)$/gm)) {
+    const code = m[1].split("'")[0];
+    for (const part of code.split(',')) push(part.split('=').pop());
+  }
   return out;
 }
 
@@ -109,11 +120,12 @@ export async function scanSourceImports(ctx: ScanContext, signal?: AbortSignal):
   for (const path of sourcePaths) {
     if (signal?.aborted) { truncated = true; break; }
     if (filesScanned >= MAX_SOURCE_FILES) { truncated = true; break; }
-    const text = await readText(ctx, path);
-    if (text == null) continue;
+    const read = await readText(ctx, path);
+    if (read == null) continue;
+    if (read.capped) truncated = true; // byte-capped read: the file contributed a partial import surface
     filesScanned++;
     const seen = new Set<string>();
-    for (const tok of extractImports(text)) {
+    for (const tok of extractImports(read.text)) {
       tokens.add(tok);
       if (seen.has(tok)) continue;
       seen.add(tok);
@@ -173,10 +185,10 @@ export async function readWorkflows(ctx: ScanContext, signal?: AbortSignal): Pro
   const files: string[] = [];
   for (const p of wf.slice(0, 40)) {
     if (signal?.aborted) break;
-    const text = await readText(ctx, p);
-    if (text == null) continue;
+    const read = await readText(ctx, p);
+    if (read == null) continue;
     files.push(p);
-    chunks.push(text);
+    chunks.push(read.text);
   }
   return { text: chunks.join('\n'), files };
 }

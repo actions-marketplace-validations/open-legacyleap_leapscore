@@ -14,19 +14,19 @@
 ## 1. Inputs
 
 - **Planes:** static-src + git
-- **Tools:** AST-grep/regex marker pack: `test.skip|xit\(|xdescribe|@Ignore|@Disabled|pytest.mark.skip|skipIf|t.Skip|it.each.skip`, conditional skips (`skipUnless`, `if (process.env.CI) return`), CI-level exclusions (`--ignore` test paths in workflow steps)
+- **Tools:** AST-grep/regex marker pack: `test.skip|xit\(|xdescribe|@Ignore|@Disabled|pytest.mark.skip|skipIf|t.Skip|it.each.skip`, conditional skips (`skipUnless`, `if (process.env.CI) return`), CI-level exclusions (`--ignore` test paths in workflow steps); .NET forms — `[Ignore]`/`<Ignore>`, `[TestMethod, Ignore]`, `Skip = "reason"` / VB `Skip:="reason"`, `Assert.Ignore(`, `Assert.Inconclusive(`
 - **Rate-cost:** none
 - **Ecosystems:** agnostic
 - **Applicability:** `na_when: zero test files` (nothing to skip — reason recorded).
 
 ## 2. Detection recipe
 
-1. Count skip markers per file; total tests estimated per framework counter (`it(`, `def test_`, `@Test`) for ratio.
+1. Count skip markers per file; total tests estimated per framework counter (`it(`, `def test_`, `@Test`, `[TestMethod]`/`[Test]`/`[Fact]`/`[Theory]`/`[TestCase]`) for ratio.
 2. Skip age: introduction commit date per marker via `git blame -L`.
 3. Conditional-skip classification (env-dependent vs permanent).
 4. Ratio = skipped / total.
 
-Preconditions: tree enumerated.
+Preconditions: tree enumerated. A bounded test-file read (file count / per-file bytes) sets `truncated` → the row is disclosed scope-limited (counts stand; coverage is partial).
 
 ## 3. Fact schema
 
@@ -47,7 +47,7 @@ unknown_when:   tree unparseable
 na_when:        zero test files
 clamp:          [1,2]                             # n/a — measured-only row
 confidence:     medium; low if blame unavailable (drop age subscore)
-scope_limited:  none typical
+scope_limited:  test-file read bound hit (file count / per-file bytes) -> measured + scope-limited
 ```
 
 ## 5. Score mapping (predicates)

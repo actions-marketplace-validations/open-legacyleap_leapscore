@@ -226,10 +226,10 @@ Specs arbitrate via each entry's own Definition + Detection text. Every divergen
 | DOCS-09 | A·estimated | A·measured | **A·measured** | docs-CI step presence = fact |
 | ECOS-01 | A·estimated | A·measured | **A·measured** | pin read (.nvmrc/Dockerfile/engines) -> endoflife.date lookup is a fact |
 | ECOS-02 | A·estimated | A·measured | **A·measured** | registry/lockfile compare yields computed percentages; framework-gap classification mechanical |
-| ECOS-03 | B·estimated | A·measured | **A·measured** | last-release date + archived flag per dep via registry APIs = facts (Socket optional) |
+| ECOS-03 | B·estimated | A·measured | **A·measured** | last-release metadata per dep from the vendored registry-derived table = fact; archived-repo check (GH/Scorecard) out of offline scope |
 | ECOS-04 | B·estimated | A·estimated | **A·estimated** | static deprecation lints runnable, but signal uneven across ecosystems (Py warnings need execution) |
-| ECOS-05 | B·measured | A·measured | **A·measured** | syft SBOM + licensee classification from lockfiles = static facts |
-| ECOS-06 | A·estimated | A·measured | **A·measured** | lockfile transitive counts + knip/depcheck unused-direct counts = tool facts |
+| ECOS-05 | B·measured | A·measured | **A·measured** | license classification from the vendored metadata table (direct-dep surface) = static facts; transitive/SBOM path pending |
+| ECOS-06 | A·estimated | A·measured | **A·measured** | lockfile transitive counts + duplicate version sets = parsed facts (unused-direct analyser not shipped; null sub-signal) |
 | ECOS-08 | A·estimated | A·measured | **A·measured** | framework support status via endoflife.date = fact; coupling-share secondary, still static |
 | ECOS-09 | A·estimated | B·unknown | **B·estimated** | skew needs multi-service manifests; measurable only within a monorepo, else unknown |
 | ECOS-10 | B·measured | A·measured | **A·measured** | Scorecard/osv/actions-pinning audit all remote-static |

@@ -1,5 +1,5 @@
 import type { ScanContext, RawFact } from '../detector';
-import { ghErrorKind, filePointer, basisPointer, measuredFact, unknownFact } from './common';
+import { ghErrorKind, filePointer, basisPointer, measuredFact, unknownFact, readBudgetNote } from './common';
 import { scanDependencies } from '../deps';
 import { matchAdvisories, advisoryCoveredEcosystems, advisoryAgeDays, snapshotVersions } from '../snapshots';
 import { cachedSourceImports, isDependencyImported } from '../sourcefiles';
@@ -20,6 +20,9 @@ export async function detectSec01(ctx: ScanContext, signal: AbortSignal): Promis
   try {
     if (signal.aborted) return unknownFact('SEC-01', 'advisory-snapshot', started, WHAT_IT_TAKES);
     const scan = await scanDependencies(ctx);
+    if (scan.readBudgetExhausted) {
+      return unknownFact('SEC-01', 'advisory-snapshot', started, readBudgetNote(scan.manifests, scan.manifestsTotal, 'dependency manifests'));
+    }
     if (scan.manifests === 0) {
       return unknownFact('SEC-01', 'advisory-snapshot', started, `${WHAT_IT_TAKES}; no dependency manifest found (na_when clause-b)`);
     }
@@ -79,7 +82,9 @@ export async function detectSec01(ctx: ScanContext, signal: AbortSignal): Promis
     };
     const measurement = uncovered.length > 0
       ? { status: 'estimated' as const, confidence: 'low' as const, scopeLimited: true }
-      : { status: 'measured' as const, confidence: imports.truncated ? 'low' as const : 'medium' as const };
+      : imports.truncated
+        ? { status: 'measured' as const, confidence: 'low' as const, scopeLimited: true }
+        : { status: 'measured' as const, confidence: 'medium' as const };
     return measuredFact({
       detectorId: 'SEC-01',
       producer: 'advisory-snapshot',

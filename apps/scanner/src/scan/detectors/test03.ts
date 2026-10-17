@@ -1,5 +1,5 @@
 import type { ScanContext, RawFact } from '../detector';
-import { ghErrorKind, filePointer, measuredFact, unknownFact } from './common';
+import { ghErrorKind, filePointer, measuredFact, unknownFact, readBudgetNote } from './common';
 import { scanTestFiles } from '../testfiles';
 
 const WHAT_IT_TAKES =
@@ -18,6 +18,10 @@ export async function detectTest03(ctx: ScanContext, signal: AbortSignal): Promi
     if (scan.total === 0) {
       return unknownFact('TEST-03', 'test-classify', started,
         'zero test files — no pyramid shape to classify; TEST-05/TEST-08 carry the zero-test signal (na_when)');
+    }
+    if (scan.unreadByBudget > 0) {
+      return unknownFact('TEST-03', 'test-classify', started,
+        readBudgetNote(scan.total - scan.unreadByBudget, scan.total, 'test files'));
     }
     const highCount = Math.round(scan.highRatio * scan.total);
     const classifiedRatio = scan.total ? highCount / scan.total : 0;
@@ -44,7 +48,7 @@ export async function detectTest03(ctx: ScanContext, signal: AbortSignal): Promi
       started,
       facts: facts as unknown as Record<string, unknown>,
       pointers,
-      measurement: { status: 'estimated', confidence: scan.highRatio >= 0.8 ? 'medium' : 'low' },
+      measurement: { status: 'estimated', confidence: scan.highRatio >= 0.8 ? 'medium' : 'low', ...(scan.truncated ? { scopeLimited: true } : {}) },
       truncated: scan.truncated,
     });
   } catch (e) {

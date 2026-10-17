@@ -60,7 +60,8 @@ Format: `#` · Decision · Source rule / rationale · Status
 | D5 | v1 is static-analysis + GitHub API only. No test-suite execution in a sandbox | Test-execution buys ~4 indicators at the price of a security review + container sandbox + scan-time explosion; belongs in a later paid "deep scan" | **AGREED** (grill Q3) |
 | D6 | Every repo scores on day 1 regardless of ecosystem; language-gated indicators report `unknown` honestly | Manifest sniffing + language-agnostic scans (git, CI, docs, dependabot) run for all repos | **AGREED** (grill Q3) |
 | D7 | Detection engine orchestrates existing OSS tools (gitleaks, trivy, osv-scanner, jscpd, knip, dependency-cruiser, Scorecard, …); v1 does not write analyzers from scratch | Build cost is orchestration + rubric mapping, not analysis | **AGREED** (grill Q3) |
-| D8 | First ecosystem gate: JS/TS (npm) + Python. Then Go + Java (Maven/Gradle). Ruby/PHP/C#/Rust later | Coverage vs. cost per language | **AGREED** (grill Q3) |
+| D8 | First ecosystem gate: JS/TS (npm) + Python. Then Go + Java (Maven/Gradle). Ruby/PHP/C#/Rust later | Coverage vs. cost per language | **AGREED** (grill Q3); "C#/Rust later" clause superseded for legacy stacks by D10 (brief Req 10) |
+| D10 | Brief Req 10 supersedes D8's "C#/legacy later" clause for the legacy-stacks scope: .NET/VB.NET (incl. VB6) + Delphi coverage ships now, with legacy-Java fidelity; Ruby/PHP/Rust stay later | Req 10 names the customer stacks ("Prioritise the stacks our customers run: Java, .NET including VB.NET, VB6, Delphi") and gates release on a two-estate validation (one .NET, one Java); D8's coverage-vs-cost ordering predates that customer set, so the gate is release-blocking, not deferrable | **AGREED** (legacy-stacks · brief Req 10) |
 
 ---
 

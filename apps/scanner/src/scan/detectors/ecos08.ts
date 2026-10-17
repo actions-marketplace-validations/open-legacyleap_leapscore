@@ -1,5 +1,5 @@
 import type { ScanContext, RawFact } from '../detector';
-import { ghErrorKind, filePointer, basisPointer, measuredFact, unknownFact } from './common';
+import { ghErrorKind, filePointer, basisPointer, measuredFact, unknownFact, readBudgetNote } from './common';
 import { scanDependencies, uniqueDirect, type DirectDep } from '../deps';
 import { resolveFramework, snapshotVersions, SNAPSHOT_REFRESH_HINT } from '../snapshots';
 import { cachedSourceImports, couplingFor } from '../sourcefiles';
@@ -16,6 +16,14 @@ const FRAMEWORK_ALIASES: Record<string, string> = {
   'org.springframework.boot:spring-boot-starter-web': 'spring-boot',
   'github.com/gin-gonic/gin': 'gin',
   'laravel/framework': 'laravel',
+  // legacy-stacks 2.4: .NET / Struts framework-class packages → dataset keys
+  'microsoft.aspnet.mvc': 'aspnet',
+  'microsoft.aspnet.webapi': 'aspnet',
+  'microsoft.aspnet.webapi.core': 'aspnet',
+  'microsoft.aspnet.webforms': 'aspnet',
+  'entityframework': 'entityframework',
+  'org.apache.struts:struts2-core': 'struts2',
+  'struts2-core': 'struts2',
 };
 
 function frameworkNameOf(dep: DirectDep): string | null {
@@ -28,7 +36,7 @@ function frameworkNameOf(dep: DirectDep): string | null {
 
 /** A spec that resolves a framework from a git URL/fork rather than the canonical
  * registry (spec ecos-08 §2.4). Canonical upstream URLs are excluded. */
-const CANONICAL_URL = /github\.com\/(expressjs|facebook\/react|vuejs|angular|sveltejs|vercel\/next\.js|nuxt|nestjs|emberjs|django|pallets\/flask|tiangolo\/fastapi|rails\/rails|spring-projects|quarkusio|gin-gonic)/i;
+const CANONICAL_URL = /github\.com\/(expressjs|facebook\/react|vuejs|angular|sveltejs|vercel\/next\.js|nuxt|nestjs|emberjs|django|pallets\/flask|tiangolo\/fastapi|rails\/rails|spring-projects|quarkusio|gin-gonic|apache\/struts|aspnet)/i;
 
 /**
  * ECOS-08 — framework lock-in / monoculture risk (detector-honesty 2.4; spec
@@ -42,6 +50,9 @@ export async function detectEcos08(ctx: ScanContext, signal: AbortSignal): Promi
   try {
     if (signal.aborted) return unknownFact('ECOS-08', 'eol-snapshot', started, WHAT_IT_TAKES);
     const scan = await scanDependencies(ctx);
+    if (scan.readBudgetExhausted) {
+      return unknownFact('ECOS-08', 'eol-snapshot', started, readBudgetNote(scan.manifests, scan.manifestsTotal, 'dependency manifests'));
+    }
     if (scan.manifests === 0) {
       return unknownFact('ECOS-08', 'eol-snapshot', started, `${WHAT_IT_TAKES}; no dependency manifest found`);
     }

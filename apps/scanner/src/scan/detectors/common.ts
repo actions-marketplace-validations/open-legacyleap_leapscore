@@ -1,13 +1,31 @@
 import type { Evidence, RawFact, ScanContext } from '../detector';
 import { GhRateLimitError } from '../gh';
+import { isReadBudgetError } from '../budget';
 
-/** Read a target file as UTF-8 through the byte-capped `ctx.readFile`, or `null`. */
-export async function readText(ctx: Pick<ScanContext, 'readFile'>, path: string, maxBytes = 4 * 1024 * 1024): Promise<string | null> {
+/** Per-detector read-budget accounting for a surface read (legacy-stacks 8.3).
+ * `reads` = reads that returned content (a genuinely missing path counts as
+ * neither); `budgetBlocked` = reads the partitioned reader refused because the
+ * per-detector byte cap ended. A caller with `budgetBlocked > 0` has NOT covered
+ * its read surface and must disclose it via `readBudgetNote`, never grade the
+ * prefix. */
+export type ReadBudgetTracker = { reads: number; budgetBlocked: number };
+
+export function makeReadBudgetTracker(): ReadBudgetTracker {
+  return { reads: 0, budgetBlocked: 0 };
+}
+
+/** Read a target file as UTF-8 through the byte-capped `ctx.readFile`, or `null`.
+ * Pass a tracker to distinguish a missing file from a read-budget exhaustion: a
+ * `QuotaExceededError` from the partitioned reader is a starved surface, not an
+ * empty one (legacy-stacks 8.1/8.3). */
+export async function readText(ctx: Pick<ScanContext, 'readFile'>, path: string, tracker?: ReadBudgetTracker): Promise<string | null> {
   try {
     const buf = await ctx.readFile(path);
     if (!buf) return null;
-    return buf.subarray(0, maxBytes).toString('utf8');
-  } catch {
+    if (tracker) tracker.reads++;
+    return buf.subarray(0, 4 * 1024 * 1024).toString('utf8');
+  } catch (e) {
+    if (tracker && isReadBudgetError(e)) tracker.budgetBlocked++;
     return null;
   }
 }
@@ -38,11 +56,11 @@ export const PRODUCER_REGISTRY: Record<string, string> = {
   'deploy-inventory': '1.1',
   'iac-inventory': '1.1',
   'migration-inventory': '1.1',
-  'lockfile-parse': '1.0',
-  'eol-snapshot': '1.0',
-  'advisory-snapshot': '1.0',
-  'test-classify': '1.0',
-  'test-scan': '1.0',
+  'lockfile-parse': '1.1',
+  'eol-snapshot': '1.1',
+  'advisory-snapshot': '1.1',
+  'test-classify': '1.1',
+  'test-scan': '1.1',
   'secret-rules': '1.0',
   'fuzz-inventory': '1.1',
   'sec-ci-inventory': '1.1',
@@ -144,6 +162,14 @@ export function measuredFact(opts: {
     truncated: opts.truncated ?? false,
     measurement,
   };
+}
+
+/** Read-budget truncation note (legacy-stacks 8.1): when the harness per-detector
+ * byte budget ends before a read surface is covered, the parsed set is a
+ * deterministic prefix — not a gradeable surface. The row stays `unknown` and
+ * this note names the coverage and the measure path. */
+export function readBudgetNote(read: number, total: number, surface: string): string {
+  return `reads hit the per-detector read budget after ${read} of ${total} ${surface} — the read surface is incomplete, so this row is unknown rather than graded over it; scan a narrower sub-tree (or raise the scan read budget) to measure it`;
 }
 
 /** The honest "cannot measure" result (measure-or-unknown): no fabricated

@@ -25,7 +25,13 @@ export type SortedWalk = {
   fileCount: number;
 };
 
-const SKIP_DIRS = new Set(['node_modules', 'dist', 'build', '.next', '.git']);
+const SKIP_DIRS = new Set([
+  'node_modules', 'dist', 'build', '.next', '.git',
+  // legacy-stacks 5.1 (design D6): unambiguous build/IDE output dirs. `bin/`
+  // stays walked (real source on unix) and `packages/` stays (workspace dirs);
+  // .NET bin/Debug|Release outputs are covered transitively.
+  'obj', 'target', '.gradle', '.vs', '__history', '__recovery',
+]);
 
 /** Walk the target tree once in canonical sorted order. Shared by the scan seam (D1). */
 export async function walkSortedTree(root: string, opts: { maxDepth?: number } = {}): Promise<SortedWalk> {

@@ -60,6 +60,12 @@ async function listFilesRecursive(clonePath: string, maxDepth = 3): Promise<stri
   return out;
 }
 
+/** Token-aware manifest dep scan — names must not match inside larger words (`gin` in `packaging`, `rails` in `grails`). */
+function manifestHasDep(txt: string, dep: string): boolean {
+  const esc = dep.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`(^|[^a-z0-9])${esc}([^a-z0-9]|$)`).test(txt);
+}
+
 function hasAnyFile(files: string[], patterns: string[]): string[] {
   const found: string[] = [];
   for (const pat of patterns) {
@@ -97,13 +103,44 @@ export async function detectPlaneInventory(clonePath: string, readFile: (p: stri
     if (buf) {
       const txt = buf.toString('utf-8').toLowerCase();
       for (const dep of serverDeps) {
-        if (txt.includes(dep)) { has_server = true; evidence.has_server.push(`${m}: ${dep}`); break; }
+        if (manifestHasDep(txt, dep)) { has_server = true; evidence.has_server.push(`${m}: ${dep}`); break; }
       }
     }
   }
   // entrypoint files
   const serverFiles = hasAnyFile(files, ['server.js','server.ts','app.js','app.py','main.go','src/server','api/server','server/']);
   if (serverFiles.length) { has_server = true; evidence.has_server.push(...serverFiles); }
+
+  // legacy-stacks 5.1 (.NET / legacy-Java server signatures, design D8):
+  // Microsoft.NET.Sdk.Web / System.Web / .aspx|.asmx|.svc and servlet/JSP/Struts
+  // evidence, derived from files already in this bounded walk.
+  const dotnetProjects: Array<{ path: string; text: string }> = [];
+  for (const p of files.filter((f) => /\.(csproj|vbproj)$/i.test(f)).slice(0, 8)) {
+    const buf = await readFile(p);
+    if (buf) dotnetProjects.push({ path: p, text: buf.toString('utf-8') });
+  }
+  for (const proj of dotnetProjects) {
+    if (/Microsoft\.NET\.Sdk\.Web/.test(proj.text)) { has_server = true; evidence.has_server.push(`${proj.path}: Microsoft.NET.Sdk.Web`); }
+    else if (/System\.Web\b/.test(proj.text)) { has_server = true; evidence.has_server.push(`${proj.path}: System.Web`); }
+  }
+  const dotnetWebFiles = files.filter((f) => /\.(aspx|asmx|svc)$/i.test(f)).slice(0, 3);
+  if (dotnetWebFiles.length) { has_server = true; evidence.has_server.push(...dotnetWebFiles); }
+  const javaWebFiles = files.filter((f) => /(^|\/)(web\.xml|struts\.xml)$/i.test(f) || /\.jsp$/i.test(f)).slice(0, 3);
+  if (javaWebFiles.length) { has_server = true; evidence.has_server.push(...javaWebFiles); }
+  // legacy-stacks 5.1: root build files first, then a bounded set of module
+  // poms/gradle files — multi-module repos carry servlet/Struts, Hibernate and
+  // JUnit signatures in child modules, not the parent.
+  const rootJavaBuildFiles = ['pom.xml', 'build.gradle', 'build.gradle.kts'];
+  const javaBuildFiles = [
+    ...rootJavaBuildFiles.filter((m) => files.includes(m)),
+    ...files.filter((f) => /(^|\/)(pom\.xml|build\.gradle|build\.gradle\.kts)$/.test(f) && !rootJavaBuildFiles.includes(f)).slice(0, 8),
+  ];
+  for (const m of javaBuildFiles) {
+    const buf = await readFile(m);
+    if (buf && /javax\.servlet|jakarta\.servlet|struts/i.test(buf.toString('utf-8'))) {
+      has_server = true; evidence.has_server.push(`${m}: servlet/Struts`);
+    }
+  }
 
   // has_data — migrations, schema.sql, prisma, DB drivers
   const dataFiles = hasAnyFile(files, ['migrations/','migrate/','db/migrate/','schema.sql','prisma/schema.prisma','prisma/','alembic.ini','alembic/']);
@@ -115,8 +152,23 @@ export async function detectPlaneInventory(clonePath: string, readFile: (p: stri
     if (buf) {
       const txt = buf.toString('utf-8').toLowerCase();
       for (const d of dbDrivers) {
-        if (txt.includes(d)) { has_data = true; evidence.has_data.push(`${m}: ${d}`); break; }
+        if (manifestHasDep(txt, d)) { has_data = true; evidence.has_data.push(`${m}: ${d}`); break; }
       }
+    }
+  }
+  // legacy-stacks 5.1 (.NET / legacy-Java data signatures, design D8):
+  // Entity Framework references, .sqlproj/.sql files, Hibernate.
+  for (const proj of dotnetProjects) {
+    if (/EntityFramework|Microsoft\.EntityFrameworkCore/.test(proj.text)) {
+      has_data = true; evidence.has_data.push(`${proj.path}: Entity Framework`);
+    }
+  }
+  const sqlFiles = files.filter((f) => f.endsWith('.sqlproj') || f.endsWith('.sql')).slice(0, 3);
+  if (sqlFiles.length) { has_data = true; evidence.has_data.push(...sqlFiles); }
+  for (const m of javaBuildFiles) {
+    const buf = await readFile(m);
+    if (buf && /hibernate/i.test(buf.toString('utf-8'))) {
+      has_data = true; evidence.has_data.push(`${m}: Hibernate`);
     }
   }
 
@@ -142,6 +194,16 @@ export async function detectPlaneInventory(clonePath: string, readFile: (p: stri
   }
   const clientFiles = hasAnyFile(files, ['src/components/','components/','frontend/','web/','client/']);
   if (clientFiles.length) { has_client = true; evidence.has_client.push(...clientFiles); }
+  // legacy-stacks 5.1 (design D8): desktop UI is a client plane — WinForms/WPF
+  // project signatures and VB6/Delphi form files (FE detectors remain
+  // web-centric; the flag is evidence, not a score).
+  for (const proj of dotnetProjects) {
+    if (/UseWindowsForms|<UseWPF|System\.Windows\.Forms|PresentationFramework/.test(proj.text)) {
+      has_client = true; evidence.has_client.push(`${proj.path}: desktop UI (WinForms/WPF)`);
+    }
+  }
+  const desktopForms = files.filter((f) => /\.(frm|dfm)$/i.test(f)).slice(0, 3);
+  if (desktopForms.length) { has_client = true; evidence.has_client.push(...desktopForms); }
 
   // has_test — __tests__, tests/, *.test.*, *.spec.*, jest, pytest, vitest
   const testFiles = hasAnyFile(files, ['__tests__/','tests/','test/','*.test.js','*.test.ts','*.spec.js','*.spec.ts','*.test.py']);
@@ -156,16 +218,29 @@ export async function detectPlaneInventory(clonePath: string, readFile: (p: stri
     }
   }
   if (testFiles.length) evidence.has_test.push(...testFiles.slice(0,3));
+  // legacy-stacks 5.1: case-tolerant Tests?/ directories and project-level
+  // MSTest/NUnit/xUnit/JUnit references (design D8).
+  const testDirHit = files.find((f) => /(^|\/)tests?\//i.test(f));
+  if (testDirHit && !testFiles.includes(testDirHit)) { has_test = true; evidence.has_test.push(testDirHit); }
+  for (const proj of dotnetProjects) {
+    if (/xunit|nunit|mstest/i.test(proj.text)) {
+      has_test = true; evidence.has_test.push(`${proj.path}: test framework reference`);
+    }
+  }
+  for (const m of javaBuildFiles) {
+    const buf = await readFile(m);
+    if (buf && /junit/i.test(buf.toString('utf-8'))) { has_test = true; evidence.has_test.push(`${m}: JUnit`); }
+  }
   // fallback: check files ending with test spec
   const anyTestFile = files.some(f => f.includes('.test.') || f.includes('.spec.') || f.includes('__tests__'));
   if (anyTestFile) has_test = true;
 
   // Exhaustive evidence for false planes — record tree scan proof
-  if (!has_server) evidence.has_server.push('tree scan: 0 matches for {server deps, server.* entrypoints}');
-  if (!has_data) evidence.has_data.push('tree scan: 0 matches for {migrations/, schema.sql, prisma/, db-drivers}');
+  if (!has_server) evidence.has_server.push('tree scan: 0 matches for {server deps, server.* entrypoints, .NET web / Java servlet signatures}');
+  if (!has_data) evidence.has_data.push('tree scan: 0 matches for {migrations/, schema.sql, prisma/, db-drivers, EF/.sqlproj/.sql, Hibernate}');
   if (!has_deploy) evidence.has_deploy.push('tree scan: 0 matches for {Dockerfile, k8s/, *.tf, serverless.yml, Chart.yaml}');
-  if (!has_client) evidence.has_client.push('tree scan: 0 matches for {client deps, src/components/}');
-  if (!has_test) evidence.has_test.push('tree scan: 0 matches for {__tests__/, tests/, *.test.*, jest/pyproject test config}');
+  if (!has_client) evidence.has_client.push('tree scan: 0 matches for {client deps, src/components/, WinForms/WPF, VB6/Delphi forms}');
+  if (!has_test) evidence.has_test.push('tree scan: 0 matches for {__tests__/, tests/, *.test.*, jest/pyproject test config, MSTest/NUnit/xUnit/JUnit}');
 
   return { has_server, has_data, has_deploy, has_client, has_test, evidence: evidence as PlaneInventory['evidence'] };
 }

@@ -1,5 +1,5 @@
 import type { ScanContext, RawFact } from '../detector';
-import { ghErrorKind, filePointer, basisPointer, measuredFact, unknownFact, readText } from './common';
+import { ghErrorKind, filePointer, basisPointer, measuredFact, unknownFact, readBudgetNote, readText, makeReadBudgetTracker } from './common';
 import { walkSortedTree } from '../tree';
 import { scanDependencies, uniqueDirect, type DirectDep } from '../deps';
 import { lookupPackage, snapshotVersions } from '../snapshots';
@@ -28,7 +28,8 @@ const SBOM_PATH = /(^|\/)(sbom|bom)(\.|$)|\.cdx\.json$|cyclonedx/i;
  * ECOS-05 — license compliance (detector-honesty 2.4; spec ecos-05). Licenses
  * for the direct-dependency surface come from the vendored package-metadata
  * table — never guessed; a package the table does not cover is counted
- * `license_unknown_count`. The row is `estimated` (clamp [1,2]): the direct
+ * `license_unknown_count` and named in `license_unknown_names`. The row is
+ * `estimated` (clamp [1,2]): the direct
  * license surface is exhaustive but transitive licenses need an SBOM scanner
  * this build does not run. G8 reads `copyleft_strong` + `closed_source_distribution_likely`.
  */
@@ -37,6 +38,9 @@ export async function detectEcos05(ctx: ScanContext, signal: AbortSignal): Promi
   try {
     if (signal.aborted) return unknownFact('ECOS-05', 'lockfile-parse', started, WHAT_IT_TAKES);
     const scan = await scanDependencies(ctx);
+    if (scan.readBudgetExhausted) {
+      return unknownFact('ECOS-05', 'lockfile-parse', started, readBudgetNote(scan.manifests, scan.manifestsTotal, 'dependency manifests'));
+    }
     if (scan.manifests === 0) {
       return unknownFact('ECOS-05', 'lockfile-parse', started, `${WHAT_IT_TAKES}; no dependency manifest found (na_when clause-b)`);
     }
@@ -46,12 +50,13 @@ export async function detectEcos05(ctx: ScanContext, signal: AbortSignal): Promi
     let packagesTotal = 0;
     let licenseUnknownCount = 0;
     let copyleftWeakCount = 0;
+    const licenseUnknownNames: string[] = [];
     const copyleftStrong: Array<{ name: string; version: string | null; license: string; direct: boolean }> = [];
     for (const d of direct as DirectDep[]) {
       packagesTotal++;
       const meta = lookupPackage(d.ecosystem, d.name);
       const cls = classifyLicense(meta?.license);
-      if (cls === 'unknown') { licenseUnknownCount++; continue; }
+      if (cls === 'unknown') { licenseUnknownCount++; licenseUnknownNames.push(d.name); continue; }
       if (cls === 'weak') copyleftWeakCount++;
       if (cls === 'strong') copyleftStrong.push({ name: d.name, version: d.version ?? null, license: meta!.license, direct: true });
     }
@@ -68,29 +73,38 @@ export async function detectEcos05(ctx: ScanContext, signal: AbortSignal): Promi
 
     // Closed-source distribution posture: a packaging config that ships a
     // built/binary artifact, unless the repo's own LICENSE is copyleft (an OSS
-    // AGPL/GPL release is copyleft-compatible).
-    const pkgRaw = await readText(ctx, 'package.json');
+    // AGPL/GPL release is copyleft-compatible). These supplementary reads feed a
+    // G8-relevant signal, so a read-budget-blocked read must be disclosed, not
+    // silently read as "absent" (legacy-stacks 8.3).
+    const suppReads = makeReadBudgetTracker();
+    const read = (p: string) => readText(ctx, p, suppReads);
+    const pkgRaw = await read('package.json');
     let hasBinaryPackaging = false;
     if (pkgRaw) { try { hasBinaryPackaging = 'bin' in (JSON.parse(pkgRaw) as Record<string, unknown>); } catch { /* ignore */ } }
     if (!hasBinaryPackaging) {
       const dockerfiles = paths.filter((p) => /(^|\/)Dockerfile(\.[\w.-]+)?$/.test(p)).slice(0, 3);
       for (const df of dockerfiles) {
-        const text = await readText(ctx, df);
+        const text = await read(df);
         if (text && (/^\s*FROM\s+scratch/im.test(text) || /COPY\s+--from=/i.test(text))) { hasBinaryPackaging = true; break; }
       }
     }
     if (!hasBinaryPackaging) {
-      const pyproject = await readText(ctx, 'pyproject.toml');
+      const pyproject = await read('pyproject.toml');
       if (pyproject && /\[build-system\]/.test(pyproject)) hasBinaryPackaging = true;
     }
-    const licenseText = (await readText(ctx, 'LICENSE')) ?? (await readText(ctx, 'LICENSE.md')) ?? (await readText(ctx, 'LICENSE.txt')) ?? '';
+    const licenseText = (await read('LICENSE')) ?? (await read('LICENSE.md')) ?? (await read('LICENSE.txt')) ?? '';
     const repoIsCopyleft = /\b(AGPL|GPL)\b/i.test(licenseText);
+    if (suppReads.budgetBlocked > 0) {
+      return unknownFact('ECOS-05', 'lockfile-parse', started,
+        readBudgetNote(suppReads.reads, suppReads.reads + suppReads.budgetBlocked, 'license supplementary reads'));
+    }
     const closedSourceDistributionLikely = hasBinaryPackaging && !repoIsCopyleft;
 
     const facts = {
       ecos05: {
         packages_total: packagesTotal,
         license_unknown_count: licenseUnknownCount,
+        license_unknown_names: licenseUnknownNames.slice().sort((a, b) => a.localeCompare(b)),
         copyleft_strong: copyleftStrong,
         copyleft_weak_count: copyleftWeakCount,
         sbom_present_in_repo: sbomPresent,

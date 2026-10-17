@@ -1,11 +1,11 @@
 import type { ScanContext, RawFact } from '../detector';
-import { ghErrorKind, filePointer, basisPointer, measuredFact, unknownFact } from './common';
+import { ghErrorKind, filePointer, basisPointer, measuredFact, unknownFact, readBudgetNote } from './common';
 import { scanTestFiles } from '../testfiles';
 import { isGitRepo, gitBlameLineAgeDays } from '../git';
 import { readWorkflows } from '../sourcefiles';
 
 const WHAT_IT_TAKES =
-  'enumerate test files and grep skip/disable markers (it.skip, xit, @Ignore, pytest.mark.skip, t.Skip, …) with git blame for skip age — needs an enumerable tree';
+  'enumerate test files and grep skip/disable markers (it.skip, xit, @Ignore, [Ignore]/<Ignore>, Skip=, pytest.mark.skip, t.Skip, …) with git blame for skip age — needs an enumerable tree';
 
 const MAX_AGED_LOOKUPS = 20;
 
@@ -22,6 +22,10 @@ export async function detectTest05(ctx: ScanContext, signal: AbortSignal): Promi
     const scan = await scanTestFiles(ctx, signal);
     if (scan.total === 0) {
       return unknownFact('TEST-05', 'test-scan', started, 'zero test files — nothing can be skipped (na_when)');
+    }
+    if (scan.unreadByBudget > 0) {
+      return unknownFact('TEST-05', 'test-scan', started,
+        readBudgetNote(scan.total - scan.unreadByBudget, scan.total, 'test files'));
     }
 
     const withSkips = scan.files.filter((f) => f.skips.length > 0);
@@ -67,7 +71,7 @@ export async function detectTest05(ctx: ScanContext, signal: AbortSignal): Promi
       started,
       facts: facts as unknown as Record<string, unknown>,
       pointers,
-      measurement: { status: 'measured', confidence: blameAvailable ? 'medium' : 'low' },
+      measurement: { status: 'measured', confidence: blameAvailable ? 'medium' : 'low', ...(scan.truncated ? { scopeLimited: true } : {}) },
       truncated: scan.truncated,
     });
   } catch (e) {

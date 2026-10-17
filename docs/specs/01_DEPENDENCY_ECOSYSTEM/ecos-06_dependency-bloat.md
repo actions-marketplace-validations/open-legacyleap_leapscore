@@ -14,17 +14,17 @@
 ## 1. Inputs
 
 - **Planes:** static-src
-- **Tools:** lockfile graph parsers (native, no install); `knip >= 5` (JS/TS), `vulture >= 2` + `deptry` (Python), `go mod why`-equivalent via graph parse (Go), `mvn dependency:analyze` config-read only (Java)
+- **Tools:** lockfile graph parsers (native, no install) — transitive counts, per-package version sets, cross-lockfile duplicate aggregation. The dead-dep analyser path (`knip`, `depcheck`, `vulture`, `mvn dependency:analyze`) is not shipped in the offline release: the unused-direct sub-signal is absent (`null`), never estimated.
 - **Rate-cost:** none
-- **Ecosystems:** npm/pnpm/yarn · pip/poetry/uv · go · Maven/Gradle
+- **Ecosystems:** npm/pnpm/yarn · pip/poetry/uv · go · Maven/Gradle · NuGet (`packages.lock.json`; classic `packages.config` has no lockfile mechanism → `unknown` per ECOS-07's rule)
 - **Applicability:** ECOS-02 clause-b. Else applicable.
 
 ## 2. Detection recipe
 
-1. Parse lockfile → transitive count, duplicate-version map (`{name: [versions...]}`).
-2. Run dead-dep detector for the ecosystem (config-only invocation).
-3. Compute `% unused direct`, duplicate security-critical pairs (intersect crypto/auth/http client allowlist).
-4. Orphan detection heuristic: deps referenced by no source import AND no CI/script reference.
+1. Parse lockfiles → transitive total, per-package version sets (a package at distinct versions within or across lockfiles is a duplicate).
+2. Aggregate the duplicate set across ALL parsed lockfiles (not per-lockfile) — the duplicate signal is scoped across the estate so cross-project repeats in a legacy solution are caught.
+3. Intersect duplicates with the security-critical family list (crypto/auth/http-client) → `duplicate_security_critical`.
+4. Unused-direct: no dead-dep analyser runs in this build → `direct_unused: []`, `pct_direct_unused: null` (absent signal, never a placeholder value).
 
 Preconditions: parsed lockfile; source tree enumerated.
 
@@ -33,32 +33,33 @@ Preconditions: parsed lockfile; source tree enumerated.
 ```json
 {"ecos06": {
   "transitive_total": 1403,
-  "direct_unused": ["left-pad-shim", "moment"],
-  "pct_direct_unused": 14.3,
+  "direct_unused": [],
+  "pct_direct_unused": null,
   "duplicates": [{"name": "lodash", "versions": ["4.17.15", "4.17.21"]}],
-  "duplicate_security_critical": true}}
+  "duplicate_security_critical": true,
+  "lockfiles_parsed": 2}}
 ```
 
 ## 4. Statusing rules
 
 ```yaml
-measured_when:  lockfile parsed and dead-dep tool ran clean
-estimated_when: dead-dep tool unavailable for ecosystem -> transitive counts stand, unused-% absent   # clamp [1,2], confidence low
-unknown_when:   no lockfile
+measured_when:  >=1 lockfile parsed            # transitive totals + duplicate version sets are exhaustive parsed facts
+estimated_when: never in this build            # the unshipped unused-direct sub-signal is reported null, not estimated
+unknown_when:   no lockfile (transitive counts unknowable)
 na_when:        applicability fired
-clamp:          [1,2]
+clamp:          [1,2]                          # n/a — measured-only row in this build
 confidence:     medium (exhaustive lockfile surface)
-scope_limited:  monorepo workspace truncation -> estimated + scope-limited
+scope_limited:  no trigger in this build (the lockfile surface has no read bound)
 ```
 
 ## 5. Score mapping (predicates)
 
 Thresholds Y/R: see encyclopedia §ECOS-06.
 
-- `3`: `transitive_total < Y_TRANS` ∧ `direct_unused.len == 0` ∧ duplicates none
-- `2`: Yellow band (`Y_TRANS <= transitive <= R_TRANS` ∨ `pct_direct_unused > Y_UNUSED`)
+- `3`: `transitive_total < Y_TRANS` ∧ `duplicates.len == 0`
+- `2`: Yellow band (`Y_TRANS <= transitive <= R_TRANS`); the unused-direct fraction cannot contribute in this build (sub-signal absent, `null`)
 - `1`: `transitive > R_TRANS` ∨ heavy duplication without security-critical overlap
-- `0`: `duplicate_security_critical == true` ∧ unremovable orphans detected
+- `0`: `duplicate_security_critical == true`
 
 ## 6. Gate hooks
 
@@ -66,13 +67,13 @@ none.
 
 ## 7. Failure & budget semantics
 
-- Budget class: `slow-dissolvable` (knip-full dissolves to manifest-level unused check; counts remain measured)
+- Budget class: `fast` in this build (lockfile parse only; the knip-full path is not shipped — unused-direct stays `null`)
 - Malformed lockfile → `unknown`
 
 ## 8. Evidence string
 
 ```
-evidence: "lockfile+knip: {t} transitives; {u}% direct unused; {d} duplicate versions"
+evidence: "lockfile-parse: {t} transitives across {k} lockfiles; {d} duplicate package versions"
 ```
 
 ## 9. Scope/overlaps echo
