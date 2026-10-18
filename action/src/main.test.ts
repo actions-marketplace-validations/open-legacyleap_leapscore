@@ -1,10 +1,11 @@
 /** action/src/main.test.ts — Action unit test matrix over pass/trip/refused exits (node:test, run: npm test --workspace action) */
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { buildScanArgs, handleExitCode, readScore, readInputs } from './main.js';
+import { buildScanArgs, handleExitCode, readScore, readInputs, run } from './main.js';
+import { main as scanMain } from '../../apps/scanner/bin/scan';
 
 function tmpOut(): string {
   return mkdtempSync(join(tmpdir(), 'leapscore-action-'));
@@ -30,7 +31,16 @@ describe('buildScanArgs', () => {
     const { args } = buildScanArgs({ path: 'sub', strict: false, outDir: 'r' }, 'scan.ts');
     assert.ok(!args.includes('--strict'));
     assert.ok(!args.includes('--fail-under'));
+    assert.ok(!args.includes('--fail-under-band'));
     assert.ok(!args.includes('--engine-ref'));
+  });
+  it('passes the band gate through only when set', () => {
+    const withBand = buildScanArgs({ path: '.', failUnderBand: 'moderate', strict: false, outDir: 'out' }, 'scan.ts');
+    const i = withBand.args.indexOf('--fail-under-band');
+    assert.equal(withBand.args[i + 1], 'moderate');
+    assert.ok(!withBand.args.includes('--fail-under'));
+    const without = buildScanArgs({ path: '.', strict: false, outDir: 'out' }, 'scan.ts');
+    assert.ok(!without.args.includes('--fail-under-band'));
   });
 });
 
@@ -40,6 +50,10 @@ describe('readInputs defaults', () => {
     assert.equal(inputs.path, '.');
     assert.equal(inputs.outDir, 'leapscore-report');
     assert.equal(inputs.strict, false);
+  });
+  it('reads fail_under_band, empty default leaves it unset', () => {
+    assert.equal(readInputs((name) => (name === 'fail_under_band' ? 'high' : '')).failUnderBand, 'high');
+    assert.equal(readInputs(() => '').failUnderBand, undefined);
   });
 });
 
@@ -80,6 +94,15 @@ describe('handleExitCode matrix', () => {
       assert.equal(h.outputs['exit-code'], '3');
     } finally { rmSync(dir, { recursive: true, force: true }); }
   });
+  it('band threshold trip (3): setFailed names the band gate', () => {
+    const dir = tmpOut();
+    try {
+      const h = harness(dir, 20, 'Critical');
+      handleExitCode(3, { path: '.', strict: false, outDir: dir, failUnderBand: 'moderate' }, h.deps);
+      assert.equal(h.failed.length, 1);
+      assert.match(h.failed[0], /fail_under_band moderate/);
+    } finally { rmSync(dir, { recursive: true, force: true }); }
+  });
   it('refused (2): setFailed guides invocation fix', () => {
     const dir = tmpOut();
     try {
@@ -103,5 +126,34 @@ describe('handleExitCode matrix', () => {
 describe('readScore', () => {
   it('returns {} when no report was written', () => {
     assert.deepEqual(readScore(join(tmpdir(), 'leapscore-missing-xyz')), {});
+  });
+});
+
+describe('5.3 workflow run with the band gate set', () => {
+  it('fails the step on a below-band seal while the report files remain for upload', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'leapscore-action-fixture-'));
+    writeFileSync(join(dir, 'package.json'), JSON.stringify({ name: 'fixture', version: '1.0.0', dependencies: { lodash: '4.17.20' } }));
+    writeFileSync(join(dir, 'package-lock.json'), JSON.stringify({ name: 'fixture', lockfileVersion: 3, packages: {} }));
+    writeFileSync(join(dir, 'README.md'), '# fixture\nsetup: npm install\n');
+    writeFileSync(join(dir, 'index.js'), 'module.exports = 1;\n');
+    const outDir = mkdtempSync(join(tmpdir(), 'leapscore-action-out-'));
+    const failed: string[] = [];
+    const outputs: Record<string, string> = {};
+    try {
+      await run({
+        getInput: (name) => (name === 'path' ? dir : name === 'fail_under_band' ? 'high' : name === 'out_dir' ? outDir : ''),
+        setFailed: (m) => failed.push(m),
+        setOutput: (n, v) => { outputs[n] = v; },
+        // Execute the same argv the workflow would: npx tsx@4 <scanBin> scan <path> ... → scanner main.
+        execImpl: async (_cmd, args) => scanMain(args.slice(3), { env: {}, stdout: () => {}, stderr: () => {} }),
+      });
+      assert.equal(failed.length, 1);
+      assert.match(failed[0], /fail_under_band high/);
+      assert.equal(outputs['exit-code'], '3');
+      for (const f of ['report.json', 'report.html', 'report.md']) assert.ok(existsSync(join(outDir, f)), `${f} kept for upload`);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+      rmSync(outDir, { recursive: true, force: true });
+    }
   });
 });

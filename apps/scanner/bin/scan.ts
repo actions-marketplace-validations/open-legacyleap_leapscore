@@ -7,8 +7,9 @@ import { runUnifiedScan } from '../src/scan/orchestrator';
 import { runLocalScan } from '../src/scan/local';
 import { sealScan, CONTRACT_VERSION, localSlugFromPath, formatStdout } from '../src/scan/scoring/seal';
 import { renderHtml, renderMarkdown } from '../src/scan/render';
+import { BAND_FLOORS, bandThresholdFor, type NextBandPath } from '@leapscore/contracts';
 
-export const USAGE = `leapscore-scan [scan] [<path> | --repo <owner/repo>] --out <dir> [--strict] [--fail-under <0-100>] [--sha <sha>] [--engine-ref <sha>] [--score-policy frozen|legacy]
+export const USAGE = `leapscore-scan [scan] [<path> | --repo <owner/repo>] --out <dir> [--strict] [--fail-under <0-100> | --fail-under-band <critical|high|moderate|low>] [--sha <sha>] [--engine-ref <sha>] [--score-policy frozen|legacy]
 
   scan <path>             Local directory scan (default entry): no clone, no GH-API, 25 local detectors
   --repo <owner/repo>     Remote scan subject as owner/repo (no https:// prefix, no .git suffix)
@@ -16,12 +17,15 @@ export const USAGE = `leapscore-scan [scan] [<path> | --repo <owner/repo>] --out
   --out <dir>             Report directory: writes report.json + report.html + report.md (all three, every sealed run)
   --strict                Zero-socket mode: any network attempt aborts (vendored snapshots only). Conflicts with --repo.
   --fail-under <0-100>    Exit 3 when the sealed score is below <n> (files are still written)
+  --fail-under-band <b>   Band-native gate: exit 3 below the named band's floor (critical|high|moderate|low).
+                          Mutually exclusive with --fail-under in one invocation.
   --engine-ref <sha>      Pinned engine ref for meta.engineSha7 identity (else LEAPSCORE_SHA/git/unknown)
   --score-policy <p>      Headline policy: frozen (default; unknowns disclosed as unscored) or legacy (renormalized reference as headline, one-release escape hatch)
   --help                  Print this usage
 
-  Exits: 0 pass · 1 crash · 2 usage-or-refused · 3 threshold trip (--fail-under)
-  Stdout: one line — score/band, gates, coverage, threshold state, then the band-specific next step with the tracked assessment URL once (final token).
+  Exits: 0 pass · 1 crash · 2 usage-or-refused · 3 threshold trip (--fail-under / --fail-under-band)
+  Stdout: one line — score/band, gates, coverage, threshold state, compact next-band path clause when the
+  sealed report carries a path, then the band-specific next step with the tracked assessment URL once (final token).
 
   Issue surfacing moved to the standalone app: use \`surface --from <dir>/report.json --repo <owner/repo>\`
   (apps/surface) instead of the removed --surface / --surface-from flags.`;
@@ -41,6 +45,7 @@ export type ParsedArgs = {
   engineRef?: string;
   strict?: boolean;
   failUnder?: string;
+  failUnderBand?: string;
   scorePolicy?: string;
   surface?: boolean;
   surfaceFrom?: string;
@@ -62,6 +67,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
     else if (a === '--out') out.out = argv[++i];
     else if (a === '--engine-ref') out.engineRef = argv[++i];
     else if (a === '--fail-under') out.failUnder = argv[++i];
+    else if (a === '--fail-under-band') out.failUnderBand = argv[++i];
     else if (a === '--score-policy') out.scorePolicy = argv[++i];
     else if (a === '--surface-from') out.surfaceFrom = argv[++i];
     else if (a === '--repo-a') out.repoA = argv[++i];
@@ -71,6 +77,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
     else if (a.startsWith('--out=')) out.out = a.slice('--out='.length);
     else if (a.startsWith('--engine-ref=')) out.engineRef = a.slice('--engine-ref='.length);
     else if (a.startsWith('--fail-under=')) out.failUnder = a.slice('--fail-under='.length);
+    else if (a.startsWith('--fail-under-band=')) out.failUnderBand = a.slice('--fail-under-band='.length);
     else if (a.startsWith('--score-policy=')) out.scorePolicy = a.slice('--score-policy='.length);
     else if (a.startsWith('--surface-from=')) out.surfaceFrom = a.slice('--surface-from='.length);
     else if (a.startsWith('--repo-a=')) out.repoA = a.slice('--repo-a='.length);
@@ -95,6 +102,17 @@ export function parseFailUnder(raw: string | undefined): number | undefined {
   return n;
 }
 
+/** Band-native threshold: only the public band vocabulary is accepted, and the
+ *  name resolves to its contract floor (band-path D4) — no second table. */
+export function parseFailUnderBand(raw: string | undefined): string | undefined {
+  if (raw == null || raw.trim() === '') return undefined;
+  const name = raw.trim().toLowerCase();
+  if (bandThresholdFor(name) === undefined) {
+    throw new Error(`invalid --fail-under-band ${JSON.stringify(raw)}: expected critical|high|moderate|low\n${USAGE}`);
+  }
+  return name;
+}
+
 export type ScorePolicy = 'frozen' | 'legacy';
 
 export function parseScorePolicy(raw: string | undefined): ScorePolicy {
@@ -116,6 +134,25 @@ export function validateRepo(raw: string | undefined): string {
     throw new Error(`invalid --repo ${JSON.stringify(v)}: expected owner/repo (e.g. vercel/next.js)`);
   }
   return v;
+}
+
+/** Post-seal threshold evaluation (scan-local): numeric or band floor, the
+ * band name resolving through the contract vocabulary (band-path D4), and
+ * either gate failing closed on a suppressed headline — no stated score never
+ * passes. D6 makes the two gates mutually exclusive, so at most one is set. */
+export function gateOutcome(
+  score: number,
+  opts: { failUnder?: number; failUnderBand?: string; suppressed?: boolean },
+): { tripped: boolean; thresholdState: string } {
+  const numericTrip = opts.failUnder != null && (!!opts.suppressed || score < opts.failUnder);
+  const bandFloor = opts.failUnderBand != null ? bandThresholdFor(opts.failUnderBand) : undefined;
+  const bandTrip = opts.failUnderBand != null && (!!opts.suppressed || score < (bandFloor ?? Number.POSITIVE_INFINITY));
+  const thresholdState = opts.failUnder != null
+    ? ` threshold:${numericTrip ? 'trip' : 'pass'}(fail-under ${opts.failUnder})`
+    : opts.failUnderBand != null
+      ? ` threshold:${bandTrip ? 'trip' : 'pass'}(fail-under-band ${opts.failUnderBand})`
+      : '';
+  return { tripped: numericTrip || bandTrip, thresholdState };
 }
 
 /** Refused reasons that map to exit 2 (unsupported input / honest refusal). Everything else refused → crash (1). */
@@ -190,6 +227,19 @@ export async function main(argv: string[], opts: MainOpts = {}): Promise<number>
     stderr(e instanceof Error ? e.message : String(e));
     return EXIT_USAGE;
   }
+  let failUnderBand: string | undefined;
+  try {
+    failUnderBand = parseFailUnderBand(args.failUnderBand);
+  } catch (e) {
+    stderr(e instanceof Error ? e.message : String(e));
+    return EXIT_USAGE;
+  }
+  // D6: the two gates are mutually exclusive in one invocation — refused as a
+  // usage error before any work begins (no scan, no report files).
+  if (failUnder != null && failUnderBand != null) {
+    stderr(`--fail-under and --fail-under-band conflict: set one gate per invocation (the conjunction is just the stricter floor)\n${USAGE}`);
+    return EXIT_USAGE;
+  }
   let scorePolicy: ScorePolicy;
   try {
     scorePolicy = parseScorePolicy(args.scorePolicy);
@@ -213,11 +263,11 @@ export async function main(argv: string[], opts: MainOpts = {}): Promise<number>
   const trace: Array<{ ts: number; elapsedMs: number; label: string; type?: string }> = [];
 
   if (useLocal) {
-    return await runLocalMain(args.path!, { env, stdout, stderr, outDir, startMs, trace, failUnder, scorePolicy, strict: !!args.strict, engineRef: args.engineRef });
+    return await runLocalMain(args.path!, { env, stdout, stderr, outDir, startMs, trace, failUnder, failUnderBand, scorePolicy, strict: !!args.strict, engineRef: args.engineRef });
   }
   const repo = validateRepoSafe(args.repo, stderr);
   if (!repo) return EXIT_USAGE;
-  return await runRemoteMain(repo, { env, stdout, stderr, outDir, startMs, trace, failUnder, scorePolicy, engineRef: args.engineRef });
+  return await runRemoteMain(repo, { env, stdout, stderr, outDir, startMs, trace, failUnder, failUnderBand, scorePolicy, engineRef: args.engineRef });
 }
 
 function validateRepoSafe(raw: string | undefined, stderr: (s: string) => void): string | null {
@@ -237,6 +287,8 @@ type RunOpts = {
   startMs: number;
   trace: Array<{ ts: number; elapsedMs: number; label: string; type?: string }>;
   failUnder: number | undefined;
+  /** Public band name (critical|high|moderate|low); mutex with failUnder. */
+  failUnderBand: string | undefined;
   scorePolicy: ScorePolicy;
   engineRef?: string;
 };
@@ -423,6 +475,7 @@ async function writeReportsAndExit(
     gates: unknown[];
     coverage: { measured: number; estimated: number; unknown: number };
     top_blockers: Array<{ row: string; name: string; points_lost: number; weight_pp: string; summary: string; evidence_file?: string; rule?: string }>;
+    next_band_path?: NextBandPath;
     categories: Array<{ id: string; name: string; category_score: number | null; weight: number; applicable: number }>;
     snapshot: { repo?: string; scanned_commit?: string; scanned_at?: string };
     status: string;
@@ -443,6 +496,7 @@ async function writeReportsAndExit(
     coverage: report.coverage,
     gates: (report.gates ?? []) as RenderInput['gates'],
     topBlockers: (report.top_blockers ?? []) as RenderInput['topBlockers'],
+    nextBandPath: report.next_band_path,
     categories: (report.categories ?? []) as RenderInput['categories'],
   };
   await mkdir(o.outDir, { recursive: true });
@@ -451,16 +505,29 @@ async function writeReportsAndExit(
   await writeFile(`${o.outDir}/report.md`, renderMarkdown(renderInput), 'utf8');
 
   const threshold = o.failUnder;
-  // --fail-under gates on the frozen headline (3.4). A suppressed headline has no
-  // presented number: with a threshold set the run trips fail-closed (exit 3).
-  const tripped = threshold != null && (suppressed || report.headline.score < threshold);
-  const thresholdState = threshold != null ? ` threshold:${tripped ? 'trip' : 'pass'}(fail-under ${threshold})` : '';
+  const bandName = o.failUnderBand;
+  // Post-seal gate evaluation (band-path D4/D6): the band floor resolves through
+  // the contract vocabulary and either gate fails closed on a suppressed
+  // headline. The two gates are mutually exclusive, so at most one is set here.
+  const { tripped, thresholdState } = gateOutcome(report.headline.score, {
+    failUnder: threshold,
+    failUnderBand: bandName,
+    suppressed,
+  });
   // Single stdout line, composed by the one composer: status fields (score/band,
-  // gates, coverage, threshold state) then the band next-step sentence with the
+  // gates, coverage, threshold state), the compact next-band path clause when
+  // the sealed report carries one, then the band next-step sentence with the
   // tracked assessment URL as the final token, appearing exactly once.
   o.stdout(formatStdout(report, { thresholdState }));
   if (tripped) {
-    o.stderr(suppressed ? `threshold trip: headline suppressed (insufficient signal) < --fail-under ${threshold}` : `threshold trip: score ${report.headline.score} < --fail-under ${threshold}`);
+    if (bandName != null) {
+      const bandFloor = bandThresholdFor(bandName);
+      o.stderr(suppressed
+        ? `threshold trip: headline suppressed (insufficient signal) < --fail-under-band ${bandName} (floor ${bandFloor})`
+        : `threshold trip: score ${report.headline.score} < --fail-under-band ${bandName} (floor ${bandFloor})`);
+    } else {
+      o.stderr(suppressed ? `threshold trip: headline suppressed (insufficient signal) < --fail-under ${threshold}` : `threshold trip: score ${report.headline.score} < --fail-under ${threshold}`);
+    }
     return EXIT_THRESHOLD;
   }
   return EXIT_OK;

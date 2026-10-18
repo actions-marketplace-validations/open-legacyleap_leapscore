@@ -129,6 +129,57 @@ export interface DeepDiveScopeEntry {
   what_it_takes: string;
 }
 
+// ---------------------------------------------------------------------------
+// Next-band path (band-path) — derived at seal time, consumed unchanged by
+// every report surface. Never scored: excluded from the score fingerprint.
+// ---------------------------------------------------------------------------
+
+/** Cost class of a path step, from the row's verify-effort tag (band-path D3):
+ *  ⚡ → sprint, 🔶 → quarter, 🔷 → structural. */
+export type BandPathCostClass = "sprint" | "quarter" | "structural";
+
+/** Whether a cost class reaches the destination on its own, only combined with
+ *  the classes ordered before it, or not at all. */
+export type BandPathArrival = "alone" | "combined" | "not-reached";
+
+export interface BandPathStep {
+  row: string;
+  name: string;
+  /** Recoverable headline points if this row reached the maximum score. */
+  recoverable_pp: number;
+  /** The row's verify-effort tag, verbatim from the compiled registry. */
+  effort: string;
+  /** Registry remediation quick win where the encyclopedia defines one. */
+  quick_win?: string;
+}
+
+export interface BandPathClass {
+  class: BandPathCostClass;
+  /** Recoverable points within this class alone. */
+  pp: number;
+  /** Recoverable points through this class and every class before it. */
+  cumulative_pp: number;
+  arrival: BandPathArrival;
+  steps: BandPathStep[];
+}
+
+/** Derived path from the sealed score to the next public band. Classes with no
+ *  steps are omitted; `arrival` is evaluated over the classes present. */
+export interface NextBandPath {
+  /** Destination band (Low/Moderate/High), or null when the path is terminal. */
+  destination: string | null;
+  /** Destination band's contract threshold, or null when terminal. */
+  threshold: number | null;
+  /** threshold − sealed score, or null when terminal. */
+  points_needed: number | null;
+  /** Steps grouped by cost class, in sprint, quarter, structural order. */
+  classes: BandPathClass[];
+  /** Sealed rows the path could not reach (unknown / not implemented). */
+  unreached_rows: number;
+  /** True when the sealed score already sits in the highest band. */
+  terminal: boolean;
+}
+
 export interface Report {
   report_schema: string;
   id: string;
@@ -168,6 +219,9 @@ export interface Report {
   top_blockers: TopBlocker[];
   deep_dive_scope: DeepDiveScopeEntry[];
   full_table: IndicatorRow[];
+  /** Derived next-band path (band-path): present unless the headline was
+   * suppressed; derived from the sealed rows, never scored. */
+  next_band_path?: NextBandPath;
   /** Provenance of the sealed run (report-envelope): the producers that actually
    * ran and the vendored snapshot version ids that joined the fingerprint. */
   provenance?: {
@@ -332,6 +386,43 @@ export function tierLegacyFor(tier: string): string {
   return tier;
 }
 
+/** Public band floors — Critical 0 · High 27 · Moderate 53 · Low 80. Derived
+ * from the one threshold table above, so a band gate can never drift from the
+ * vocabulary the report renders (band-path D4). */
+export const BAND_FLOORS = {
+  critical: 0,
+  high: TIER_THRESHOLDS.high,
+  moderate: TIER_THRESHOLDS.moderate,
+  low: TIER_THRESHOLDS.low,
+} as const;
+
+export type PublicBandName = keyof typeof BAND_FLOORS;
+
+/** Contract threshold for a public band name; undefined when the name is not
+ * part of the public band vocabulary. */
+export function bandThresholdFor(name: string | null | undefined): number | undefined {
+  const key = String(name ?? "").trim().toLowerCase() as PublicBandName;
+  return Object.prototype.hasOwnProperty.call(BAND_FLOORS, key) ? BAND_FLOORS[key] : undefined;
+}
+
+/** The next band above a sealed score: its public label and contract
+ * threshold, or null when the score already sits in the highest band. */
+export function nextBandForScore(score: number): { band: string; threshold: number } | null {
+  let best: { band: string; threshold: number } | null = null;
+  for (const floor of Object.values(BAND_FLOORS)) {
+    if (floor > score && (best === null || floor < best.threshold)) {
+      best = { band: tierForScore(floor), threshold: floor };
+    }
+  }
+  return best;
+}
+
+/** Percentage-point display for a derived path: two decimals, trailing zeros
+ * trimmed (6.1, 2.22). Display only — the sealed values stay exact. */
+export function formatPp(pp: number): string {
+  return String(Number(pp.toFixed(2)));
+}
+
 /** Local subject slug: normalized directory basename (lowercased, unsafe chars → `-`). */
 export function localSlugFromPath(raw: string): string {
   const base = raw.replace(/[/\\]+$/, "").split(/[/\\]/).filter(Boolean).pop() ?? "scan";
@@ -369,6 +460,128 @@ export function assessmentUrlForBand(tier: string): string {
 
 export function assessmentCtaForBand(tier: string): string {
   return BAND_CTA[tier] ?? BAND_CTA.Moderate;
+}
+
+// ---------------------------------------------------------------------------
+// Next-band path block — one grammar for every surface that renders the derived
+// path (site report views, CLI report.html, CLI report.md, CLI stdout). The
+// emitters own markup only; the wording lives here so a surface cannot drift
+// from the sealed field (report-envelope: no duplicated grammar).
+// ---------------------------------------------------------------------------
+
+const BAND_PATH_CLASS_META: Record<BandPathCostClass, { label: string; effort: string }> = {
+  sprint: { label: "Sprint", effort: "⚡ ≤30 min" },
+  quarter: { label: "Quarter", effort: "🔶 2–4 h" },
+  structural: { label: "Structural", effort: "🔷 1–2 days" },
+};
+
+export interface BandPathBlockStep {
+  row: string;
+  name: string;
+  /** Signed recoverable points, e.g. `+2.22pp`. */
+  pp: string;
+  effort: string;
+  quick_win?: string;
+}
+
+export interface BandPathBlockClass {
+  label: string;
+  effort: string;
+  /** Recoverable points within this class alone, e.g. `4.2pp`. */
+  total: string;
+  /** Recoverable points through this class and every class before it. */
+  cumulative: string;
+  /** Arrival state as a sentence naming the destination. */
+  arrival: string;
+  steps: BandPathBlockStep[];
+}
+
+/** Render-agnostic model of the sealed path block: emitters map it to markup. */
+export interface BandPathBlock {
+  heading: string;
+  /** Destination-and-distance sentence, or the terminal statement. */
+  statement: string;
+  classes: BandPathBlockClass[];
+  /** Present only when no class reaches the destination. */
+  shortfall: string | null;
+  /** Disclosure of rows the path could not reach; null when it reached all. */
+  unreached: string | null;
+  /** What the recoverable-points arithmetic assumes (band-path D8). */
+  assumption: string;
+}
+
+export function bandPathBlock(path: NextBandPath, opts: { tier: string; score: number }): BandPathBlock {
+  const unreached =
+    path.unreached_rows > 0
+      ? `${path.unreached_rows} row${path.unreached_rows === 1 ? "" : "s"} could not be reached by this path (unknown or not implemented).`
+      : null;
+  const assumption =
+    "Assumes applicability is unchanged — a fix that adds or removes a plane can move the denominators.";
+  const heading = "Path to the next band";
+  if (path.terminal) {
+    return {
+      heading,
+      statement: `Already at the highest band (${opts.tier}) — no next band to reach.`,
+      classes: [],
+      shortfall: null,
+      unreached,
+      assumption,
+    };
+  }
+  const destination = path.destination ?? "";
+  const needed = path.points_needed ?? 0;
+  const classes: BandPathBlockClass[] = path.classes.map((c) => {
+    const meta = BAND_PATH_CLASS_META[c.class];
+    const arrival =
+      c.arrival === "alone"
+        ? `${meta.label} alone reaches ${destination}`
+        : c.arrival === "combined"
+          ? `${meta.label} crosses only with the classes before it`
+          : `${meta.label} stays short of ${destination}`;
+    return {
+      label: meta.label,
+      effort: meta.effort,
+      total: `${formatPp(c.pp)}pp`,
+      cumulative: `${formatPp(c.cumulative_pp)}pp`,
+      arrival,
+      steps: c.steps.map((s) => ({
+        row: s.row,
+        name: s.name,
+        pp: `+${formatPp(s.recoverable_pp)}pp`,
+        effort: s.effort,
+        ...(s.quick_win ? { quick_win: s.quick_win } : {}),
+      })),
+    };
+  });
+  const last = path.classes[path.classes.length - 1];
+  const reaches = last !== undefined && last.cumulative_pp >= needed;
+  const shortfall = reaches
+    ? null
+    : `No combination of graded deductions reaches ${destination} — ${formatPp(needed - (last?.cumulative_pp ?? 0))}pp short${
+        path.unreached_rows > 0
+          ? `, and ${path.unreached_rows} row${path.unreached_rows === 1 ? "" : "s"} this path could not reach would have to be graded first`
+          : ""
+      }.`;
+  return {
+    heading,
+    statement: `Reach ${destination} — ${formatPp(needed)}pp needed (band floor ${path.threshold}, sealed ${opts.score}).`,
+    classes,
+    shortfall,
+    unreached,
+    assumption,
+  };
+}
+
+/** Compact stdout clause (band-path D7): destination, distance, and the class
+ * that crosses — or the honest non-arrival / terminal state. */
+export function formatBandPathClause(path: NextBandPath, tier: string): string {
+  if (path.terminal) return `next:none (at ${tier})`;
+  const head = `next:${path.destination} +${formatPp(path.points_needed ?? 0)}pp`;
+  const crossing = path.classes.find((c) => c.arrival !== "not-reached");
+  if (!crossing) return `${head} unreachable`;
+  if (crossing.arrival === "alone") return `${head} via ${crossing.class}`;
+  const chain = path.classes.filter((c) => c.cumulative_pp <= crossing.cumulative_pp).map((c) => c.class);
+  return `${head} via ${chain.join("+")}`;
 }
 
 // ---------------------------------------------------------------------------

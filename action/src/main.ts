@@ -13,6 +13,8 @@ export const EXIT_THRESHOLD = 3;
 export type ActionInputs = {
   path: string;
   failUnder?: string;
+  /** Public band name (critical|high|moderate|low); mutex with failUnder. */
+  failUnderBand?: string;
   strict: boolean;
   outDir: string;
   engineRef?: string;
@@ -22,6 +24,7 @@ export function readInputs(getInput: (name: string) => string = core.getInput): 
   return {
     path: getInput('path') || '.',
     failUnder: getInput('fail_under') || undefined,
+    failUnderBand: getInput('fail_under_band') || undefined,
     strict: (getInput('strict') || 'false').toLowerCase() === 'true',
     outDir: getInput('out_dir') || 'leapscore-report',
     engineRef: getInput('engine_ref') || undefined,
@@ -39,6 +42,7 @@ export function buildScanArgs(inputs: ActionInputs, scanBin: string): { cmd: str
   const args = [scanBin, 'scan', inputs.path, '--out', inputs.outDir];
   if (inputs.strict) args.push('--strict');
   if (inputs.failUnder) args.push('--fail-under', inputs.failUnder);
+  if (inputs.failUnderBand) args.push('--fail-under-band', inputs.failUnderBand);
   if (inputs.engineRef) args.push('--engine-ref', inputs.engineRef);
   return { cmd: 'npx', args: ['-y', 'tsx@4', ...args] };
 }
@@ -74,7 +78,8 @@ export function handleExitCode(
   if (tier != null) deps.setOutput('tier', String(tier));
   if (code === EXIT_OK) return;
   if (code === EXIT_THRESHOLD) {
-    deps.setFailed(`LeapScore threshold trip: score ${score ?? '?'} < fail_under ${inputs.failUnder} (tier ${tier ?? '?'})${deps.stdoutLine ? ` — ${deps.stdoutLine}` : ''}`);
+    const gate = inputs.failUnderBand != null ? `fail_under_band ${inputs.failUnderBand}` : `fail_under ${inputs.failUnder}`;
+    deps.setFailed(`LeapScore threshold trip: score ${score ?? '?'} < ${gate} (tier ${tier ?? '?'})${deps.stdoutLine ? ` — ${deps.stdoutLine}` : ''}`);
     return;
   }
   if (code === EXIT_USAGE) {

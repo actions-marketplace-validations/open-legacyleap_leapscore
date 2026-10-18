@@ -15,6 +15,12 @@ import {
   assessmentUrlForBand,
   assessmentCtaForBand,
   POSITIONING_LINE,
+  BAND_FLOORS,
+  bandThresholdFor,
+  nextBandForScore,
+  formatPp,
+  formatBandPathClause,
+  bandPathBlock,
 } from "./index";
 
 describe("runId grammar", () => {
@@ -117,5 +123,107 @@ describe("assessment funnel link", () => {
     }
     expect(assessmentCtaForBand("Critical")).toMatch(/\$0 Assessment/);
     expect(assessmentCtaForBand("Low")).toMatch(/keep.*in CI/i);
+  });
+});
+
+describe("band vocabulary resolves from the one threshold table (band-path D4)", () => {
+  it("floors mirror 80/53/27 and accept only public band names", () => {
+    expect(BAND_FLOORS).toEqual({ critical: 0, high: 27, moderate: 53, low: 80 });
+    expect(bandThresholdFor("Moderate")).toBe(53);
+    expect(bandThresholdFor(" critical ")).toBe(0);
+    expect(bandThresholdFor("healthy")).toBeUndefined();
+    expect(bandThresholdFor("")).toBeUndefined();
+  });
+  it("destination is the next band above the sealed score", () => {
+    expect(nextBandForScore(48)).toEqual({ band: "Moderate", threshold: 53 });
+    expect(nextBandForScore(26)).toEqual({ band: "High", threshold: 27 });
+    expect(nextBandForScore(0)).toEqual({ band: "High", threshold: 27 });
+    expect(nextBandForScore(60)).toEqual({ band: "Low", threshold: 80 });
+    expect(nextBandForScore(85)).toBeNull();
+    expect(nextBandForScore(80)).toBeNull();
+  });
+  it("band labels come from tierForScore, never a second table", () => {
+    for (const { band, threshold } of [
+      { band: "High", threshold: 27 },
+      { band: "Moderate", threshold: 53 },
+      { band: "Low", threshold: 80 },
+    ]) {
+      expect(tierForScore(threshold)).toBe(band);
+    }
+  });
+});
+
+describe("next-band path contract field (band-path)", () => {
+  const path = {
+    destination: "Moderate",
+    threshold: 53,
+    points_needed: 5,
+    classes: [
+      {
+        class: "sprint" as const,
+        pp: 4.2,
+        cumulative_pp: 4.2,
+        arrival: "not-reached" as const,
+        steps: [
+          { row: "SEC-01", name: "Unpatched Vulnerabilities", recoverable_pp: 4.2, effort: "🔶 ~2–4 h", quick_win: "patch today" },
+        ],
+      },
+      {
+        class: "quarter" as const,
+        pp: 2.6,
+        cumulative_pp: 6.8,
+        arrival: "combined" as const,
+        steps: [],
+      },
+    ],
+    unreached_rows: 6,
+    terminal: false,
+  };
+
+  it("formatPp trims to two decimals without trailing zeros", () => {
+    expect(formatPp(6.1)).toBe("6.1");
+    expect(formatPp(2.2222)).toBe("2.22");
+    expect(formatPp(5)).toBe("5");
+  });
+
+  it("stdout clause names destination, distance, and the crossing class", () => {
+    expect(formatBandPathClause(path, "High")).toBe("next:Moderate +5pp via sprint+quarter");
+    const alone = { ...path, classes: [{ ...path.classes[0], pp: 6.1, cumulative_pp: 6.1, arrival: "alone" as const }] };
+    expect(formatBandPathClause(alone, "High")).toBe("next:Moderate +5pp via sprint");
+    const unreachable = { ...path, classes: [path.classes[0]] };
+    expect(formatBandPathClause(unreachable, "High")).toBe("next:Moderate +5pp unreachable");
+  });
+
+  it("terminal clause carries no destination", () => {
+    const terminal = { ...path, destination: null, threshold: null, points_needed: null, classes: [], terminal: true };
+    expect(formatBandPathClause(terminal, "Low")).toBe("next:none (at Low)");
+    const block = bandPathBlock(terminal, { tier: "Low", score: 85 });
+    expect(block.statement).toMatch(/highest band \(Low\)/);
+    expect(block.classes).toHaveLength(0);
+    expect(block.shortfall).toBeNull();
+  });
+
+  it("block states the honest non-arrival and the unreached count", () => {
+    const block = bandPathBlock({ ...path, classes: [path.classes[0]] }, { tier: "High", score: 48 });
+    expect(block.statement).toBe("Reach Moderate — 5pp needed (band floor 53, sealed 48).");
+    expect(block.shortfall).toMatch(/No combination of graded deductions reaches Moderate/);
+    expect(block.shortfall).toMatch(/6 rows .* would have to be graded first/);
+    expect(block.unreached).toMatch(/^6 rows could not be reached/);
+    expect(block.classes[0].arrival).toBe("Sprint stays short of Moderate");
+  });
+
+  it("block reports per-class cumulative arrival without smoothing", () => {
+    const block = bandPathBlock(path, { tier: "High", score: 48 });
+    expect(block.classes.map((c) => [c.label, c.total, c.cumulative, c.arrival])).toEqual([
+      ["Sprint", "4.2pp", "4.2pp", "Sprint stays short of Moderate"],
+      ["Quarter", "2.6pp", "6.8pp", "Quarter crosses only with the classes before it"],
+    ]);
+    expect(block.shortfall).toBeNull();
+  });
+
+  it("an additive field keeps the contract at the current version", () => {
+    const envelope = { contractVersion: CONTRACT_VERSION, meta: {}, report: { next_band_path: path } };
+    expect(() => assertContractVersion(envelope)).not.toThrow();
+    expect(CONTRACT_VERSION).toBe(1);
   });
 });

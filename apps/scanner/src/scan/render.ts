@@ -1,5 +1,5 @@
 /** apps/scanner/src/scan/render.ts — self-contained HTML + Markdown emitters (spec: report-rendering) */
-import { assessmentUrlForBand, assessmentCtaForBand, POSITIONING_LINE } from '@leapscore/contracts';
+import { assessmentUrlForBand, assessmentCtaForBand, bandPathBlock, POSITIONING_LINE, type NextBandPath } from '@leapscore/contracts';
 
 export type RenderInput = {
   score: number;
@@ -18,6 +18,9 @@ export type RenderInput = {
   coverage: { measured: number; estimated: number; unknown: number };
   gates: Array<{ id: string; name: string; status: string; note: string }>;
   topBlockers: Array<{ row: string; name: string; points_lost: number; weight_pp: string; summary: string; evidence_file?: string; rule?: string }>;
+  /** Sealed next-band path (band-path): renders as one block after the top
+   * risks and before the per-deduction detail; absent → no block at all. */
+  nextBandPath?: NextBandPath;
   categories: Array<{ id: string; name: string; category_score: number | null; weight: number; applicable: number }>;
 };
 
@@ -26,6 +29,42 @@ function esc(s: string): string {
 }
 
 const METHODOLOGY_URL = 'https://leapscore.dev/methodology';
+
+/** Path block, HTML: destination statement, per-class steps with cumulative
+ * arrival, shortfall disclosure, unreached count, and the stated assumption. */
+function renderPathHtml(path: NextBandPath, tier: string, score: number): string {
+  const block = bandPathBlock(path, { tier, score });
+  const classes = block.classes.map((c) => {
+    const steps = c.steps.map((s) => `<li><strong>${esc(s.row)} ${esc(s.name)}</strong> ${esc(s.pp)} — ${esc(s.effort)}${s.quick_win ? `: ${esc(s.quick_win)}` : ''}</li>`).join('\n');
+    return `<h3>${esc(c.label)} (${esc(c.effort)}) — ${esc(c.total)}, cumulative ${esc(c.cumulative)}: ${esc(c.arrival)}</h3>
+<ul>${steps}</ul>`;
+  }).join('\n');
+  return `<h2>${esc(block.heading)}</h2>
+<p>${esc(block.statement)}</p>
+${classes ? `${classes}\n` : ''}${block.shortfall ? `<p>${esc(block.shortfall)}</p>\n` : ''}${block.unreached ? `<p>${esc(block.unreached)}</p>\n` : ''}<p>${esc(block.assumption)}</p>`;
+}
+
+/** Path block, Markdown — same model, same wording, line-oriented markup. */
+function renderPathMarkdown(path: NextBandPath, tier: string, score: number): string[] {
+  const block = bandPathBlock(path, { tier, score });
+  const lines: string[] = [`## ${block.heading}`, ``, block.statement];
+  for (const c of block.classes) {
+    lines.push(``);
+    lines.push(`**${c.label}** (${c.effort}) — ${c.total}, cumulative ${c.cumulative}: ${c.arrival}`);
+    for (const s of c.steps) lines.push(`- **${s.row} ${s.name}** ${s.pp} — ${s.effort}${s.quick_win ? `: ${s.quick_win}` : ''}`);
+  }
+  if (block.shortfall) {
+    lines.push(``);
+    lines.push(block.shortfall);
+  }
+  if (block.unreached) {
+    lines.push(``);
+    lines.push(block.unreached);
+  }
+  lines.push(``);
+  lines.push(`_${block.assumption}_`);
+  return lines;
+}
 
 /** Self-contained HTML: inline CSS only, no external assets, no CDN, no scripts. */
 export function renderHtml(r: RenderInput): string {
@@ -60,7 +99,7 @@ ${headline}
 <p class="meta">${esc(r.repo)} · commit ${esc(commitShort)} · ${esc(r.scannedAt)} · ${esc(r.runId)} · ${esc(r.status)} · coverage ${r.coverage.measured}m/${r.coverage.estimated}e/${r.coverage.unknown}u${r.fingerprint ? ` · fingerprint ${esc(r.fingerprint.slice(0, 12))}` : ''}</p>
 <h2>Top risks</h2>
 <ul>${risks || '<li>No deductions — clean scan.</li>'}</ul>
-<h2>Detail</h2>
+${r.nextBandPath ? `${renderPathHtml(r.nextBandPath, r.tier, r.score)}\n` : ''}<h2>Detail</h2>
 <h3>Gates</h3>
 <ul>${gates}</ul>
 <h3>Categories</h3>
@@ -91,6 +130,10 @@ export function renderMarkdown(r: RenderInput): string {
       const rule = b.rule ? ` (rule: ${b.rule})` : '';
       lines.push(`- **${b.row} ${b.name}** (${b.weight_pp} lost): ${b.summary}${ev}${rule}`);
     }
+  }
+  if (r.nextBandPath) {
+    lines.push(``);
+    lines.push(...renderPathMarkdown(r.nextBandPath, r.tier, r.score));
   }
   lines.push(``);
   lines.push(`## Detail`);

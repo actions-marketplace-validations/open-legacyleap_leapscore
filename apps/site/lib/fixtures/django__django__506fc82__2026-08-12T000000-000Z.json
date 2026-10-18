@@ -4519,6 +4519,437 @@
         "effort": "\u26a1 \u226430 min"
       }
     ],
+    "next_band_path": {
+      "destination": "Low",
+      "threshold": 80,
+      "points_needed": 22,
+      "classes": [
+        {
+          "class": "sprint",
+          "pp": 35.53703703703707,
+          "cumulative_pp": 35.53703703703707,
+          "arrival": "alone",
+          "steps": [
+            {
+              "row": "SEC-05",
+              "name": "Audit Logging Deficits",
+              "recoverable_pp": 2.2222222222222223,
+              "effort": "\u26a1 \u226430 min",
+              "quick_win": "Add audit logging to the top admin/PII/auth paths with a structured schema, ship logs to an external durable sink, set retention."
+            },
+            {
+              "row": "DATA-02",
+              "name": "Database Coupling & Hidden Dependencies",
+              "recoverable_pp": 1.3333333333333333,
+              "effort": "\u26a1 \u226430 min",
+              "quick_win": "document all cross-service DB reads/writes (the hidden map), move the worst cross-read behind an API or event."
+            },
+            {
+              "row": "DATA-08",
+              "name": "Schema Overfitting & Model Rigidity",
+              "recoverable_pp": 1.3333333333333333,
+              "effort": "\u26a1 \u226430 min",
+              "quick_win": "Kill the obvious versioned/flags columns behind an additive migration, document the domain model properly."
+            },
+            {
+              "row": "ECOS-08",
+              "name": "Framework Lock-in & Monoculture Risk",
+              "recoverable_pp": 1.25,
+              "effort": "\u26a1 \u226430 min",
+              "quick_win": "quantify the coupling (which modules touch framework-specific APIs directly) and freeze scope on framework-dependent features."
+            },
+            {
+              "row": "TEST-08",
+              "name": "Quality Gates in CI",
+              "recoverable_pp": 1.25,
+              "effort": "\u26a1 \u226430 min",
+              "quick_win": "Add lint + SAST (Semgrep/CodeQL/SonarQube) as failing stages, add a coverage gate on core, block admin bypass (require justification audit)."
+            },
+            {
+              "row": "PERF-05",
+              "name": "No Auto-Scaling / Capacity Planning",
+              "recoverable_pp": 1.1111111111111112,
+              "effort": "\u26a1 \u226430 min",
+              "quick_win": "set HPA/ASG on the top 5 workloads with sane thresholds, add utilization + headroom dashboards, run the scheduled-campaign checklist."
+            },
+            {
+              "row": "PERF-07",
+              "name": "No SLOs / Performance Budgets",
+              "recoverable_pp": 1.1111111111111112,
+              "effort": "\u26a1 \u226430 min",
+              "quick_win": "define SLOs for the top 3 services (latency p95 + availability), measure them with the metrics you added (PERF-01), add a synthetic check for the money path."
+            },
+            {
+              "row": "PERF-08",
+              "name": "Runtime Waste & Startup Latency",
+              "recoverable_pp": 1.1111111111111112,
+              "effort": "\u26a1 \u226430 min",
+              "quick_win": "lazy-init the greedy startup work, trim the boot-time DI/registrations, enable JVM/cache warmup layers."
+            },
+            {
+              "row": "SEC-04",
+              "name": "Authentication & Authorization Weaknesses",
+              "recoverable_pp": 1.1111111111111112,
+              "effort": "\u26a1 \u226430 min",
+              "quick_win": "kill default creds, add auth + server-side authorization to every endpoint (route registry), enable MFA on privileged roles, fix the top IDORs."
+            },
+            {
+              "row": "SEC-07",
+              "name": "Patch Cadence & Update Workflow",
+              "recoverable_pp": 1.1111111111111112,
+              "effort": "\u26a1 \u226430 min",
+              "quick_win": "enable Dependabot/Renovate with auto-merge on green for patch/minor updates, act on the security-only PRs first."
+            },
+            {
+              "row": "ARCH-01",
+              "name": "Cognitive Complexity & God Classes",
+              "recoverable_pp": 1,
+              "effort": "\u26a1 \u226430 min",
+              "quick_win": "Carve the top 5 offenders by automated extract-method, add a complexity budget to CI (eslint max-complexity, SonarQube gate)."
+            },
+            {
+              "row": "ARCH-02",
+              "name": "Coupling & Cohesion",
+              "recoverable_pp": 1,
+              "effort": "\u26a1 \u226430 min",
+              "quick_win": "Draw the DSM, pick the 3 highest-fan-in hubs, wrap them behind interfaces and shrink their API."
+            },
+            {
+              "row": "ARCH-03",
+              "name": "Layer & Boundary Violations",
+              "recoverable_pp": 1,
+              "effort": "\u26a1 \u226430 min",
+              "quick_win": "add an arch test (ArchUnit/import-linter) and fix the top violations; enforce at PR time."
+            },
+            {
+              "row": "ARCH-05",
+              "name": "Code Churn vs. Defect Hot Spots",
+              "recoverable_pp": 1,
+              "effort": "\u26a1 \u226430 min",
+              "quick_win": "put the top hot spot behind a designated owner, add targeted tests, freeze feature scope on it for one sprint."
+            },
+            {
+              "row": "ARCH-06",
+              "name": "Architectural Era / Framework Generation",
+              "recoverable_pp": 1,
+              "effort": "\u26a1 \u226430 min",
+              "quick_win": "introduce interface seams around the 3 worst-coupled cores, add a couple of tests to prove the seams work."
+            },
+            {
+              "row": "ARCH-07",
+              "name": "Global Mutable State & Hidden Dependencies",
+              "recoverable_pp": 1,
+              "effort": "\u26a1 \u226430 min",
+              "quick_win": "Inject the clock/random/IO at the seams you can reach; make the top 5 singletons instances with explicit wiring."
+            },
+            {
+              "row": "ARCH-10",
+              "name": "Feature-Flag & Configuration Debt",
+              "recoverable_pp": 1,
+              "effort": "\u26a1 \u226430 min",
+              "quick_win": "move the top flags to an externalized flag source with owners + retirement dates, externalize prod config into a per-env injected pipeline."
+            },
+            {
+              "row": "ECOS-06",
+              "name": "Dependency Bloat",
+              "recoverable_pp": 0.8333333333333334,
+              "effort": "\u26a1 \u226430 min",
+              "quick_win": "run `knip`/`depcheck`, remove unused direct deps, enable `npm dedupe`/lockfile optimization in CI."
+            },
+            {
+              "row": "TEST-04",
+              "name": "Test Run Time",
+              "recoverable_pp": 0.8333333333333334,
+              "effort": "\u26a1 \u226430 min",
+              "quick_win": "Parallelize across shards/workers, move slow E2E out of the merge gate (nightly), fix the slowest 10 tests."
+            },
+            {
+              "row": "VEL-01",
+              "name": "CI/CD Build Duration",
+              "recoverable_pp": 0.7407407407407407,
+              "effort": "\u26a1 \u226430 min",
+              "quick_win": "Turn on caching, parallelize shards, drop the slow E2E from the merge path (TEST-04), float the slowest 10 tests once."
+            },
+            {
+              "row": "VEL-10",
+              "name": "Branching & Monorepo Strategy Legacy",
+              "recoverable_pp": 0.7407407407407407,
+              "effort": "\u26a1 \u226430 min",
+              "quick_win": "trunk-based basics \u2014 short-lived branches < 3 days, protect main + require green CI, delete the oldest release branch with a manual backport policy."
+            },
+            {
+              "row": "DATA-01",
+              "name": "Schema Migration Backlog / \"Migration Hell\"",
+              "recoverable_pp": 0.6666666666666666,
+              "effort": "\u26a1 \u226430 min",
+              "quick_win": "bring migrations under tooling (alembic/flyway/prisma), reconcile the drift between envs with a verified baseline, add a CI \"fresh build from migrations\" check."
+            },
+            {
+              "row": "DATA-04",
+              "name": "Legacy Storage Technology",
+              "recoverable_pp": 0.6666666666666666,
+              "effort": "\u26a1 \u226430 min",
+              "quick_win": "stand up a read side (index the files into a modern store, keep legacy as archive), build the extraction utilities."
+            },
+            {
+              "row": "DATA-07",
+              "name": "ORM / Query Performance Smells",
+              "recoverable_pp": 0.6666666666666666,
+              "effort": "\u26a1 \u226430 min",
+              "quick_win": "fix the top 10 N+1s with eager loading/joins, add the missing indexes on the hot path, reduce column projection."
+            },
+            {
+              "row": "PERF-01",
+              "name": "Observability Gaps",
+              "recoverable_pp": 0.5555555555555556,
+              "effort": "\u26a1 \u226430 min",
+              "quick_win": "add structured logging + request IDs everywhere (framework middleware), stand up a metrics endpoint with RED/U; USE basics, emit the top 6 metrics."
+            },
+            {
+              "row": "PERF-02",
+              "name": "Legacy Deployment Model",
+              "recoverable_pp": 0.5555555555555556,
+              "effort": "\u26a1 \u226430 min",
+              "quick_win": "containerize the app (it's usually the smallest step), move VM provisioning to IaC (Terraform/cloud-init), codify the laptop script."
+            },
+            {
+              "row": "PERF-06",
+              "name": "Missing IaC / Config Drift",
+              "recoverable_pp": 0.5555555555555556,
+              "effort": "\u26a1 \u226430 min",
+              "quick_win": "adopt Terraform/Pulumi for the top resource types (VPC/DB/compute), add drift detection (initial run finds the gap), codify the \"documented console changes\" retroactively."
+            },
+            {
+              "row": "ARCH-04",
+              "name": "Dead & Orphaned Code",
+              "recoverable_pp": 0.5,
+              "effort": "\u26a1 \u226430 min",
+              "quick_win": "run knip/vulture, delete safely (git history preserves), remove orphaned endpoints and the routes that point to them."
+            },
+            {
+              "row": "ARCH-09",
+              "name": "Agentic Operability (AI/LLM Codebase-Readiness)",
+              "recoverable_pp": 0.5,
+              "effort": "\u26a1 \u226430 min",
+              "quick_win": "ship a repo-map/context file, co-locate tests for the top core modules, define a task runner of record with a fresh-clone CI proof."
+            },
+            {
+              "row": "API-01",
+              "name": "API Contract Drift",
+              "recoverable_pp": 0.4166666666666667,
+              "effort": "\u26a1 \u226430 min",
+              "quick_win": "generate accurate specs from code (OpenAPI annotations/`apischema`, `drf-spectacular`, NestJS Swagger), validate specs vs. responses in CI."
+            },
+            {
+              "row": "API-02",
+              "name": "Versioning & Breaking-Change Discipline",
+              "recoverable_pp": 0.4166666666666667,
+              "effort": "\u26a1 \u226430 min",
+              "quick_win": "introduce versioning at the least cost (path `v2` for the contract-breaking surface; keep `v1` alive with a retirement date)."
+            },
+            {
+              "row": "API-03",
+              "name": "Integration Point Bloat",
+              "recoverable_pp": 0.4166666666666667,
+              "effort": "\u26a1 \u226430 min",
+              "quick_win": "build the topology map (automated), as the source of truth, and start routing traffic through a gateway for the top 5 hubs."
+            },
+            {
+              "row": "API-04",
+              "name": "Synchronous Coupling & Chatty Interfaces",
+              "recoverable_pp": 0.4166666666666667,
+              "effort": "\u26a1 \u226430 min",
+              "quick_win": "add timeouts + circuit breakers on the fragile hops, cache the slow reads."
+            },
+            {
+              "row": "API-05",
+              "name": "Third-Party & Vendor API Dependency Risk",
+              "recoverable_pp": 0.4166666666666667,
+              "effort": "\u26a1 \u226430 min",
+              "quick_win": "wrap the top 3 vendor calls behind ports (adapters), add fallback paths where feasible, assign a vendor-risk owner + deprecation watch."
+            },
+            {
+              "row": "API-07",
+              "name": "Error Handling & API Observability Semantics",
+              "recoverable_pp": 0.4166666666666667,
+              "effort": "\u26a1 \u226430 min",
+              "quick_win": "standardize an error contract (RFC 7807 or a JSON schema: code, message, correlationId, retriable flag), add request IDs everywhere, fix the worst misclassifications."
+            },
+            {
+              "row": "API-08",
+              "name": "Consumer Blindness & Backward Compatibility",
+              "recoverable_pp": 0.4166666666666667,
+              "effort": "\u26a1 \u226430 min",
+              "quick_win": "add per-consumer API keys + endpoint analytics (who, what, how often), start a consumer registry doc."
+            },
+            {
+              "row": "DOCS-05",
+              "name": "Tribal Knowledge & Oral Tradition",
+              "recoverable_pp": 0.4166666666666667,
+              "effort": "\u26a1 \u226430 min",
+              "quick_win": "run the departure drill on the top module \u2014 write the unrecorded facts as docs/ADRs/runbooks, pair-document with the oral experts."
+            },
+            {
+              "row": "ECOS-02",
+              "name": "Major Package Drift",
+              "recoverable_pp": 0.4166666666666667,
+              "effort": "\u26a1 \u226430 min",
+              "quick_win": "enable Dependabot/Renovate with major-update grouping and a monthly budget."
+            },
+            {
+              "row": "ECOS-03",
+              "name": "Abandoned / Unmaintained Libraries",
+              "recoverable_pp": 0.4166666666666667,
+              "effort": "\u26a1 \u226430 min",
+              "quick_win": "audit the dependency surface for abandoned libs and create a removal/swap ticket with a date."
+            },
+            {
+              "row": "ECOS-04",
+              "name": "Deprecated API Usage",
+              "recoverable_pp": 0.4166666666666667,
+              "effort": "\u26a1 \u226430 min",
+              "quick_win": "turn deprecation warnings into a CI-visible report (not silent); fix the 20 highest-value warnings."
+            },
+            {
+              "row": "TEST-01",
+              "name": "Code Coverage Degradation",
+              "recoverable_pp": 0.4166666666666667,
+              "effort": "\u26a1 \u226430 min",
+              "quick_win": "add a real coverage gate (fail below threshold) on core modules only, and instrument the trend."
+            },
+            {
+              "row": "TEST-05",
+              "name": "Skipped / Disabled Tests",
+              "recoverable_pp": 0.4166666666666667,
+              "effort": "\u26a1 \u226430 min",
+              "quick_win": "re-enable or delete each skip deliberately (delete-with-justification or fix-with-test); no skips without a linked ticket and owner."
+            },
+            {
+              "row": "TEST-06",
+              "name": "Core Domain Untested",
+              "recoverable_pp": 0.4166666666666667,
+              "effort": "\u26a1 \u226430 min",
+              "quick_win": "characterisation-test the core (capture current behavior, lock it), then fix the top 3 divergent behaviors."
+            },
+            {
+              "row": "VEL-02",
+              "name": "Local Dev Setup Time & Friction",
+              "recoverable_pp": 0.37037037037037035,
+              "effort": "\u26a1 \u226430 min",
+              "quick_win": "containerize the stack with a one-command up, ship `.env.example`, write a working setup doc, document the \"Golden Path.\""
+            },
+            {
+              "row": "VEL-08",
+              "name": "Manual Release Steps & Operability",
+              "recoverable_pp": 0.37037037037037035,
+              "effort": "\u26a1 \u226430 min",
+              "quick_win": "capture the manual steps as a CI/CD job (artifact \u2192 deploy), remove direct prod SSH, add an audit log of every deployment."
+            },
+            {
+              "row": "VEL-09",
+              "name": "PR & Code-Review Hygiene",
+              "recoverable_pp": 0.37037037037037035,
+              "effort": "\u26a1 \u226430 min",
+              "quick_win": "enforce branch protection with required reviews on core paths, ban direct pushes, add a PR-size lint (split > 400-LOC PRs), publish review-coverage metrics."
+            },
+            {
+              "row": "DOCS-01",
+              "name": "Missing Architectural Decision Records (ADRs)",
+              "recoverable_pp": 0.20833333333333334,
+              "effort": "\u26a1 \u226430 min",
+              "quick_win": "write ADRs for the top 10 load-bearing decisions (interview the oldest engineers, mine git/past docs), establish a template + PR requirement for consequential choices."
+            },
+            {
+              "row": "DOCS-02",
+              "name": "Stale / Drifted Documentation",
+              "recoverable_pp": 0.20833333333333334,
+              "effort": "\u26a1 \u226430 min",
+              "quick_win": "a doc-rot sweep (delete/rewrite the worst 10), add \"last verified\" dates, a github-issues link on every doc page so inaccuracies are reportable with one click."
+            },
+            {
+              "row": "DOCS-06",
+              "name": "Comment Debt & Self-Documenting Code Imbalance",
+              "recoverable_pp": 0.20833333333333334,
+              "effort": "\u26a1 \u226430 min",
+              "quick_win": "kill the top 20 misleading/obsolete comments (fix or delete), resolve/add justification for the oldest TODOs, rename the worst identifiers."
+            },
+            {
+              "row": "DOCS-08",
+              "name": "No Release Communication / Changelog",
+              "recoverable_pp": 0.20833333333333334,
+              "effort": "\u26a1 \u226430 min",
+              "quick_win": "adopt a CHANGELOG process (Keep-a-Changelog, auto-generated from commits/PRs), publish release notes for the top consumers, write migration guides for open breaking changes (backfill)."
+            }
+          ]
+        },
+        {
+          "class": "quarter",
+          "pp": 6.462962962962963,
+          "cumulative_pp": 42.00000000000003,
+          "arrival": "combined",
+          "steps": [
+            {
+              "row": "SEC-01",
+              "name": "Unpatched Vulnerabilities",
+              "recoverable_pp": 1.1111111111111112,
+              "effort": "\ud83d\udd36 ~2\u20134 h",
+              "quick_win": "Patch the open Criticals/Highs in the exposure window \u2014 today; re-scan. Both CVEs are closed; keep the trend."
+            },
+            {
+              "row": "ARCH-08",
+              "name": "Duplication Debt",
+              "recoverable_pp": 1,
+              "effort": "\ud83d\udd36 ~2\u20134 h",
+              "quick_win": "run jscpd, consolidate the top clusters behind a shared library (start with the business-critical ones)."
+            },
+            {
+              "row": "TEST-02",
+              "name": "Flaky Test Rate",
+              "recoverable_pp": 0.8333333333333334,
+              "effort": "\ud83d\udd36 ~2\u20134 h",
+              "quick_win": "quarantine flaky tests (run separately, don't block but do report), fix the top 5 by root cause (sleeps \u2192 waits, shared DB \u2192 test DBs, order-dependence \u2192 isolation)."
+            },
+            {
+              "row": "TEST-03",
+              "name": "Test Pyramid Inversion",
+              "recoverable_pp": 0.8333333333333334,
+              "effort": "\ud83d\udd36 ~2\u20134 h",
+              "quick_win": "move the top 20 E2E tests' logic down to integration/unit level (test the service, not the click)."
+            },
+            {
+              "row": "TEST-07",
+              "name": "Test Isolation & Hermeticity",
+              "recoverable_pp": 0.8333333333333334,
+              "effort": "\ud83d\udd36 ~2\u20134 h",
+              "quick_win": "run randomized + parallel CI to surface the worst offenders, fix shared-fixture tests, replace sleeps with waits."
+            },
+            {
+              "row": "VEL-04",
+              "name": "Deployment Frequency & Lead Time",
+              "recoverable_pp": 0.7407407407407407,
+              "effort": "\ud83d\udd36 ~2\u20134 h",
+              "quick_win": "remove freeze/merge windows, do Friday non-events, add a deploy button per service."
+            },
+            {
+              "row": "VEL-05",
+              "name": "Onboarding Lead Time to First Production PR",
+              "recoverable_pp": 0.7407407407407407,
+              "effort": "\ud83d\udd36 ~2\u20134 h",
+              "quick_win": "write a \"first PR in a day\" path (a safe starter ticket + doc patch + tiny config change), assign onboarding buddy + SLA, grant prod deploy gradually but early."
+            },
+            {
+              "row": "VEL-07",
+              "name": "Environment Reproducibility / Works-on-My-Machine",
+              "recoverable_pp": 0.37037037037037035,
+              "effort": "\ud83d\udd36 ~2\u20134 h",
+              "quick_win": "containerize dev for parity, make config canonical (one source of truth, injected per env), stand up a staging clone of prod config."
+            }
+          ]
+        }
+      ],
+      "unreached_rows": 34,
+      "terminal": false
+    },
     "sample": true
   },
   "trace": []

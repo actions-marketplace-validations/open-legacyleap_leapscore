@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { BandPath } from "@/components/band-path";
 import { DeepDiveScope, TopBlockers } from "@/components/blockers";
 import { CategorySection } from "@/components/category-section";
 import { DialGauge } from "@/components/dial-gauge";
@@ -202,6 +203,11 @@ export function ReportView({
         </div>
         <div className="space-y-6">
           <TopBlockers blockers={report.top_blockers ?? []} />
+          <BandPath
+            path={report.next_band_path}
+            tier={report.headline.tier}
+            score={report.headline.score}
+          />
         </div>
       </div>
 

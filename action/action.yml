@@ -13,6 +13,10 @@ inputs:
     description: "Exit non-zero via core.setFailed when the sealed score is below this 0-100 threshold"
     required: false
     default: ""
+  fail_under_band:
+    description: "Band-native gate: fail when the sealed score is below this band's floor (critical|high|moderate|low). Mutually exclusive with fail_under."
+    required: false
+    default: ""
   strict:
     description: "'true' = zero-socket mode (vendored snapshots only; any network attempt aborts)"
     required: false

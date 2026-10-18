@@ -1,6 +1,7 @@
 /** apps/scanner/src/scan/seal.ts — shared terminal composer (scanner service + workflow CLI) */
 import { scoreMvp } from './scorer/mvp';
 import { computeScoreFingerprint, FINGERPRINT_VERSION } from './fingerprint';
+import { bandPathRegistryFromRubric, deriveNextBandPath } from './bandpath';
 import type { FactRecord } from '../facts';
 import rubricData from './rubric.json' with { type: 'json' };
 // Single producer-owned contract: runId grammar, envelope, provenance.
@@ -17,10 +18,12 @@ import {
   localSlugFromPath,
   assessmentUrlForBand,
   assessmentCtaForBand,
+  formatBandPathClause,
   ASSESSMENT_BASE_URL,
   ASSESSMENT_CAMPAIGN,
   ALLOWED_NETWORK_HOSTS,
   NETWORK_NEVER_SEND_RULE,
+  type NextBandPath,
   type Report as ContractReport,
   type EnvelopeMeta as ContractMeta,
   type TraceEntry as ContractTrace,
@@ -123,10 +126,11 @@ export function truncateTrace(trace: SealTraceEntry[]): SealTraceEntry[] {
 }
 
 /** Single stdout composer. One line: status fields (score/band, gates, coverage,
- * threshold state when a threshold is set) then the band-specific next-step
+ * threshold state when a threshold is set), then the compact next-band path
+ * clause when the sealed report carries one, then the band-specific next-step
  * sentence and the tracked assessment URL as the final token — exactly once. */
 export function formatStdout(
-  report: { headline: { score: number; tier: string; suppressed?: boolean; verdict?: string }; gates: unknown[]; coverage: { measured: number; estimated: number; unknown: number } },
+  report: { headline: { score: number; tier: string; suppressed?: boolean; verdict?: string }; gates: unknown[]; coverage: { measured: number; estimated: number; unknown: number }; next_band_path?: NextBandPath },
   opts: { thresholdState?: string } = {},
 ): string {
   const gates = report.gates as Array<{ status?: string }>;
@@ -135,9 +139,12 @@ export function formatStdout(
   const gatePart = unevaluable ? `gates:${fired}/${report.gates.length} unevaluable:${unevaluable}/${report.gates.length}` : `gates:${fired}/${report.gates.length}`;
   const thresholdPart = opts.thresholdState ?? '';
   const coveragePart = `coverage:${report.coverage.measured}m/${report.coverage.estimated}e/${report.coverage.unknown}u`;
+  // Band-path D7: the clause slots between the status fields and the band
+  // sentence, so the funnel sentence and tracked URL keep their anchors.
+  const pathPart = report.next_band_path ? ` ${formatBandPathClause(report.next_band_path, report.headline.tier)}` : '';
   const prefix = report.headline.suppressed
     ? `insufficient-signal ${gatePart} ${coveragePart}${thresholdPart}`
-    : `${report.headline.score}/${report.headline.tier} ${gatePart} ${coveragePart}${thresholdPart}`;
+    : `${report.headline.score}/${report.headline.tier} ${gatePart} ${coveragePart}${thresholdPart}${pathPart}`;
   return `${prefix} — ${assessmentCtaForBand(report.headline.tier)} ${assessmentUrlForBand(report.headline.tier)}`;
 }
 
@@ -201,6 +208,17 @@ export function sealScan(input: SealInput): SealOutput {
   const tier = tierForScore(headlineScore);
   const tierLegacy = tierLegacyFor(tier);
 
+  // Derived next-band path (band-path D1): computed once, at seal time, so the
+  // site views, CLI HTML/MD, and stdout all read the same sealed field. It is a
+  // view over already-sealed rows and never feeds back into sealing.
+  const nextBandPath = deriveNextBandPath({
+    score: headlineScore,
+    suppressed: (mvp as unknown as { suppressed?: boolean }).suppressed ?? false,
+    categories: mvp.categories as never,
+    rows: mvp.rows as never,
+    registry: bandPathRegistryFromRubric(rubricData),
+  });
+
   const report = {
     id: input.scanId ?? `ls_${Date.now().toString(36)}`,
     snapshot: {
@@ -237,6 +255,9 @@ export function sealScan(input: SealInput): SealOutput {
     top_blockers: topBlockers,
     deep_dive_scope: deepDiveScope,
     full_table: mvp.rows,
+    // Derived view over the sealed rows; the key is absent (not empty) when the
+    // headline was suppressed and there is no stated score to measure from.
+    ...(nextBandPath ? { next_band_path: nextBandPath } : {}),
     report_schema: '1',
   } as unknown as SealOutput['report'];
 

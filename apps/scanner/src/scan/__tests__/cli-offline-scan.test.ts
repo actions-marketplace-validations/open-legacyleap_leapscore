@@ -111,6 +111,10 @@ describe('1.2 exit map with --fail-under', () => {
 });
 
 describe('1.3 + 5.3 single stdout line with tracked link', () => {
+  /** Compact next-band path clause (band-path D7): appears between the status
+   * fields and the band sentence when the sealed report carries a path. */
+  const PATH_CLAUSE = String.raw`( next:((none \(at [A-Za-z]+\))|([A-Za-z]+ \+\d+(\.\d+)?pp (via [a-z+]+|unreachable))))?`;
+
   it('prints one line: status prefix, then the band sentence with the tracked URL once as the final token', async () => {
     const dir = makeFixture();
     const outDir = mkdtempSync(join(tmpdir(), 'leapscore-out-'));
@@ -120,7 +124,7 @@ describe('1.3 + 5.3 single stdout line with tracked link', () => {
       expect(r.out).toHaveLength(1);
       const line = r.out[0];
       // status fields keep their order (score/band, gates [unevaluable], coverage) and stay first
-      expect(line).toMatch(/^\d+(\.\d+)?\/(Low|Moderate|High|Critical) gates:\d+\/\d+( unevaluable:\d+\/\d+)? coverage:\d+m\/\d+e\/\d+u — /);
+      expect(line).toMatch(new RegExp(String.raw`^\d+(\.\d+)?\/(Low|Moderate|High|Critical) gates:\d+\/\d+( unevaluable:\d+\/\d+)? coverage:\d+m\/\d+e\/\d+u${PATH_CLAUSE} — `));
       const band = /(Low|Moderate|High|Critical)/.exec(line)![0];
       const sentence = assessmentCtaForBand(band);
       const url = assessmentUrlForBand(band);
@@ -146,7 +150,7 @@ describe('1.3 + 5.3 single stdout line with tracked link', () => {
       const r = await runCli(['scan', dir, '--out', outDir, '--fail-under', '100']);
       expect(r.code).toBe(3);
       expect(r.out).toHaveLength(1);
-      expect(r.out[0]).toMatch(/coverage:\d+m\/\d+e\/\d+u threshold:trip\(fail-under 100\) — /);
+      expect(r.out[0]).toMatch(new RegExp(String.raw`coverage:\d+m\/\d+e\/\d+u threshold:trip\(fail-under 100\)${PATH_CLAUSE} — `));
       expect(r.out[0].match(/utm_campaign=cli-scan-v1/g)).toHaveLength(1);
       expect(r.out[0].endsWith(assessmentUrlForBand(/Low|Moderate|High|Critical/.exec(r.out[0])![0]))).toBe(true);
     } finally {
