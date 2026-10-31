@@ -1,4 +1,7 @@
 import { describe, it, expect } from "vitest";
+import { readFileSync, readdirSync, statSync } from "node:fs";
+import { join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   CONTRACT_VERSION,
   normalizeRepoForSlug,
@@ -25,6 +28,16 @@ import {
   DELTA_SCHEMA_VERSION,
   isDeltaDocument,
   resolveRequestedIndicators,
+  BAND_PALETTE,
+  bandColorFor,
+  COVERAGE_FLOOR,
+  badgeCoverage,
+  badgeMonth,
+  badgeViewModel,
+  reportPermalinkFor,
+  REPORT_BASE_URL,
+  BadgeRefusalError,
+  type BadgeViewModel,
 } from "./index";
 
 describe("runId grammar", () => {
@@ -343,3 +356,229 @@ describe("requested indicator set resolution (run-diff D3)", () => {
     expect(resolveRequestedIndicators({ meta: { requested_indicators: undefined } }).ok).toBe(false);
   });
 });
+
+// ---------------------------------------------------------------------------
+// score-badge — contract surface
+// ---------------------------------------------------------------------------
+
+const REPO_ROOT = fileURLToPath(new URL("../../../", import.meta.url));
+
+function walkSources(dir: string, found: string[] = []): string[] {
+  for (const name of readdirSync(dir)) {
+    if (name === "node_modules" || name === ".next" || name === "out" || name === "dist" || name === "coverage") continue;
+    const p = join(dir, name);
+    const st = statSync(p);
+    if (st.isDirectory()) walkSources(p, found);
+    else if (/\.(ts|tsx|js|jsx|css)$/.test(name)) found.push(p);
+  }
+  return found;
+}
+
+type FixtureEnvelope = {
+  contractVersion: number;
+  meta: { runId: string };
+  report: {
+    status: string;
+    sample?: boolean;
+    headline: { score: number; tier: string; suppressed?: boolean; verdict?: string };
+    coverage: { measured: number; estimated: number; unknown: number; not_applicable?: number };
+    snapshot: { scanned_at: string };
+  };
+  trace: unknown[];
+};
+
+function badgeEnvelope(overrides: {
+  status?: string;
+  sample?: boolean;
+  score?: number;
+  tier?: string;
+  suppressed?: boolean;
+  coverage?: { measured: number; estimated: number; unknown: number };
+  scannedAt?: string;
+} = {}): FixtureEnvelope {
+  return {
+    contractVersion: CONTRACT_VERSION,
+    meta: { runId: "acme__api__a3f9c1__20261031T091200Z" },
+    report: {
+      status: overrides.status ?? "complete",
+      ...(overrides.sample != null ? { sample: overrides.sample } : {}),
+      headline: {
+        score: overrides.score ?? 62,
+        tier: overrides.tier ?? "Moderate",
+        suppressed: overrides.suppressed ?? false,
+        ...(overrides.suppressed ? { verdict: "insufficient-signal" } : {}),
+      },
+      coverage: overrides.coverage ?? { measured: 45, estimated: 20, unknown: 35 },
+      snapshot: { scanned_at: overrides.scannedAt ?? "2026-10-31T09:12:00Z" },
+    },
+    trace: [],
+  };
+}
+
+describe("band palette has one owner (score-badge D8 / 1.1)", () => {
+  it("every public band resolves to the site token value", () => {
+    expect(BAND_PALETTE).toEqual({
+      Low: "#22c55e",
+      Moderate: "#e0a00a",
+      High: "#ef4444",
+      Critical: "#9f1d2c",
+    });
+    expect(bandColorFor("Low")).toBe("#22c55e");
+    expect(bandColorFor(" moderate ")).toBe("#e0a00a");
+    expect(bandColorFor("HIGH")).toBe("#ef4444");
+    expect(bandColorFor("Critical")).toBe("#9f1d2c");
+    // An unrecognised name still tints the claim, at the most severe band.
+    expect(bandColorFor("nonsense")).toBe(BAND_PALETTE.Critical);
+    expect(bandColorFor(null)).toBe(BAND_PALETTE.Critical);
+  });
+
+  it("no second hex table exists in source (the CSS token file is the only other owner)", () => {
+    const hexes = Object.values(BAND_PALETTE);
+    const allowed = new Set([
+      join(REPO_ROOT, "packages/contracts/src/index.ts"),
+      // The assertions below necessarily spell the expected values out.
+      join(REPO_ROOT, "packages/contracts/src/index.test.ts"),
+      join(REPO_ROOT, "apps/site/app/globals.css"),
+    ]);
+    const offenders: string[] = [];
+    for (const file of [...walkSources(join(REPO_ROOT, "packages")), ...walkSources(join(REPO_ROOT, "apps"))]) {
+      if (allowed.has(file)) continue;
+      const text = readFileSync(file, "utf8");
+      if (hexes.some((hex) => text.includes(hex))) offenders.push(relative(REPO_ROOT, file));
+    }
+    expect(offenders).toEqual([]);
+  });
+});
+
+describe("badge coverage is the coverage-floor quantity (score-badge D2 / 1.2)", () => {
+  it("denominates over gradeable rows: (measured + estimated) / attempted", () => {
+    expect(badgeCoverage({ measured: 45, estimated: 20, unknown: 35 })).toBeCloseTo(0.65, 10);
+    // 28 measured + 1 estimated of 31 attempted — the 71 unimplemented rows are
+    // not in the counts at all, so they cannot be the subject's deficiency.
+    expect(badgeCoverage({ measured: 28, estimated: 1, unknown: 2 })).toBeCloseTo(29 / 31, 10);
+    expect(Math.round(badgeCoverage({ measured: 28, estimated: 1, unknown: 2 }) * 100)).toBe(94);
+  });
+
+  it("guards a zero denominator", () => {
+    expect(badgeCoverage({ measured: 0, estimated: 0, unknown: 0 })).toBe(0);
+    expect(badgeCoverage(null)).toBe(0);
+    expect(badgeCoverage(undefined)).toBe(0);
+  });
+
+  it("equals the suppression quantity either side of COVERAGE_FLOOR", () => {
+    const above = { measured: 50, estimated: 0, unknown: 49 };
+    const below = { measured: 49, estimated: 0, unknown: 51 };
+    const at = { measured: 50, estimated: 0, unknown: 50 };
+    expect(badgeCoverage(above)).toBeGreaterThanOrEqual(COVERAGE_FLOOR);
+    expect(badgeCoverage(below)).toBeLessThan(COVERAGE_FLOOR);
+    expect(badgeCoverage(at)).toBe(COVERAGE_FLOOR);
+    // The suppression rule is exactly `ratio < COVERAGE_FLOOR`.
+    const suppressed = (c: { measured: number; estimated: number; unknown: number }) =>
+      badgeCoverage(c) < COVERAGE_FLOOR;
+    expect(suppressed(above)).toBe(false);
+    expect(suppressed(below)).toBe(true);
+    expect(suppressed(at)).toBe(false);
+  });
+
+  it("counts estimations as gradeable (dropping them would flip the floor)", () => {
+    const withEstimates = { measured: 10, estimated: 45, unknown: 45 };
+    expect(badgeCoverage(withEstimates)).toBeCloseTo(0.55, 10);
+    expect(badgeCoverage(withEstimates)).toBeGreaterThanOrEqual(COVERAGE_FLOOR);
+    const measuredOnly = 10 / 100;
+    expect(measuredOnly).toBeLessThan(COVERAGE_FLOOR);
+  });
+});
+
+describe("badge view model derives four facts from the envelope (1.3)", () => {
+  it("scored: score, band, coverage, and UTC month", () => {
+    const vm = badgeViewModel(badgeEnvelope());
+    expect(vm.state).toBe("scored");
+    expect(vm.label).toBe("leapscore");
+    expect(vm.claim).toBe("62 Moderate");
+    expect(vm.qualifier).toBe("65% · 2026-10");
+    expect(vm.value).toBe("62 Moderate · 65% · 2026-10");
+    expect(vm.band).toBe("Moderate");
+    expect(vm.permalink).toBe(`${REPORT_BASE_URL}/acme__api__a3f9c1__20261031T091200Z`);
+    expect(vm.accessibleName).toContain("score 62");
+    expect(vm.accessibleName).toContain("band Moderate");
+    expect(vm.accessibleName).toContain("65% gradeable");
+    expect(vm.accessibleName).toContain("October 2026");
+  });
+
+  it("suppressed: unscored replaces score and band, coverage and month remain", () => {
+    const vm = badgeViewModel(
+      badgeEnvelope({ suppressed: true, coverage: { measured: 20, estimated: 21, unknown: 59 } }),
+    );
+    expect(vm.state).toBe("suppressed");
+    expect(vm.claim).toBe("unscored");
+    expect(vm.band).toBeNull();
+    expect(vm.value).toBe("unscored · 41% · 2026-10");
+    expect(vm.accessibleName).toContain("unscored");
+    expect(vm.accessibleName).toContain("insufficient signal");
+  });
+
+  it("incomplete: the four facts plus a trailing marker", () => {
+    const vm = badgeViewModel(badgeEnvelope({ status: "degraded" }));
+    expect(vm.state).toBe("incomplete");
+    expect(vm.value).toBe("62 Moderate · 65% · 2026-10 · incomplete");
+    expect(vm.accessibleName).toContain("Scan incomplete.");
+  });
+
+  it("not-scanned: nothing attempted, no coverage number", () => {
+    const vm = badgeViewModel(
+      badgeEnvelope({ coverage: { measured: 0, estimated: 0, unknown: 0 } }),
+    );
+    expect(vm.state).toBe("not-scanned");
+    expect(vm.claim).toBe("not scanned");
+    expect(vm.value).toBe("not scanned · 2026-10");
+    expect(vm.accessibleName).toBe("LeapScore badge: not scanned, measured October 2026.");
+  });
+
+  it("absent: a fixture produces no badge (refusal, never a view model)", () => {
+    expect(() => badgeViewModel(badgeEnvelope({ sample: true }))).toThrow(BadgeRefusalError);
+    const states: Array<BadgeViewModel["state"]> = ["scored", "suppressed", "incomplete", "not-scanned"];
+    expect(states).not.toContain("absent");
+  });
+
+  it("suppressed and incomplete together", () => {
+    const vm = badgeViewModel(
+      badgeEnvelope({
+        suppressed: true,
+        status: "degraded",
+        coverage: { measured: 20, estimated: 21, unknown: 59 },
+      }),
+    );
+    expect(vm.state).toBe("suppressed");
+    expect(vm.value).toBe("unscored · 41% · 2026-10 · incomplete");
+    expect(vm.accessibleName).toContain("Scan incomplete.");
+  });
+
+  it("a floored score never reads as a band the report did not seal", () => {
+    for (let score = 0; score <= 100; score += 0.1) {
+      const tier = tierForScore(score);
+      expect(tierForScore(Math.floor(score))).toBe(tier);
+    }
+    const vm = badgeViewModel(badgeEnvelope({ score: 52.6, tier: "High" }));
+    expect(vm.claim).toBe("52 High");
+  });
+});
+
+describe("badge refuses fixtures and deltas at the entry point (1.4)", () => {
+  it("names the sample marker", () => {
+    expect(() => badgeViewModel(badgeEnvelope({ sample: true }))).toThrow(/sample/i);
+  });
+
+  it("names the delta document", () => {
+    const delta = {
+      document: DELTA_DOCUMENT,
+      delta_schema: DELTA_SCHEMA_VERSION,
+      baseline: { runId: "a__x__1", score: 44, tier: "High", suppressed: false },
+      current: { runId: "a__x__2", score: 48, tier: "High", suppressed: false },
+      verdict: { status: "comparable", inputs: [] },
+      rows: [],
+      transitions: [],
+    };
+    expect(() => badgeViewModel(delta)).toThrow(/delta/i);
+  });
+});
+

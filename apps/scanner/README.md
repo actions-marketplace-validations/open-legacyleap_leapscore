@@ -20,6 +20,43 @@ Exits: `0` pass · `1` crash · `2` usage-or-refused · `3` threshold trip
 `--strict` is zero-socket mode (vendored snapshots only; any network attempt
 aborts) and conflicts with `--repo` (exit 2, before any work).
 
+## Score badge
+
+`--badge <path>` writes a self-contained score badge SVG beside the report trio,
+plus a copy-paste embed snippet at `<name>.snippet.md`:
+
+```sh
+leapscore-scan scan ./claims-core --strict --out ./out --badge ./docs/leapscore-badge.svg
+```
+
+The badge states four facts — band, score, coverage, and the scan month — and is
+a derived view of the sealed envelope: it never changes `report.json`,
+`report.html`, `report.md`, or `score_fingerprint`. Its coverage is the same
+`(measured + estimated) / (measured + estimated + unknown)` quantity that gates
+headline suppression, so a printed score and a printed coverage cannot
+contradict each other. Fixtures (`report.sample`) and delta documents are
+refused (exit 2) rather than emitting a badge with nothing real to cite.
+
+**Regenerate in CI; never hand-edit the date.** The month is the *scan* month,
+not the generation date, so re-rendering an old report keeps the old month. The
+only way to refresh a badge is to run a new scan — a badge that says `2026-10`
+in 2028 is correctly saying the scan is old.
+
+The snippet carries both forms. Markdown:
+
+```
+[![LeapScore badge: score 62, band Moderate, 65% gradeable, measured October 2026.](docs/leapscore-badge.svg)](https://leapscore.dev/reports/acme__api__a3f9c1__20261031T091200Z)
+```
+
+HTML:
+
+```html
+<a href="https://leapscore.dev/reports/acme__api__a3f9c1__20261031T091200Z"><img src="docs/leapscore-badge.svg" alt="LeapScore badge: score 62, band Moderate, 65% gradeable, measured October 2026."></a>
+```
+
+The link is a provenance citation to the sealed report, so it carries no
+assessment campaign parameters. The `alt` is the full sentence, not "badge".
+
 ## Network posture
 
 Two postures, no surprises:

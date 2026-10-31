@@ -57,6 +57,96 @@ top blockers (5 worst rows, one line each)
 - **Annotations:** one per Red row (location-less allowed), ≤50 per API batch; overflow lives in the summary table.
 - Honest instrument-panel corollary: install flow states plainly "fired gates mark the check red."
 
+## 4a. Score badge (README surface)
+
+The deliverable `00_MASTER_INDEX.md` line 25 names. A sealed run already produces
+`report.json` + `report.html` + `report.md`; the badge is the one artifact that
+leaves the report. Implementation spec: `openspec/changes/score-badge` (synced to
+`openspec/specs/score-badge`), emitter
+`apps/scanner/src/scan/badge.ts`, contract surface
+`packages/contracts/src/index.ts` (`badgeViewModel`, `BAND_PALETTE`,
+`badgeCoverage`).
+
+### Four facts, one source each
+
+| Fact | Source | Rendered as |
+|---|---|---|
+| score | `report.headline.score` (absent when suppressed) | integer, floored |
+| band | `report.headline.tier` (Low ≥80 · Moderate 53–79 · High 27–52 · Critical <27) | the word, never colour alone |
+| coverage | `report.coverage` via `badgeCoverage` | integer percentage |
+| scan month | `report.snapshot.scanned_at` truncated to `YYYY-MM` in UTC | `2026-10` |
+
+No fifth fact: no delta, no next-band distance, no gate count, no top blocker,
+no fingerprint excerpt. The score is floored rather than rounded so the printed
+number can never read as a band the report did not seal (52.6 High stays `52`,
+never `53`). Band colour comes from the one palette owner (`BAND_PALETTE`,
+mirroring `apps/site/app/globals.css`); an SVG cannot read a CSS custom
+property, so the mapping lives in contracts.
+
+### Coverage is the coverage-floor quantity
+
+`coverage = (measured + estimated) / (measured + estimated + unknown)` — the
+same ratio the headline-suppression rule compares against `COVERAGE_FLOOR`
+(0.5). One quantity means a printed score and a printed coverage can never
+contradict each other ("a score at 45% coverage" is impossible by construction).
+`not_applicable` and `not_implemented` rows are excluded from both numerator and
+denominator: LeapScore's unimplemented detectors are not the scanned
+repository's deficiency. The full-rubric denominator (`measured / 102`) is
+forbidden as a badge value for that reason. Consequence accepted deliberately:
+when a score is visible, coverage is necessarily ≥ 50%, so the useful reading is
+at the low end of 50–100%.
+
+### Five states; disclosure renders rather than suppresses
+
+| State | Condition | Value segment |
+|---|---|---|
+| **scored** | headline exists and the scan is complete | `62 Moderate · 61% · 2026-10` |
+| **suppressed** | `headline.suppressed` (`insufficient-signal`) | `unscored · 41% · 2026-10` |
+| **incomplete** | sealed status is not `complete` (truncated tree, unreadable path, out-of-root symlink) | `62 Moderate · 61% · 2026-10 · incomplete` |
+| **not-scanned** | nothing attempted (coverage denominator is zero) | `not scanned · 2026-10` |
+| **absent** | authored fixture (`report.sample === true`) | no badge is produced |
+
+`suppressed` replaces the score-and-band segment because there is no band to
+state; `incomplete` is a trailing marker because an incomplete scan still has a
+sealed score and a band, and the reader needs all four facts plus the caveat. A
+suppressed-and-incomplete run renders `unscored · {cov}% · {YYYY-MM} ·
+incomplete`. `absent` is a refusal with a reason naming `sample`, not a silent
+missing file; a run-diff delta is refused the same way, naming `delta`.
+
+### No delta occupant (D1)
+
+A delta badge was considered and rejected. `run-diff` splits movement into
+code-, coverage-, model-attributable, and unattributable parts and refuses to
+compare on an `incomparable` verdict; compressing that into a pill either drops
+attribution (printing coverage growth as improvement — the "trick of a higher
+number" `09` §1.2 forbids) or carries a verdict a 20px pill cannot. At 31/102
+implemented indicators every rubric expansion also reclassifies movement as
+`coverage-change`, so a delta badge would report "no code change measured" for
+most repos through most of its life.
+
+The value segment is nevertheless specified as an occupant slot — a fixed
+`leapscore` label plus a variable value segment — so the intended future
+occupant (a code-attributable band transition) can replace the score-and-band
+occupant without a second badge grammar, dimensions convention, or embed form.
+This change ships only the four rendered occupants above.
+
+### Determinism, freshness, and the embed
+
+The badge is a self-contained SVG: no `href`, script, stylesheet, external font,
+or `url(` reference, and no wall-clock content. The same envelope yields
+byte-identical bytes on any machine; the month is the *scan* month, so
+regenerating an old envelope keeps the old month and a stale badge is visibly
+stale rather than silently current. Freshness comes from re-running the scan in
+CI (the Action emits the badge), never from re-rendering.
+
+An SVG loaded through `<img>` cannot link anywhere and does not surface its
+`<title>`, so generation also emits a copy-paste snippet: a Markdown
+`[![alt](svg)](permalink)` line and an HTML `<a><img …></a>` block. The link is
+a provenance citation to the sealed report (`/reports/<runId>`) — deliberately
+no `utm_campaign` or `band` parameters; the assessment next-step link stays
+single-sourced by `release-funnel`. The `alt` is the full sentence (band, score,
+coverage, month, and any disclosure marker), not the word "badge".
+
 ## 5. Remediation tracker spec (H4–H7)
 
 ### Object model

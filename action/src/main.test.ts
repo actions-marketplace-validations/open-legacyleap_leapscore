@@ -119,6 +119,16 @@ describe('buildScanArgs', () => {
     const without = buildScanArgs({ path: '.', strict: false, outDir: 'out' }, 'scan.ts');
     assert.ok(!without.args.includes('--fail-under-band'));
   });
+  it('forwards --badge only when the input is non-empty', () => {
+    const withBadge = buildScanArgs({ path: '.', strict: false, outDir: 'out', badge: 'out/badge.svg' }, 'scan.ts');
+    const i = withBadge.args.indexOf('--badge');
+    assert.ok(i > 0);
+    assert.equal(withBadge.args[i + 1], 'out/badge.svg');
+    const without = buildScanArgs({ path: '.', strict: false, outDir: 'out' }, 'scan.ts');
+    assert.ok(!without.args.includes('--badge'));
+    const empty = buildScanArgs({ path: '.', strict: false, outDir: 'out', badge: '' }, 'scan.ts');
+    assert.ok(!empty.args.includes('--badge'));
+  });
 });
 
 describe('readInputs defaults', () => {
@@ -179,6 +189,15 @@ describe('handleExitCode matrix', () => {
       assert.equal(h.outputs['exit-code'], '0');
       assert.equal(h.outputs.score, '62');
       assert.equal(h.outputs.tier, 'Moderate');
+      assert.equal(h.outputs['badge-path'], undefined);
+    } finally { rmSync(dir, { recursive: true, force: true }); }
+  });
+  it('pass (0) with badge: badge-path output carries the requested path', () => {
+    const dir = tmpOut();
+    try {
+      const h = harness(dir, 62, 'Moderate');
+      handleExitCode(0, { path: '.', strict: false, outDir: dir, badge: 'out/badge.svg' }, h.deps);
+      assert.equal(h.outputs['badge-path'], 'out/badge.svg');
     } finally { rmSync(dir, { recursive: true, force: true }); }
   });
   it('threshold trip (3): setFailed names score vs threshold', () => {

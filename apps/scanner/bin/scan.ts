@@ -2,23 +2,26 @@
 /** apps/scanner/bin/scan.ts — thin workflow CLI over runUnifiedScan/runLocalScan + sealScan (spec: workflow-scan, scan-local) */
 import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import { stat } from 'node:fs/promises';
-import { resolve, basename } from 'node:path';
+import { resolve, basename, dirname } from 'node:path';
 import { runUnifiedScan } from '../src/scan/orchestrator';
 import { runLocalScan } from '../src/scan/local';
 import { sealScan, CONTRACT_VERSION, localSlugFromPath, formatStdout } from '../src/scan/scoring/seal';
 import { renderHtml, renderMarkdown } from '../src/scan/render';
+import { renderBadgeSvg, renderBadgeSnippet } from '../src/scan/badge';
 import { computeDelta, formatDeltaLine, ratchetOutcome, type RatchetOutcome } from '../src/scan/diff';
 import {
   assertContractVersion,
   BAND_FLOORS,
   bandThresholdFor,
+  badgeViewModel,
   isDeltaDocument,
+  type BadgeViewModel,
   type DeltaDocument,
   type NextBandPath,
   type ReportEnvelope,
 } from '@leapscore/contracts';
 
-export const USAGE = `leapscore-scan [scan] [<path> | --repo <owner/repo>] --out <dir> [--strict] [--fail-under <0-100> | --fail-under-band <critical|high|moderate|low>] [--baseline <report.json> [--ratchet[=<tolerance-pp>]]] [--sha <sha>] [--engine-ref <sha>] [--score-policy frozen|legacy]
+export const USAGE = `leapscore-scan [scan] [<path> | --repo <owner/repo>] --out <dir> [--strict] [--fail-under <0-100> | --fail-under-band <critical|high|moderate|low>] [--baseline <report.json> [--ratchet[=<tolerance-pp>]]] [--badge <path>] [--sha <sha>] [--engine-ref <sha>] [--score-policy frozen|legacy]
 
   scan <path>             Local directory scan (default entry): no clone, no GH-API, 25 local detectors
   --repo <owner/repo>     Remote scan subject as owner/repo (no https:// prefix, no .git suffix)
@@ -36,6 +39,9 @@ export const USAGE = `leapscore-scan [scan] [<path> | --repo <owner/repo>] --out
                           Gate on the code-attributable part of the delta (default tolerance 0pp): exit 3 when it
                           falls beyond tolerance, exit 2 when the comparison is incomparable — a gate that cannot
                           evaluate never passes. Requires --baseline.
+  --badge <path>          Write a self-contained score badge SVG at <path> plus its embed snippet
+                          (<name>.snippet.md) beside it. Derived from the sealed envelope only: no change to the
+                          report trio or the score fingerprint. Refuses fixtures and delta documents.
   --engine-ref <sha>      Pinned engine ref for meta.engineSha7 identity (else LEAPSCORE_SHA/git/unknown)
   --score-policy <p>      Headline policy: frozen (default; unknowns disclosed as unscored) or legacy (renormalized reference as headline, one-release escape hatch)
   --help                  Print this usage
@@ -67,6 +73,8 @@ export type ParsedArgs = {
   baseline?: string;
   /** `true` for a bare `--ratchet` (tolerance 0), or the raw tolerance text. */
   ratchet?: true | string;
+  /** Output path for the score badge SVG; unset = no badge written. */
+  badge?: string;
   scorePolicy?: string;
   surface?: boolean;
   surfaceFrom?: string;
@@ -101,6 +109,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
         out.ratchet = true;
       }
     } else if (a.startsWith('--ratchet=')) out.ratchet = a.slice('--ratchet='.length);
+    else if (a === '--badge') out.badge = argv[++i] ?? '';
     else if (a === '--score-policy') out.scorePolicy = argv[++i];
     else if (a === '--surface-from') out.surfaceFrom = argv[++i];
     else if (a === '--repo-a') out.repoA = argv[++i];
@@ -112,6 +121,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
     else if (a.startsWith('--fail-under=')) out.failUnder = a.slice('--fail-under='.length);
     else if (a.startsWith('--fail-under-band=')) out.failUnderBand = a.slice('--fail-under-band='.length);
     else if (a.startsWith('--baseline=')) out.baseline = a.slice('--baseline='.length);
+    else if (a.startsWith('--badge=')) out.badge = a.slice('--badge='.length);
     else if (a.startsWith('--score-policy=')) out.scorePolicy = a.slice('--score-policy='.length);
     else if (a.startsWith('--surface-from=')) out.surfaceFrom = a.slice('--surface-from='.length);
     else if (a.startsWith('--repo-a=')) out.repoA = a.slice('--repo-a='.length);
@@ -153,6 +163,48 @@ export function parseScorePolicy(raw: string | undefined): ScorePolicy {
   if (raw == null || raw === '') return 'frozen';
   if (raw === 'frozen' || raw === 'legacy') return raw;
   throw new Error(`invalid --score-policy ${JSON.stringify(raw)}: expected frozen|legacy\n${USAGE}`);
+}
+
+/** `--badge` takes an output path. An empty value (bare flag, `--badge=`) is a
+ *  usage error rather than "no badge": silently dropping the artifact the caller
+ *  asked for is the failure mode this flag exists to avoid. */
+export function parseBadgePath(raw: string | undefined): string | undefined {
+  if (raw == null) return undefined;
+  if (raw.trim() === '') {
+    throw new Error(`missing value for --badge <path>: expected an output path for the badge SVG\n${USAGE}`);
+  }
+  return raw;
+}
+
+/** Snippet written beside the badge SVG: `badge.svg` → `badge.snippet.md`. */
+export function badgeSnippetPath(badgePath: string): string {
+  return `${badgePath.replace(/\.svg$/i, '')}.snippet.md`;
+}
+
+export type BadgeWriteResult =
+  | { ok: true; svgPath: string; snippetPath: string; viewModel: BadgeViewModel }
+  | { ok: false; detail: string };
+
+/**
+ * Write the badge SVG and its embed snippet from a sealed envelope. The badge
+ * is a derived view: this writes two new files and touches nothing else. A
+ * fixture or delta envelope is refused with the reason and no file is written
+ * (score-badge D10) — never an empty or fabricated artifact.
+ */
+export async function writeBadgeArtifacts(envelope: unknown, badgePath: string): Promise<BadgeWriteResult> {
+  let viewModel: BadgeViewModel;
+  try {
+    viewModel = badgeViewModel(envelope);
+  } catch (e) {
+    return { ok: false, detail: e instanceof Error ? e.message : String(e) };
+  }
+  const svg = renderBadgeSvg(viewModel);
+  const snippet = renderBadgeSnippet(viewModel, { svgPath: badgePath });
+  await mkdir(dirname(resolve(badgePath)), { recursive: true });
+  await writeFile(badgePath, svg, 'utf8');
+  const snippetPath = badgeSnippetPath(badgePath);
+  await writeFile(snippetPath, `${snippet.markdown}\n\n${snippet.html}\n`, 'utf8');
+  return { ok: true, svgPath: badgePath, snippetPath, viewModel };
 }
 
 /** Ratchet tolerance in headline points: bare `--ratchet` is 0 (design D7 —
@@ -347,6 +399,13 @@ export async function main(argv: string[], opts: MainOpts = {}): Promise<number>
     stderr(e instanceof Error ? e.message : String(e));
     return EXIT_USAGE;
   }
+  let badgePath: string | undefined;
+  try {
+    badgePath = parseBadgePath(args.badge);
+  } catch (e) {
+    stderr(e instanceof Error ? e.message : String(e));
+    return EXIT_USAGE;
+  }
   // The ratchet is a delta gate: without a baseline there is no comparison to
   // gate, so the combination is a usage error before any work.
   if (args.ratchet != null && args.baseline == null) {
@@ -387,11 +446,11 @@ export async function main(argv: string[], opts: MainOpts = {}): Promise<number>
   const trace: Array<{ ts: number; elapsedMs: number; label: string; type?: string }> = [];
 
   if (useLocal) {
-    return await runLocalMain(args.path!, { env, stdout, stderr, outDir, startMs, trace, failUnder, failUnderBand, scorePolicy, strict: !!args.strict, engineRef: args.engineRef, baseline, ratchet });
+    return await runLocalMain(args.path!, { env, stdout, stderr, outDir, startMs, trace, failUnder, failUnderBand, scorePolicy, strict: !!args.strict, engineRef: args.engineRef, baseline, ratchet, badge: badgePath });
   }
   const repo = validateRepoSafe(args.repo, stderr);
   if (!repo) return EXIT_USAGE;
-  return await runRemoteMain(repo, { env, stdout, stderr, outDir, startMs, trace, failUnder, failUnderBand, scorePolicy, engineRef: args.engineRef, baseline, ratchet });
+  return await runRemoteMain(repo, { env, stdout, stderr, outDir, startMs, trace, failUnder, failUnderBand, scorePolicy, engineRef: args.engineRef, baseline, ratchet, badge: badgePath });
 }
 
 function validateRepoSafe(raw: string | undefined, stderr: (s: string) => void): string | null {
@@ -419,6 +478,8 @@ type RunOpts = {
   baseline?: ReportEnvelope;
   /** Ratchet tolerance in points; defined only when --baseline --ratchet was set. */
   ratchet?: number;
+  /** Output path for the badge SVG; unset = no badge written. */
+  badge?: string;
 };
 
 async function runLocalMain(
@@ -589,7 +650,7 @@ async function runRemoteMain(repo: string, o: RunOpts): Promise<number> {
   return await writeReportsAndExit(sealed, o);
 }
 
-async function writeReportsAndExit(
+export async function writeReportsAndExit(
   sealed: {
     report: unknown;
     meta: { runId: string; score: number; tier: string };
@@ -642,6 +703,18 @@ async function writeReportsAndExit(
     delta = computeDelta(o.baseline, envelope as ReportEnvelope);
     if (o.ratchet != null) ratchet = ratchetOutcome(delta, o.ratchet);
     await writeFile(`${o.outDir}/report.delta.json`, JSON.stringify(delta, null, 2), 'utf8');
+  }
+
+  // Score badge (score-badge): a derived view written beside the trio. It reads
+  // the sealed envelope only, so the three files above and the fingerprint are
+  // untouched. A fixture or delta envelope is refused with the reason and no
+  // badge file — never an empty artifact.
+  if (o.badge) {
+    const badge = await writeBadgeArtifacts(envelope as ReportEnvelope, o.badge);
+    if (!badge.ok) {
+      o.stderr(`refused (badge): ${badge.detail}`);
+      return EXIT_USAGE;
+    }
   }
 
   const threshold = o.failUnder;

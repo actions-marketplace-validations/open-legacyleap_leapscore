@@ -1,4 +1,5 @@
 import type { FactRecord } from '../../facts';
+import { COVERAGE_FLOOR } from '@leapscore/contracts';
 import { factsToRows as phase1Rows, scorePhase1 } from './phase1';
 import rubricData from '../rubric.json' with { type: 'json' };
 import { evaluateGates } from './rollup';
@@ -549,8 +550,9 @@ export const ALL_MEASURED_IDS = [...MVP_IDS, ...TRANCHE_A_IDS];
 
 /** Coverage floor for headline suppression (3.2): the headline is suppressed with
  * an `insufficient-signal` verdict when fewer than this fraction of requested
- * rows are measured. A constant — tunable without changing specs or tasks. */
-export const COVERAGE_FLOOR = 0.5;
+ * rows are measured. One owner — the badge's displayed coverage is this same
+ * quantity (score-badge D2), so it lives in the shared contract. */
+export { COVERAGE_FLOOR };
 
 const RUBRIC_REGISTRY: Record<string, { name: string; category: string; effort: string; remediation: { quick_win: string; structural: string; gold_standard: string; effort: string } }> = Object.fromEntries(
   ((rubricData as unknown as { indicators: Array<{ id: string; category: string; name: string; effort: string; remediation: { quick_win: string; structural: string; gold_standard: string; effort: string } }> }).indicators ?? []).map(i => [i.id, { name: i.name, category: i.category, effort: i.effort, remediation: i.remediation }])

@@ -433,11 +433,251 @@ export function formatPp(pp: number): string {
   return String(Number(pp.toFixed(2)));
 }
 
+// ---------------------------------------------------------------------------
+// Band palette — the one owner of band → hex (score-badge D8). The values are
+// the site's tier tokens (`apps/site/app/globals.css`); an SVG cannot read a CSS
+// custom property, so the mapping lives here beside the band vocabulary and
+// every badge renderer consumes it instead of hardcoding four hexes.
+// ---------------------------------------------------------------------------
+
+export const BAND_PALETTE = {
+  Low: "#22c55e",
+  Moderate: "#e0a00a",
+  High: "#ef4444",
+  Critical: "#9f1d2c",
+} as const;
+
+export type BandPaletteName = keyof typeof BAND_PALETTE;
+
+/** Tier color for a public band name, case-insensitive. An unrecognised name
+ * falls back to the most severe band so a badge claim is never left untinted. */
+export function bandColorFor(tier: string | null | undefined): string {
+  const key = String(tier ?? "").trim().toLowerCase();
+  for (const name of Object.keys(BAND_PALETTE) as BandPaletteName[]) {
+    if (name.toLowerCase() === key) return BAND_PALETTE[name];
+  }
+  return BAND_PALETTE.Critical;
+}
+
 /** Local subject slug: normalized directory basename (lowercased, unsafe chars → `-`). */
 export function localSlugFromPath(raw: string): string {
   const base = raw.replace(/[/\\]+$/, "").split(/[/\\]/).filter(Boolean).pop() ?? "scan";
   const slug = base.toLowerCase().replace(/[^a-z0-9.\-]+/g, "-").replace(/^-+|-+$/g, "");
   return slug || "scan";
+}
+
+// ---------------------------------------------------------------------------
+// Score badge — a derived view over an already-sealed envelope (capability
+// score-badge). The badge states four facts (score, band, coverage, scan month)
+// and never introduces, recomputes, or reinterprets a graded quantity. Design
+// rationale: docs/plans/12_GITHUB_SURFACE_PLAN.md §badge.
+// ---------------------------------------------------------------------------
+
+/** Coverage floor for headline suppression: the headline is withheld when fewer
+ * than this fraction of attempted rows are gradeable (measured + estimated).
+ * One constant, one quantity — the badge's displayed coverage is the same ratio,
+ * so a printed percentage and a printed score can never come from different
+ * definitions (score-badge D2). */
+export const COVERAGE_FLOOR = 0.5;
+
+/** The badge's coverage: gradeable rows over attempted rows.
+ *
+ *   (measured + estimated) / (measured + estimated + unknown)
+ *
+ * `not_applicable` and `not_implemented` rows are already absent from the
+ * counts, so an unimplemented detector is never presented as the scanned
+ * subject's deficiency. Returns a ratio in `[0, 1]` — the exact quantity the
+ * suppression floor compares — and `0` when nothing was attempted. */
+export function badgeCoverage(
+  coverage: { measured?: number; estimated?: number; unknown?: number } | null | undefined,
+): number {
+  const count = (v: unknown): number => {
+    const n = Number(v);
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  };
+  const measured = count(coverage?.measured);
+  const estimated = count(coverage?.estimated);
+  const unknown = count(coverage?.unknown);
+  const attempted = measured + estimated + unknown;
+  if (attempted === 0) return 0;
+  return (measured + estimated) / attempted;
+}
+
+/** Sealed-report permalink base. The badge links to the run's sealed report,
+ * not to the marketing surface; the assessment next-step link stays
+ * single-sourced by `release-funnel`. */
+export const REPORT_BASE_URL = "https://leapscore.dev/reports";
+
+/** Build the citation target for a sealed run. Shared so the CLI emitter and
+ * any later surface cannot drift on the route (score-badge D9). */
+export function reportPermalinkFor(runId: string): string {
+  return `${REPORT_BASE_URL}/${encodeURIComponent(String(runId ?? ""))}`;
+}
+
+/** Constant label segment: the same badge, whichever state it discloses. */
+export const BADGE_LABEL = "leapscore";
+
+/** The badge's disclosure states. `absent` is the fixture refusal — no badge is
+ * produced — and is never returned by `badgeViewModel` (score-badge D3). */
+export type BadgeState = "scored" | "suppressed" | "incomplete" | "not-scanned" | "absent";
+
+/** Render-agnostic badge model: the emitters own markup only, so the SVG and
+ * the embed snippet cannot disagree on a fact, a label, or a sentence. */
+export interface BadgeViewModel {
+  state: Exclude<BadgeState, "absent">;
+  /** Fixed label segment (`leapscore`). */
+  label: string;
+  /** Full value segment, e.g. `62 Moderate · 61% · 2026-10`. */
+  value: string;
+  /** Primary claim — the tinted segment: `62 Moderate`, `unscored`, `not scanned`. */
+  claim: string;
+  /** Subordinate qualifier — coverage, month, and any disclosure marker. */
+  qualifier: string;
+  /** Full accessible sentence (aria-label / alt text). */
+  accessibleName: string;
+  /** The run's sealed-report URL. */
+  permalink: string;
+  /** Public band for the claim tint; null when the badge states no band. */
+  band: string | null;
+}
+
+/** A badge request that cannot produce an honest artifact. The message names
+ * which refusal fired (fixture vs delta) so the caller can report it. */
+export class BadgeRefusalError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "BadgeRefusalError";
+  }
+}
+
+const MONTH_NAMES = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+] as const;
+
+/** A sealed scan whose verdict is not `complete` is incomplete: a surface was
+ * truncated, unreadable, or out of root, so the sealed number is a floor rather
+ * than a clean measurement. `complete`/`degraded` is the contract's status
+ * vocabulary; the badge discloses the non-complete verdict rather than hiding
+ * it. */
+export function isIncompleteScanStatus(status: string | null | undefined): boolean {
+  const s = String(status ?? "").trim().toLowerCase();
+  return s !== "" && s !== "complete";
+}
+
+/** `scanned_at` truncated to `YYYY-MM` in UTC — the badge's only time-derived
+ * content, read from the envelope and never from generation time (D6). */
+export function badgeMonth(scannedAt: string): string {
+  const date = new Date(scannedAt);
+  if (Number.isNaN(date.getTime())) {
+    throw new BadgeRefusalError(
+      `refusing to mint a badge: report.snapshot.scanned_at is not a parseable timestamp (got ${JSON.stringify(scannedAt)})`,
+    );
+  }
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+/** The month's display name for the accessible sentence, from `YYYY-MM`. */
+function monthName(month: string): string {
+  const index = Number(month.slice(5, 7)) - 1;
+  const name = MONTH_NAMES[index];
+  return name ? `${name} ${month.slice(0, 4)}` : month;
+}
+
+/**
+ * Derive the badge view model from a sealed envelope.
+ *
+ * Reads only `report.headline`, `report.coverage`, `report.status`,
+ * `report.snapshot.scanned_at`, and `meta` — no second threshold table, no
+ * recomputation of a graded quantity. Refuses (throws `BadgeRefusalError`) a
+ * fixture (`report.sample === true`) and a run-diff delta document, naming
+ * which refusal fired (D10).
+ */
+export function badgeViewModel(envelope: unknown): BadgeViewModel {
+  if (isDeltaDocument(envelope)) {
+    throw new BadgeRefusalError(
+      "refusing to mint a badge from a run-diff delta document: a delta is not a sealed envelope and states no sealed score — pass the report.json envelope it was derived from",
+    );
+  }
+  const env = envelope as Partial<ReportEnvelope> | null | undefined;
+  const report = env?.report as Report | undefined;
+  const meta = env?.meta as EnvelopeMeta | undefined;
+  if (!report || typeof report !== "object" || !meta || typeof meta !== "object") {
+    throw new BadgeRefusalError(
+      "refusing to mint a badge: not a sealed report envelope (missing meta or report)",
+    );
+  }
+  if (report.sample === true) {
+    throw new BadgeRefusalError(
+      "refusing to mint a badge from a sample fixture (report.sample is true): an authored fixture has no measured run to cite — scan the repository to seal a real envelope",
+    );
+  }
+  const runId = typeof meta.runId === "string" ? meta.runId.trim() : "";
+  if (!runId) {
+    throw new BadgeRefusalError("refusing to mint a badge: sealed envelope has no meta.runId to cite");
+  }
+
+  const month = badgeMonth(String(report.snapshot?.scanned_at ?? ""));
+  const ratio = badgeCoverage(report.coverage);
+  const attempted = (report.coverage?.measured ?? 0) + (report.coverage?.estimated ?? 0) + (report.coverage?.unknown ?? 0);
+  const coveragePct = Math.round(ratio * 100);
+  const suppressed = report.headline?.suppressed === true;
+  const incomplete = isIncompleteScanStatus(report.status);
+  const tier = typeof report.headline?.tier === "string" ? report.headline.tier.trim() : "";
+  const score = Number(report.headline?.score);
+  // Integer score display: floor keeps the printed number inside the same band
+  // the report sealed (53–79 Moderate etc.), so a rounded score can never read
+  // as a band it does not have.
+  const displayScore = Number.isFinite(score) ? Math.floor(score) : 0;
+  const band = !suppressed && attempted > 0 && tier !== "" ? tier : null;
+
+  let state: BadgeViewModel["state"];
+  let claim: string;
+  let qualifier: string;
+
+  if (attempted === 0) {
+    state = "not-scanned";
+    claim = "not scanned";
+    qualifier = month;
+  } else if (suppressed) {
+    state = "suppressed";
+    claim = "unscored";
+    qualifier = `${coveragePct}% · ${month}${incomplete ? " · incomplete" : ""}`;
+  } else {
+    state = incomplete ? "incomplete" : "scored";
+    claim = `${displayScore} ${band ?? ""}`.trim();
+    qualifier = `${coveragePct}% · ${month}${incomplete ? " · incomplete" : ""}`;
+  }
+
+  const value = `${claim} · ${qualifier}`;
+
+  const accessibleName =
+    state === "not-scanned"
+      ? `LeapScore badge: not scanned, measured ${monthName(month)}.`
+      : state === "suppressed"
+        ? `LeapScore badge: unscored — insufficient signal, ${coveragePct}% gradeable, measured ${monthName(month)}.${incomplete ? " Scan incomplete." : ""}`
+        : `LeapScore badge: score ${displayScore}, band ${band}, ${coveragePct}% gradeable, measured ${monthName(month)}.${incomplete ? " Scan incomplete." : ""}`;
+
+  return {
+    state,
+    label: BADGE_LABEL,
+    value,
+    claim,
+    qualifier,
+    accessibleName,
+    permalink: reportPermalinkFor(runId),
+    band,
+  };
 }
 
 // ---------------------------------------------------------------------------

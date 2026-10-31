@@ -22,6 +22,8 @@ export type ActionInputs = {
   baseline?: string;
   /** Ratchet gate request: 'true' (tolerance 0), a tolerance number, or unset/'false'. */
   ratchet?: string;
+  /** Output path for the score badge SVG; unset = no badge written. */
+  badge?: string;
 };
 
 export function readInputs(getInput: (name: string) => string = core.getInput): ActionInputs {
@@ -34,6 +36,7 @@ export function readInputs(getInput: (name: string) => string = core.getInput): 
     engineRef: getInput('engine_ref') || undefined,
     baseline: getInput('baseline') || undefined,
     ratchet: getInput('ratchet') || undefined,
+    badge: getInput('badge') || undefined,
   };
 }
 
@@ -70,6 +73,7 @@ export function buildScanArgs(inputs: ActionInputs, scanBin: string): { cmd: str
   if (inputs.baseline) args.push('--baseline', inputs.baseline);
   const ratchet = ratchetFlag(inputs.ratchet);
   if (ratchet) args.push(ratchet);
+  if (inputs.badge) args.push('--badge', inputs.badge);
   return { cmd: 'npx', args: ['-y', 'tsx@4', ...args] };
 }
 
@@ -130,6 +134,7 @@ export function handleExitCode(
   deps.setOutput('exit-code', String(code));
   if (score != null) deps.setOutput('score', String(score));
   if (tier != null) deps.setOutput('tier', String(tier));
+  if (inputs.badge) deps.setOutput('badge-path', inputs.badge);
   if (code === EXIT_OK) return;
   const delta = inputs.baseline != null || inputs.ratchet != null ? readDelta(inputs.outDir) : undefined;
   if (code === EXIT_THRESHOLD) {
