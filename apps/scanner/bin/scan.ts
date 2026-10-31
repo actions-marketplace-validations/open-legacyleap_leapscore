@@ -1,15 +1,24 @@
 #!/usr/bin/env tsx
 /** apps/scanner/bin/scan.ts — thin workflow CLI over runUnifiedScan/runLocalScan + sealScan (spec: workflow-scan, scan-local) */
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import { stat } from 'node:fs/promises';
 import { resolve, basename } from 'node:path';
 import { runUnifiedScan } from '../src/scan/orchestrator';
 import { runLocalScan } from '../src/scan/local';
 import { sealScan, CONTRACT_VERSION, localSlugFromPath, formatStdout } from '../src/scan/scoring/seal';
 import { renderHtml, renderMarkdown } from '../src/scan/render';
-import { BAND_FLOORS, bandThresholdFor, type NextBandPath } from '@leapscore/contracts';
+import { computeDelta, formatDeltaLine, ratchetOutcome, type RatchetOutcome } from '../src/scan/diff';
+import {
+  assertContractVersion,
+  BAND_FLOORS,
+  bandThresholdFor,
+  isDeltaDocument,
+  type DeltaDocument,
+  type NextBandPath,
+  type ReportEnvelope,
+} from '@leapscore/contracts';
 
-export const USAGE = `leapscore-scan [scan] [<path> | --repo <owner/repo>] --out <dir> [--strict] [--fail-under <0-100> | --fail-under-band <critical|high|moderate|low>] [--sha <sha>] [--engine-ref <sha>] [--score-policy frozen|legacy]
+export const USAGE = `leapscore-scan [scan] [<path> | --repo <owner/repo>] --out <dir> [--strict] [--fail-under <0-100> | --fail-under-band <critical|high|moderate|low>] [--baseline <report.json> [--ratchet[=<tolerance-pp>]]] [--sha <sha>] [--engine-ref <sha>] [--score-policy frozen|legacy]
 
   scan <path>             Local directory scan (default entry): no clone, no GH-API, 25 local detectors
   --repo <owner/repo>     Remote scan subject as owner/repo (no https:// prefix, no .git suffix)
@@ -19,13 +28,22 @@ export const USAGE = `leapscore-scan [scan] [<path> | --repo <owner/repo>] --out
   --fail-under <0-100>    Exit 3 when the sealed score is below <n> (files are still written)
   --fail-under-band <b>   Band-native gate: exit 3 below the named band's floor (critical|high|moderate|low).
                           Mutually exclusive with --fail-under in one invocation.
+  --baseline <report.json>
+                          Compare against a previously sealed report: writes report.delta.json beside the sealed
+                          trio and prints one delta summary line after the sealed-run line. The sealed files are
+                          byte-identical to an unbaselined run.
+  --ratchet[=<tolerance-pp>]
+                          Gate on the code-attributable part of the delta (default tolerance 0pp): exit 3 when it
+                          falls beyond tolerance, exit 2 when the comparison is incomparable — a gate that cannot
+                          evaluate never passes. Requires --baseline.
   --engine-ref <sha>      Pinned engine ref for meta.engineSha7 identity (else LEAPSCORE_SHA/git/unknown)
   --score-policy <p>      Headline policy: frozen (default; unknowns disclosed as unscored) or legacy (renormalized reference as headline, one-release escape hatch)
   --help                  Print this usage
 
-  Exits: 0 pass · 1 crash · 2 usage-or-refused · 3 threshold trip (--fail-under / --fail-under-band)
+  Exits: 0 pass · 1 crash · 2 usage-or-refused · 3 threshold trip (--fail-under / --fail-under-band) or ratchet trip (--ratchet)
   Stdout: one line — score/band, gates, coverage, threshold state, compact next-band path clause when the
   sealed report carries a path, then the band-specific next step with the tracked assessment URL once (final token).
+  With --baseline, one additional delta summary line follows the sealed-run line.
 
   Issue surfacing moved to the standalone app: use \`surface --from <dir>/report.json --repo <owner/repo>\`
   (apps/surface) instead of the removed --surface / --surface-from flags.`;
@@ -46,6 +64,9 @@ export type ParsedArgs = {
   strict?: boolean;
   failUnder?: string;
   failUnderBand?: string;
+  baseline?: string;
+  /** `true` for a bare `--ratchet` (tolerance 0), or the raw tolerance text. */
+  ratchet?: true | string;
   scorePolicy?: string;
   surface?: boolean;
   surfaceFrom?: string;
@@ -68,6 +89,18 @@ export function parseArgs(argv: string[]): ParsedArgs {
     else if (a === '--engine-ref') out.engineRef = argv[++i];
     else if (a === '--fail-under') out.failUnder = argv[++i];
     else if (a === '--fail-under-band') out.failUnderBand = argv[++i];
+    else if (a === '--baseline') out.baseline = argv[++i];
+    // Bare `--ratchet` means tolerance 0; an adjacent numeric token (a tolerance
+    // never starts with a path separator or a flag) is consumed as the value.
+    else if (a === '--ratchet') {
+      const next = argv[i + 1];
+      if (next != null && /^\d+(\.\d+)?$/.test(next)) {
+        out.ratchet = next;
+        i++;
+      } else {
+        out.ratchet = true;
+      }
+    } else if (a.startsWith('--ratchet=')) out.ratchet = a.slice('--ratchet='.length);
     else if (a === '--score-policy') out.scorePolicy = argv[++i];
     else if (a === '--surface-from') out.surfaceFrom = argv[++i];
     else if (a === '--repo-a') out.repoA = argv[++i];
@@ -78,6 +111,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
     else if (a.startsWith('--engine-ref=')) out.engineRef = a.slice('--engine-ref='.length);
     else if (a.startsWith('--fail-under=')) out.failUnder = a.slice('--fail-under='.length);
     else if (a.startsWith('--fail-under-band=')) out.failUnderBand = a.slice('--fail-under-band='.length);
+    else if (a.startsWith('--baseline=')) out.baseline = a.slice('--baseline='.length);
     else if (a.startsWith('--score-policy=')) out.scorePolicy = a.slice('--score-policy='.length);
     else if (a.startsWith('--surface-from=')) out.surfaceFrom = a.slice('--surface-from='.length);
     else if (a.startsWith('--repo-a=')) out.repoA = a.slice('--repo-a='.length);
@@ -119,6 +153,72 @@ export function parseScorePolicy(raw: string | undefined): ScorePolicy {
   if (raw == null || raw === '') return 'frozen';
   if (raw === 'frozen' || raw === 'legacy') return raw;
   throw new Error(`invalid --score-policy ${JSON.stringify(raw)}: expected frozen|legacy\n${USAGE}`);
+}
+
+/** Ratchet tolerance in headline points: bare `--ratchet` is 0 (design D7 —
+ *  the default is zero and is configurable), a supplied value must be a
+ *  non-negative finite number. */
+export function parseRatchetTolerance(raw: true | string | undefined): number | undefined {
+  if (raw == null) return undefined;
+  if (raw === true) return 0;
+  const n = Number(raw);
+  if (raw.trim() === '' || !Number.isFinite(n) || n < 0) {
+    throw new Error(`invalid --ratchet ${JSON.stringify(raw)}: expected a non-negative tolerance in points, e.g. --ratchet or --ratchet=2.5\n${USAGE}`);
+  }
+  return n;
+}
+
+export type BaselineLoadResult =
+  | { ok: true; envelope: ReportEnvelope }
+  | { ok: false; detail: string };
+
+/** A baseline is a previously sealed envelope on disk. A delta document is
+ *  explicitly refused rather than half-read (design D9 / run-diff: the delta is
+ *  never an envelope); a readable JSON that is neither is refused too. */
+export function validateBaselineDocument(raw: unknown, label = 'baseline'): BaselineLoadResult {
+  if (isDeltaDocument(raw)) {
+    return { ok: false, detail: `${label} is a run-diff delta document, not a sealed report — pass the report.json envelope it was derived from` };
+  }
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return { ok: false, detail: `${label} is not a sealed report envelope (expected a JSON object)` };
+  }
+  const env = raw as Partial<ReportEnvelope>;
+  if (!env.meta || typeof env.meta !== 'object' || !env.report || typeof env.report !== 'object') {
+    return { ok: false, detail: `${label} is not a sealed report envelope (missing meta or report)` };
+  }
+  if (typeof env.meta.runId !== 'string' || !env.meta.runId) {
+    return { ok: false, detail: `${label} is not a sealed report envelope (meta.runId missing)` };
+  }
+  try {
+    assertContractVersion(env as ReportEnvelope);
+  } catch (e) {
+    return { ok: false, detail: `${label}: ${e instanceof Error ? e.message : String(e)}` };
+  }
+  return { ok: true, envelope: env as ReportEnvelope };
+}
+
+/** Read + validate the baseline before any scan work starts: an unreadable,
+ *  missing, or non-envelope file is a usage-or-refused exit with no report
+ *  written (scan-local: unreadable baseline is refused before work). */
+export async function loadBaselineEnvelope(
+  path: string,
+  readFileImpl: (p: string, enc: 'utf8') => Promise<string> = readFile,
+): Promise<BaselineLoadResult> {
+  let text: string;
+  try {
+    text = await readFileImpl(path, 'utf8');
+  } catch (e) {
+    const detail = (e instanceof Error ? e.message : String(e)).slice(0, 200);
+    return { ok: false, detail: `cannot read baseline ${path}: ${detail}` };
+  }
+  let raw: unknown;
+  try {
+    raw = JSON.parse(text);
+  } catch (e) {
+    const detail = (e instanceof Error ? e.message : String(e)).slice(0, 200);
+    return { ok: false, detail: `baseline ${path} is not valid JSON: ${detail}` };
+  }
+  return validateBaselineDocument(raw, `baseline ${path}`);
 }
 
 export function validateRepo(raw: string | undefined): string {
@@ -247,6 +347,30 @@ export async function main(argv: string[], opts: MainOpts = {}): Promise<number>
     stderr(e instanceof Error ? e.message : String(e));
     return EXIT_USAGE;
   }
+  // The ratchet is a delta gate: without a baseline there is no comparison to
+  // gate, so the combination is a usage error before any work.
+  if (args.ratchet != null && args.baseline == null) {
+    stderr(`--ratchet requires --baseline <report.json>: there is no delta to gate without a comparison\n${USAGE}`);
+    return EXIT_USAGE;
+  }
+  let ratchet: number | undefined;
+  try {
+    ratchet = parseRatchetTolerance(args.ratchet);
+  } catch (e) {
+    stderr(e instanceof Error ? e.message : String(e));
+    return EXIT_USAGE;
+  }
+  // Read + validate the baseline before any scan work: a missing, unreadable, or
+  // non-envelope file refuses here and writes nothing (scan-local).
+  let baseline: ReportEnvelope | undefined;
+  if (args.baseline != null) {
+    const loaded = await loadBaselineEnvelope(args.baseline);
+    if (!loaded.ok) {
+      stderr(`refused (baseline): ${loaded.detail}`);
+      return EXIT_USAGE;
+    }
+    baseline = loaded.envelope;
+  }
   if (!args.out) {
     stderr(`missing --out <dir>\n${USAGE}`);
     return EXIT_USAGE;
@@ -263,11 +387,11 @@ export async function main(argv: string[], opts: MainOpts = {}): Promise<number>
   const trace: Array<{ ts: number; elapsedMs: number; label: string; type?: string }> = [];
 
   if (useLocal) {
-    return await runLocalMain(args.path!, { env, stdout, stderr, outDir, startMs, trace, failUnder, failUnderBand, scorePolicy, strict: !!args.strict, engineRef: args.engineRef });
+    return await runLocalMain(args.path!, { env, stdout, stderr, outDir, startMs, trace, failUnder, failUnderBand, scorePolicy, strict: !!args.strict, engineRef: args.engineRef, baseline, ratchet });
   }
   const repo = validateRepoSafe(args.repo, stderr);
   if (!repo) return EXIT_USAGE;
-  return await runRemoteMain(repo, { env, stdout, stderr, outDir, startMs, trace, failUnder, failUnderBand, scorePolicy, engineRef: args.engineRef });
+  return await runRemoteMain(repo, { env, stdout, stderr, outDir, startMs, trace, failUnder, failUnderBand, scorePolicy, engineRef: args.engineRef, baseline, ratchet });
 }
 
 function validateRepoSafe(raw: string | undefined, stderr: (s: string) => void): string | null {
@@ -291,6 +415,10 @@ type RunOpts = {
   failUnderBand: string | undefined;
   scorePolicy: ScorePolicy;
   engineRef?: string;
+  /** Parsed + validated baseline envelope; absent for an unbaselined run. */
+  baseline?: ReportEnvelope;
+  /** Ratchet tolerance in points; defined only when --baseline --ratchet was set. */
+  ratchet?: number;
 };
 
 async function runLocalMain(
@@ -500,9 +628,21 @@ async function writeReportsAndExit(
     categories: (report.categories ?? []) as RenderInput['categories'],
   };
   await mkdir(o.outDir, { recursive: true });
-  await writeFile(`${o.outDir}/report.json`, JSON.stringify({ report: sealed.report, meta: sealed.meta, trace: sealed.traceToPersist, contractVersion: CONTRACT_VERSION }, null, 2), 'utf8');
+  const envelope = { report: sealed.report, meta: sealed.meta, trace: sealed.traceToPersist, contractVersion: CONTRACT_VERSION };
+  await writeFile(`${o.outDir}/report.json`, JSON.stringify(envelope, null, 2), 'utf8');
   await writeFile(`${o.outDir}/report.html`, renderHtml(renderInput), 'utf8');
   await writeFile(`${o.outDir}/report.md`, renderMarkdown(renderInput), 'utf8');
+
+  // Baseline comparison (scan-local: baselined run adds a document and a summary
+  // line). The delta is derived from the sealed envelope and never alters the
+  // three sealed files above; design D5 writes it beside them as report.delta.json.
+  let delta: DeltaDocument | undefined;
+  let ratchet: RatchetOutcome | undefined;
+  if (o.baseline) {
+    delta = computeDelta(o.baseline, envelope as ReportEnvelope);
+    if (o.ratchet != null) ratchet = ratchetOutcome(delta, o.ratchet);
+    await writeFile(`${o.outDir}/report.delta.json`, JSON.stringify(delta, null, 2), 'utf8');
+  }
 
   const threshold = o.failUnder;
   const bandName = o.failUnderBand;
@@ -517,8 +657,10 @@ async function writeReportsAndExit(
   // Single stdout line, composed by the one composer: status fields (score/band,
   // gates, coverage, threshold state), the compact next-band path clause when
   // the sealed report carries one, then the band next-step sentence with the
-  // tracked assessment URL as the final token, appearing exactly once.
+  // tracked assessment URL as the final token, appearing exactly once. A delta
+  // summary line follows it without touching that line's composition.
   o.stdout(formatStdout(report, { thresholdState }));
+  if (delta) o.stdout(formatDeltaLine(delta, ratchet ? { ratchetState: ratchet.state } : {}));
   if (tripped) {
     if (bandName != null) {
       const bandFloor = bandThresholdFor(bandName);
@@ -529,6 +671,20 @@ async function writeReportsAndExit(
       o.stderr(suppressed ? `threshold trip: headline suppressed (insufficient signal) < --fail-under ${threshold}` : `threshold trip: score ${report.headline.score} < --fail-under ${threshold}`);
     }
     return EXIT_THRESHOLD;
+  }
+  // Ratchet gate semantics (run-diff): trip only on a code-attributable
+  // regression beyond tolerance; an incomparable comparison refuses with a
+  // usage-or-refused exit naming the cause rather than passing. The threshold
+  // gate above keeps an unbaselined-parity exit when it already tripped.
+  if (ratchet) {
+    if (ratchet.refused) {
+      o.stderr(ratchet.message);
+      return EXIT_USAGE;
+    }
+    if (ratchet.tripped) {
+      o.stderr(ratchet.message);
+      return EXIT_THRESHOLD;
+    }
   }
   return EXIT_OK;
 }

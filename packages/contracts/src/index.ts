@@ -256,6 +256,16 @@ export interface EnvelopeMeta {
    * identical target content + scanner release + flags; runId/scanned_at differ. */
   score_fingerprint?: string;
   fingerprint_version?: number;
+  /** Comparability input (report-envelope: comparability inputs on the envelope):
+   * the indicator ids this run's slice requested — every full-table row that is
+   * not `not_implemented`. Absent (never `[]`) on envelopes written before the
+   * field existed, so absence stays distinguishable from an empty set; such an
+   * envelope is reconstructed by `resolveRequestedIndicators`. */
+  requested_indicators?: string[];
+  /** Comparability input: the headline score policy that sealed this run
+   * (`frozen` | `legacy`). Already a fingerprinted input; recorded here so a
+   * differ can read it from `meta` without opening the report body. */
+  score_policy?: string;
 }
 
 export type TracePhase =
@@ -582,6 +592,231 @@ export function formatBandPathClause(path: NextBandPath, tier: string): string {
   if (crossing.arrival === "alone") return `${head} via ${crossing.class}`;
   const chain = path.classes.filter((c) => c.cumulative_pp <= crossing.cumulative_pp).map((c) => c.class);
   return `${head} via ${chain.join("+")}`;
+}
+
+// ---------------------------------------------------------------------------
+// run-diff — the derived delta document (capability `run-diff`).
+//
+// Defined exactly once, here: the CLI and any later consumer import this
+// definition. A delta is NOT an envelope — it carries no score fingerprint, is
+// not accepted by ingest, and modifies neither input envelope.
+// ---------------------------------------------------------------------------
+
+/** Document marker for the derived comparison artifact written beside the
+ *  sealed trio as `report.delta.json`. */
+export const DELTA_DOCUMENT = "run-delta";
+
+/** Schema version of the delta document itself (independent of the envelope's
+ *  `contractVersion`: a delta is a derived view, never a sealed report). */
+export const DELTA_SCHEMA_VERSION = 1;
+
+/** Every reported row difference carries exactly one kind
+ *  (`run-diff`: delta-kind taxonomy with attribution precedence). */
+export type DeltaKind =
+  | "scored-change"
+  | "coverage-change"
+  | "applicability-change"
+  | "implementation-change"
+  | "model-change";
+
+/** A row that entered or left the graded set between the two runs, or whose
+ *  applicability flipped. Emitted instead of a score delta for its case. */
+export type DeltaTransition =
+  | "became-graded"
+  | "became-ungraded"
+  | "became-applicable"
+  | "became-not-applicable"
+  | "became-implemented";
+
+/** Report-level comparability verdict, computed before any delta
+ *  (`run-diff`: comparability verdict before any delta). */
+export type ComparabilityVerdict =
+  | "comparable"
+  | "comparable-with-coverage-change"
+  | "comparable-with-row-exclusions"
+  | "incomparable";
+
+/** Why an `incomparable` verdict refused the comparison. */
+export type ComparabilityBlockingCause =
+  | "subject-mismatch"
+  | "fingerprint-era-mismatch"
+  | "rubric-version-mismatch"
+  | "missing-comparability-inputs";
+
+/** The inputs a comparability verdict is computed from; each is reported as
+ *  matched or differed so a reader can tell what was held constant. Engine
+ *  identity is listed but never blocking (design D1). */
+export type ComparabilityInputName =
+  | "subject"
+  | "fingerprint-era"
+  | "rubric-version"
+  | "requested-indicators"
+  | "producer-versions"
+  | "engine-identity"
+  | "score-policy";
+
+export interface ComparabilityInputReport {
+  name: ComparabilityInputName;
+  matched: boolean;
+  /** What was compared, named concretely (values or counts). */
+  detail: string;
+}
+
+export interface DeltaProducerExclusion {
+  tool: string;
+  baseline_version: string;
+  current_version: string;
+}
+
+export interface DeltaVerdict {
+  status: ComparabilityVerdict;
+  /** Present exactly when `status === "incomparable"`. */
+  cause?: ComparabilityBlockingCause;
+  /** Which fingerprinted inputs the rows were withheld for; empty unless the
+   *  verdict is `comparable-with-row-exclusions`. */
+  row_exclusions?: { rows: string[]; producers: DeltaProducerExclusion[] };
+  /** Every comparability input this verdict was computed from. */
+  inputs: ComparabilityInputReport[];
+}
+
+/** One side of a comparison: enough identity to re-read or re-baseline it. */
+export interface DeltaRunReference {
+  runId: string;
+  /** Sealed headline score, or `null` when the headline was suppressed. */
+  score: number | null;
+  tier: string;
+  suppressed: boolean;
+  score_fingerprint?: string;
+  fingerprint_version?: number;
+  /** Run-scoped identity, so baseline age is visible in the artifact. */
+  ranAt?: string;
+  repoSha?: string;
+  rubric_version?: string;
+  engine_version?: string;
+  engineSha7?: string;
+}
+
+export interface DeltaRowDifference {
+  row: string;
+  name?: string;
+  category?: string;
+  kind: DeltaKind;
+  from: { status: RowStatus; score?: number };
+  to: { status: RowStatus; score?: number };
+  /** Signed row-score movement; present only for rows graded in both runs. */
+  score_delta?: number;
+  /** Present instead of a score delta for a row graded in only one run. */
+  transition?: DeltaTransition;
+  /** The row's own recorded reason for an applicability transition
+   *  (`reason` / `unknown_measure_path` of the run the row entered). */
+  transition_reason?: string;
+  /** Evidence pointers the transitioned row recorded, when it carried any. */
+  transition_evidence?: string[];
+  /** Set when the producing tool's identity or version differs per row. */
+  producer?: { tool: string; from: string; to: string };
+}
+
+export interface DeltaTransitionEntry {
+  row: string;
+  transition: DeltaTransition;
+  kind: DeltaKind;
+  reason?: string;
+  evidence?: string[];
+}
+
+/** Headline movement decomposed by delta kind (`run-diff`: headline
+ *  decomposition). Parts are ∈ {code, coverage, model} plus a disclosed
+ *  residual; `statement` is the one-sentence reading of the decomposition. */
+export interface DeltaHeadlineDecomposition {
+  baseline: number;
+  current: number;
+  /** current − baseline, from the two sealed headlines. */
+  movement: number;
+  code_attributable: number;
+  coverage_attributable: number;
+  model_attributable: number;
+  /** Residual that could not be attributed — disclosed, never absorbed. */
+  unattributable: number;
+  /** Headline policy the decomposition was computed under. */
+  policy: string;
+  /** True when the code-attributable part is zero and the headline moved. */
+  no_code_change_measured: boolean;
+  statement: string;
+  /** Rows withheld from code attribution and why. */
+  attribution_notes: string[];
+}
+
+/** The derived comparison document (`report.delta.json`): two run references,
+ *  the verdict with its blocking cause, the headline decomposition, the per-row
+ *  differences with their kinds, and the transition list. Never sealed. */
+export interface DeltaDocument {
+  document: typeof DELTA_DOCUMENT;
+  delta_schema: number;
+  baseline: DeltaRunReference;
+  current: DeltaRunReference;
+  verdict: DeltaVerdict;
+  /** Absent for an `incomparable` verdict: no numbers are emitted at all. */
+  headline?: DeltaHeadlineDecomposition;
+  rows: DeltaRowDifference[];
+  transitions: DeltaTransitionEntry[];
+}
+
+/** True when a parsed JSON document is a run-diff delta rather than a sealed
+ *  envelope. Ingest uses this to skip a delta explicitly (design D9). */
+export function isDeltaDocument(value: unknown): value is DeltaDocument {
+  if (!value || typeof value !== "object") return false;
+  const doc = value as Partial<DeltaDocument>;
+  return (
+    doc.document === DELTA_DOCUMENT &&
+    typeof doc.delta_schema === "number" &&
+    !!doc.baseline &&
+    typeof doc.baseline === "object" &&
+    !!doc.current &&
+    typeof doc.current === "object" &&
+    !!doc.verdict &&
+    typeof doc.verdict === "object"
+  );
+}
+
+export type RequestedIndicatorsResolution =
+  | { ok: true; indicators: string[]; source: "recorded" | "reconstructed" }
+  | { ok: false; reason: "missing-comparability-inputs"; detail: string };
+
+/** Resolve a run's requested indicator set for comparison (design D3).
+ *
+ *  Recorded when `meta.requested_indicators` is present — an empty array is a
+ *  recorded empty set, so absence is never read as "nothing was requested".
+ *  Otherwise reconstructed from the report's full table: a row is requested
+ *  precisely when it is not `not_implemented`, which is exact because
+ *  `not_implemented` already means "the rubric lists it and this slice does not
+ *  build it". Refuses only when neither input exists. */
+export function resolveRequestedIndicators(input: {
+  meta?: { requested_indicators?: unknown } | null;
+  report?: { full_table?: unknown } | null;
+}): RequestedIndicatorsResolution {
+  const recorded = input.meta?.requested_indicators;
+  if (Array.isArray(recorded)) {
+    const ids = [...new Set(recorded.map((id) => String(id)))].sort();
+    return { ok: true, indicators: ids, source: "recorded" };
+  }
+  const table = input.report?.full_table;
+  if (Array.isArray(table) && table.length > 0) {
+    const ids = [
+      ...new Set(
+        table
+          .filter((r) => (r as { status?: string })?.status !== "not_implemented")
+          .map((r) => String((r as { id?: unknown })?.id ?? ""))
+          .filter((id) => id !== ""),
+      ),
+    ].sort();
+    return { ok: true, indicators: ids, source: "reconstructed" };
+  }
+  return {
+    ok: false,
+    reason: "missing-comparability-inputs",
+    detail:
+      "no requested_indicators on meta and no full table to reconstruct from — request the set explicitly by re-sealing rather than assuming a comparison",
+  };
 }
 
 // ---------------------------------------------------------------------------

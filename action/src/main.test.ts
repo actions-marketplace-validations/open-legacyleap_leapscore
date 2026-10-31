@@ -1,14 +1,79 @@
 /** action/src/main.test.ts — Action unit test matrix over pass/trip/refused exits (node:test, run: npm test --workspace action) */
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { buildScanArgs, handleExitCode, readScore, readInputs, run } from './main.js';
+import { buildScanArgs, handleExitCode, readScore, readInputs, run, ratchetFlag, ratchetTolerance, readDelta } from './main.js';
 import { main as scanMain } from '../../apps/scanner/bin/scan';
+import { headlineFromRows } from '../../apps/scanner/src/scan/diff';
+import { tierForScore, type RowStatus } from '@leapscore/contracts';
 
 function tmpOut(): string {
   return mkdtempSync(join(tmpdir(), 'leapscore-action-'));
+}
+
+function makeActionFixture(): string {
+  const dir = mkdtempSync(join(tmpdir(), 'leapscore-action-fixture-'));
+  writeFileSync(join(dir, 'package.json'), JSON.stringify({ name: 'fixture', version: '1.0.0', dependencies: { lodash: '4.17.20' } }));
+  writeFileSync(join(dir, 'package-lock.json'), JSON.stringify({ name: 'fixture', lockfileVersion: 3, packages: {} }));
+  writeFileSync(join(dir, 'README.md'), '# fixture\nsetup: npm install\n');
+  writeFileSync(join(dir, 'index.js'), 'module.exports = 1;\n');
+  return dir;
+}
+
+type StoredRow = { id: string; status: RowStatus; score?: number; category_id?: string; evidence?: { tool?: string; tool_version?: string } };
+type StoredEnv = {
+  report: { headline: { score: number; tier: string; score_policy?: string }; full_table: StoredRow[]; categories: Array<{ id: string; weight: number }> };
+  meta: { repoSlug: string; score: number; tier: string; score_policy?: string; requested_indicators?: string[] };
+};
+
+function mutateStoredReport(p: string, mutate: (env: StoredEnv) => void): void {
+  const env = JSON.parse(readFileSync(p, 'utf8')) as StoredEnv;
+  mutate(env);
+  writeFileSync(p, JSON.stringify(env, null, 2), 'utf8');
+}
+
+/** Recompute the sealed headline from rows, as the differ does for counterfactuals. */
+function recomputeHeadline(env: StoredEnv): void {
+  const weights: Record<string, number> = {};
+  for (const c of env.report.categories) weights[c.id] = c.weight;
+  const score = headlineFromRows(env.report.full_table, env.meta.score_policy ?? 'frozen', weights);
+  env.report.headline.score = score;
+  env.meta.score = score;
+  env.report.headline.tier = tierForScore(score);
+  env.meta.tier = env.report.headline.tier;
+}
+
+/** Simulate a baseline whose slice did not build `dropped` (coverage growth). */
+function simulateEarlierSlice(p: string, dropped: string[]): void {
+  mutateStoredReport(p, (env) => {
+    for (const row of env.report.full_table) {
+      if (!dropped.includes(row.id)) continue;
+      delete row.score;
+      row.status = 'not_implemented';
+    }
+    env.meta.requested_indicators = env.report.full_table.filter((r) => r.status !== 'not_implemented').map((r) => r.id);
+    recomputeHeadline(env);
+  });
+}
+
+async function runAction(
+  inputs: Record<string, string>,
+  collected: { failed: string[]; outputs: Record<string, string>; summaries: string[] },
+): Promise<void> {
+  await run({
+    getInput: (name) => inputs[name] ?? '',
+    setFailed: (m) => collected.failed.push(m),
+    setOutput: (n, v) => { collected.outputs[n] = v; },
+    summary: (md) => collected.summaries.push(md),
+    // Execute the argv a workflow would: npx -y tsx@4 <scanBin> scan ... → scanner main.
+    execImpl: async (_cmd, args) => scanMain(args.slice(3), { env: {}, stdout: () => {}, stderr: () => {} }),
+  });
+}
+
+function collector() {
+  return { failed: [] as string[], outputs: {} as Record<string, string>, summaries: [] as string[] };
 }
 
 describe('buildScanArgs', () => {
@@ -33,6 +98,18 @@ describe('buildScanArgs', () => {
     assert.ok(!args.includes('--fail-under'));
     assert.ok(!args.includes('--fail-under-band'));
     assert.ok(!args.includes('--engine-ref'));
+    assert.ok(!args.includes('--baseline'));
+    assert.ok(!args.some((a) => a.startsWith('--ratchet')));
+  });
+  it('maps baseline and ratchet inputs to the comparison flags', () => {
+    const { args } = buildScanArgs({ path: '.', strict: false, outDir: 'out', baseline: 'prev/report.json', ratchet: 'true' }, 'scan.ts');
+    const b = args.indexOf('--baseline');
+    assert.equal(args[b + 1], 'prev/report.json');
+    assert.ok(args.includes('--ratchet'));
+    const tol = buildScanArgs({ path: '.', strict: false, outDir: 'out', baseline: 'p.json', ratchet: '2.5' }, 'scan.ts');
+    assert.ok(tol.args.includes('--ratchet=2.5'));
+    const off = buildScanArgs({ path: '.', strict: false, outDir: 'out', baseline: 'p.json', ratchet: 'false' }, 'scan.ts');
+    assert.ok(!off.args.some((a) => a.startsWith('--ratchet')));
   });
   it('passes the band gate through only when set', () => {
     const withBand = buildScanArgs({ path: '.', failUnderBand: 'moderate', strict: false, outDir: 'out' }, 'scan.ts');
@@ -50,10 +127,30 @@ describe('readInputs defaults', () => {
     assert.equal(inputs.path, '.');
     assert.equal(inputs.outDir, 'leapscore-report');
     assert.equal(inputs.strict, false);
+    assert.equal(inputs.baseline, undefined);
+    assert.equal(inputs.ratchet, undefined);
   });
   it('reads fail_under_band, empty default leaves it unset', () => {
     assert.equal(readInputs((name) => (name === 'fail_under_band' ? 'high' : '')).failUnderBand, 'high');
     assert.equal(readInputs(() => '').failUnderBand, undefined);
+  });
+  it('reads baseline and ratchet', () => {
+    const inputs = readInputs((name) => (name === 'baseline' ? 'prev/report.json' : name === 'ratchet' ? '2' : ''));
+    assert.equal(inputs.baseline, 'prev/report.json');
+    assert.equal(inputs.ratchet, '2');
+  });
+});
+
+describe('ratchetFlag and ratchetTolerance', () => {
+  it('empty and false disable the gate; true and numbers map to the CLI forms', () => {
+    assert.equal(ratchetFlag(undefined), undefined);
+    assert.equal(ratchetFlag(''), undefined);
+    assert.equal(ratchetFlag('FALSE'), undefined);
+    assert.equal(ratchetFlag('true'), '--ratchet');
+    assert.equal(ratchetFlag('2.5'), '--ratchet=2.5');
+    assert.equal(ratchetTolerance('true'), 0);
+    assert.equal(ratchetTolerance('2.5'), 2.5);
+    assert.equal(ratchetTolerance(''), undefined);
   });
 });
 
@@ -129,31 +226,148 @@ describe('readScore', () => {
   });
 });
 
-describe('5.3 workflow run with the band gate set', () => {
-  it('fails the step on a below-band seal while the report files remain for upload', async () => {
-    const dir = mkdtempSync(join(tmpdir(), 'leapscore-action-fixture-'));
-    writeFileSync(join(dir, 'package.json'), JSON.stringify({ name: 'fixture', version: '1.0.0', dependencies: { lodash: '4.17.20' } }));
-    writeFileSync(join(dir, 'package-lock.json'), JSON.stringify({ name: 'fixture', lockfileVersion: 3, packages: {} }));
-    writeFileSync(join(dir, 'README.md'), '# fixture\nsetup: npm install\n');
-    writeFileSync(join(dir, 'index.js'), 'module.exports = 1;\n');
-    const outDir = mkdtempSync(join(tmpdir(), 'leapscore-action-out-'));
-    const failed: string[] = [];
-    const outputs: Record<string, string> = {};
+describe('handleExitCode with a ratchet gate', () => {
+  function deltaHarness(outDir: string, delta: Record<string, unknown>, score?: number) {
+    mkdirSync(outDir, { recursive: true });
+    if (score != null) writeFileSync(join(outDir, 'report.json'), JSON.stringify({ meta: { score, tier: 'Moderate' }, report: { headline: { score, tier: 'Moderate' } } }));
+    writeFileSync(join(outDir, 'report.delta.json'), JSON.stringify(delta));
+    const c = collector();
+    return c;
+  }
+  it('exit 3 with a negative code part is reported as a ratchet trip, not a threshold trip', () => {
+    const dir = tmpOut();
     try {
-      await run({
-        getInput: (name) => (name === 'path' ? dir : name === 'fail_under_band' ? 'high' : name === 'out_dir' ? outDir : ''),
-        setFailed: (m) => failed.push(m),
-        setOutput: (n, v) => { outputs[n] = v; },
-        // Execute the same argv the workflow would: npx tsx@4 <scanBin> scan <path> ... → scanner main.
-        execImpl: async (_cmd, args) => scanMain(args.slice(3), { env: {}, stdout: () => {}, stderr: () => {} }),
-      });
-      assert.equal(failed.length, 1);
-      assert.match(failed[0], /fail_under_band high/);
-      assert.equal(outputs['exit-code'], '3');
-      for (const f of ['report.json', 'report.html', 'report.md']) assert.ok(existsSync(join(outDir, f)), `${f} kept for upload`);
+      const c = deltaHarness(dir, { verdict: { status: 'comparable' }, headline: { code_attributable: -4.2, movement: -4.2 } }, 50);
+      handleExitCode(3, { path: '.', strict: false, outDir: dir, baseline: 'b.json', ratchet: 'true' }, { setFailed: (m) => c.failed.push(m), setOutput: (n, v) => { c.outputs[n] = v; }, summary: (md) => c.summaries.push(md) });
+      assert.equal(c.failed.length, 1);
+      assert.match(c.failed[0], /ratchet trip/);
+      assert.match(c.failed[0], /-4\.2pp/);
+      assert.match(c.summaries[0], /ratchet trip/);
+    } finally { rmSync(dir, { recursive: true, force: true }); }
+  });
+  it('exit 3 with a non-negative code part falls back to the threshold message', () => {
+    const dir = tmpOut();
+    try {
+      const c = deltaHarness(dir, { verdict: { status: 'comparable' }, headline: { code_attributable: 0, movement: 0 } }, 20);
+      handleExitCode(3, { path: '.', strict: false, outDir: dir, failUnder: '53', baseline: 'b.json', ratchet: 'true' }, { setFailed: (m) => c.failed.push(m), setOutput: () => {} });
+      assert.match(c.failed[0], /threshold trip/i);
+    } finally { rmSync(dir, { recursive: true, force: true }); }
+  });
+  it('exit 2 with an incomparable delta names the blocking cause in the message and summary', () => {
+    const dir = tmpOut();
+    try {
+      const c = deltaHarness(dir, { verdict: { status: 'incomparable', cause: 'fingerprint-era-mismatch' } });
+      handleExitCode(2, { path: '.', strict: false, outDir: dir, baseline: 'b.json', ratchet: 'true' }, { setFailed: (m) => c.failed.push(m), setOutput: () => {}, summary: (md) => c.summaries.push(md) });
+      assert.equal(c.failed.length, 1);
+      assert.match(c.failed[0], /ratchet refused/);
+      assert.match(c.failed[0], /fingerprint-era-mismatch/);
+      assert.match(c.summaries[0], /fingerprint-era-mismatch/);
+      assert.ok(!/pass/i.test(c.failed[0]));
+    } finally { rmSync(dir, { recursive: true, force: true }); }
+  });
+  it('readDelta returns undefined when no delta document exists', () => {
+    const dir = tmpOut();
+    try {
+      assert.equal(readDelta(dir), undefined);
+    } finally { rmSync(dir, { recursive: true, force: true }); }
+  });
+});
+
+describe('6.1 a workflow supplying neither baseline nor ratchet behaves as before', () => {
+  it('action.yml declares both inputs with empty defaults', () => {
+    const yml = readFileSync(new URL('../action.yml', import.meta.url), 'utf8');
+    assert.match(yml, /baseline:\n\s+description:[^\n]*\n\s+required: false\n\s+default: ""/);
+    assert.match(yml, /ratchet:\n\s+description:[^\n]*\n\s+required: false\n\s+default: ""/);
+  });
+  it('a run with neither input writes no delta document and does not fail', async () => {
+    const dir = makeActionFixture();
+    const outDir = tmpOut();
+    const c = collector();
+    try {
+      await runAction({ path: dir, out_dir: outDir }, c);
+      assert.deepEqual(c.failed, []);
+      assert.equal(c.outputs['exit-code'], '0');
+      assert.ok(existsSync(join(outDir, 'report.json')));
+      assert.ok(!existsSync(join(outDir, 'report.delta.json')), 'no delta without a baseline');
     } finally {
       rmSync(dir, { recursive: true, force: true });
       rmSync(outDir, { recursive: true, force: true });
     }
+  });
+});
+
+describe('6.2/6.3/6.4/6.5 workflow run against a restored baseline', () => {
+  it('coverage-only movement does not fail the step; a code regression does, with artifacts kept', async () => {
+    const dir = makeActionFixture();
+    const baselineOut = tmpOut();
+    try {
+      await runAction({ path: dir, out_dir: baselineOut }, collector());
+      assert.ok(existsSync(join(baselineOut, 'report.json')));
+
+      // Coverage-only: the restored baseline did not build four rows the current
+      // run does. The ratchet must not fail the step.
+      const coverageBase = tmpOut();
+      writeFileSync(join(coverageBase, 'report.json'), readFileSync(join(baselineOut, 'report.json')));
+      simulateEarlierSlice(join(coverageBase, 'report.json'), ['DOCS-01', 'DOCS-03', 'SEC-09', 'SEC-10']);
+      const covOut = tmpOut();
+      const cov = collector();
+      await runAction({ path: dir, out_dir: covOut, baseline: join(coverageBase, 'report.json'), ratchet: 'true' }, cov);
+      assert.deepEqual(cov.failed, []);
+      assert.equal(cov.outputs['exit-code'], '0');
+      const covDelta = JSON.parse(readFileSync(join(covOut, 'report.delta.json'), 'utf8'));
+      assert.equal(covDelta.verdict.status, 'comparable-with-coverage-change');
+      assert.equal(covDelta.headline.code_attributable, 0);
+      rmSync(coverageBase, { recursive: true, force: true });
+
+      // Code regression: the restored baseline sealed one row better than the
+      // fixture scans. The step fails and the artifacts remain for upload.
+      const regressedBase = tmpOut();
+      writeFileSync(join(regressedBase, 'report.json'), readFileSync(join(baselineOut, 'report.json')));
+      mutateStoredReport(join(regressedBase, 'report.json'), (env) => {
+        const row = env.report.full_table.find((r) => r.id === 'DOCS-01')!;
+        row.score = (row.score ?? 0) + 1;
+        recomputeHeadline(env);
+      });
+      const regOut = tmpOut();
+      const reg = collector();
+      await runAction({ path: dir, out_dir: regOut, baseline: join(regressedBase, 'report.json'), ratchet: 'true' }, reg);
+      assert.equal(reg.outputs['exit-code'], '3');
+      assert.equal(reg.failed.length, 1);
+      assert.match(reg.failed[0], /ratchet trip/);
+      for (const f of ['report.json', 'report.html', 'report.md', 'report.delta.json']) {
+        assert.ok(existsSync(join(regOut, f)), `${f} kept for upload`);
+      }
+      rmSync(regressedBase, { recursive: true, force: true });
+
+      // Incomparable refusal: a different subject. The step refuses and both the
+      // failure message and the job summary name the blocking cause.
+      const refBase = tmpOut();
+      writeFileSync(join(refBase, 'report.json'), readFileSync(join(baselineOut, 'report.json')));
+      mutateStoredReport(join(refBase, 'report.json'), (env) => { env.meta.repoSlug = 'other/app'; });
+      const refOut = tmpOut();
+      const ref = collector();
+      await runAction({ path: dir, out_dir: refOut, baseline: join(refBase, 'report.json'), ratchet: 'true' }, ref);
+      assert.equal(ref.outputs['exit-code'], '2');
+      assert.equal(ref.failed.length, 1);
+      assert.match(ref.failed[0], /subject-mismatch/);
+      assert.equal(ref.summaries.length, 1);
+      assert.match(ref.summaries[0], /subject-mismatch/);
+      for (const f of ['report.json', 'report.html', 'report.md', 'report.delta.json']) {
+        assert.ok(existsSync(join(refOut, f)), `${f} kept for upload`);
+      }
+      rmSync(refBase, { recursive: true, force: true });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+      rmSync(baselineOut, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('6.4 workflow artifacts are uploaded in every outcome', () => {
+  it('the workflow uploads the report directory with if: always()', () => {
+    const yml = readFileSync(new URL('../../.github/workflows/leapscore-scan.yml', import.meta.url), 'utf8');
+    assert.match(yml, /uses: actions\/upload-artifact@v\d+/);
+    assert.match(yml, /upload-artifact@v\d+[\s\S]*?if: always\(\)/);
+    assert.match(yml, /path: leapscore-report\//);
   });
 });

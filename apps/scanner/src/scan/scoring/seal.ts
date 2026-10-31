@@ -54,6 +54,17 @@ export {
 
 const ARCH_ALLOW = new Set(['library', 'service', 'cli', 'infra', 'docs', 'agent-skills', 'mixed', 'unknown']);
 
+/** The requested indicator set recorded on `meta` (report-envelope:
+ *  comparability inputs). A row is requested precisely when it is not
+ *  `not_implemented` — the slice builds it and may grade it, mark it N/A, or
+ *  leave it unknown — which is the same rule a differ applies when
+ *  reconstructing a pre-field envelope (run-diff D3), so the recorded and the
+ *  reconstructed set can never disagree. Derived from the sealed table, never
+ *  from a static list. */
+function requestedIndicatorsFromRows(rows: Array<{ id: string; status: string }>): string[] {
+  return [...new Set(rows.filter((r) => r.status !== 'not_implemented').map((r) => r.id))].sort();
+}
+
 /** The runnable-producer manifest (report-envelope / detector-honesty 1.3):
  * every producer that produced a graded row's evidence, each with its version,
  * derived from the sealed rows themselves so it can never be a stale static list. */
@@ -310,6 +321,11 @@ export function sealScan(input: SealInput): SealOutput {
     contractVersion: CONTRACT_VERSION,
     score_fingerprint: scoreFingerprint,
     fingerprint_version: FINGERPRINT_VERSION,
+    // Comparability inputs (report-envelope): both are declared views of inputs
+    // that already join the fingerprint (`indicator_set`, `score_policy`), so
+    // recording them changes no fingerprint. Never `[]` for "unknown".
+    requested_indicators: requestedIndicatorsFromRows(mvp.rows as Array<{ id: string; status: string }>),
+    score_policy: policy,
   };
 
   return { report, meta, traceToPersist, stdoutLine: formatStdout(report as never), durationMs, runId, repoSha: String(repoSha) };

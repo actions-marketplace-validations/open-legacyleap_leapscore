@@ -29,10 +29,18 @@ inputs:
     description: "Pinned engine ref for meta.engineSha7 identity"
     required: false
     default: ""
+  baseline:
+    description: "Path to a previously sealed report.json to compare against; writes report.delta.json beside the sealed reports"
+    required: false
+    default: ""
+  ratchet:
+    description: "Ratchet gate on the code-attributable part of the delta: 'true' for tolerance 0, or a tolerance in points (e.g. '2.5'). Empty or 'false' disables the gate. Requires baseline."
+    required: false
+    default: ""
 
 outputs:
   exit-code:
-    description: "Scanner exit code: 0 pass, 1 crash, 2 usage-or-refused, 3 threshold trip"
+    description: "Scanner exit code: 0 pass, 1 crash, 2 usage-or-refused, 3 threshold or ratchet trip"
   score:
     description: "Sealed score (when a report was written)"
   tier:

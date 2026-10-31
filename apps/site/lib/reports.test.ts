@@ -12,8 +12,10 @@ import {
   isValidRunId,
   readReportEnvelope,
   listReportMetas,
+  ingestReportDocuments,
 } from "@/lib/reports";
-import { resolveEngineSha7 } from "@leapscore/contracts";
+import { resolveEngineSha7, CONTRACT_VERSION } from "@leapscore/contracts";
+import sampleEnvelope from "@/lib/fixtures/django__django__506fc82__2026-08-12T000000-000Z.json";
 
 describe("repoSlug derivation", () => {
   it("normalizeRepoForSlug handles URL variants", () => {
@@ -141,5 +143,100 @@ describe("site-owned history (fixture)", () => {
     expect(await readReportEnvelope("../../etc/passwd")).toBeNull();
     expect(await readReportEnvelope("a/b__c__2026-08-29T053000-123Z")).toBeNull();
     expect(await readReportEnvelope("bad__format")).toBeNull();
+  });
+});
+
+// Ingest safety: a report directory may hold a sealed envelope plus the derived
+// report.delta.json. The delta never becomes a run row; unknown-version
+// envelopes keep the pre-change skip, now with the reason recorded.
+describe("ingest safety (report-envelope: delta document shape)", () => {
+  const runRef = (score: number) => ({
+    runId: "django__django__506fc82__2026-08-12T000000-000Z",
+    score,
+    tier: "Moderate",
+    suppressed: false,
+  });
+  const deltaDocument = () => ({
+    document: "run-delta",
+    delta_schema: 1,
+    baseline: runRef(58),
+    current: runRef(58),
+    verdict: { status: "comparable", inputs: [] },
+    rows: [],
+    transitions: [],
+  });
+  const envelopeDocument = () => JSON.parse(JSON.stringify(sampleEnvelope)) as Record<string, unknown>;
+
+  it("7.1 skips a delta document as a non-envelope with a recorded warning and creates no run row", () => {
+    const result = ingestReportDocuments([deltaDocument()]);
+    expect(result.envelopes).toEqual([]);
+    expect(result.metas).toEqual([]);
+    expect(result.warnings).toHaveLength(1);
+    expect(result.warnings[0].reason).toBe("delta-document");
+    expect(result.warnings[0].detail).toContain("run-delta");
+    expect(result.warnings[0].detail).toContain("no run row created");
+  });
+
+  it("7.2 ingests the envelope and skips only the delta when both share a directory", () => {
+    const result = ingestReportDocuments([envelopeDocument(), deltaDocument()]);
+    expect(result.envelopes).toHaveLength(1);
+    expect(result.metas.map((m) => m.runId)).toEqual(["django__django__506fc82__2026-08-12T000000-000Z"]);
+    expect(result.warnings.map((w) => w.reason)).toEqual(["delta-document"]);
+  });
+
+  it("7.3 unknown-version envelopes keep the pre-change behavior (skipped, never a row) with the reason recorded", () => {
+    const future = envelopeDocument();
+    (future.meta as Record<string, unknown>).contractVersion = CONTRACT_VERSION + 1;
+    const result = ingestReportDocuments([future, envelopeDocument()]);
+    expect(result.envelopes).toHaveLength(1);
+    expect(result.metas).toHaveLength(1);
+    expect(result.metas[0].runId).toBe("django__django__506fc82__2026-08-12T000000-000Z");
+    expect(result.warnings).toHaveLength(1);
+    expect(result.warnings[0].reason).toBe("unknown-contract-version");
+    expect(result.warnings[0].detail).toContain(String(CONTRACT_VERSION + 1));
+  });
+});
+
+// The run-history list maps each row from meta alone; the report body must
+// never be touched. A body that throws on any read proves the seam.
+describe("run-history list reads only meta (report-envelope: list view)", () => {
+  it("2.2 renders every list row field without opening the report body", () => {
+    const raw = JSON.parse(JSON.stringify(sampleEnvelope)) as Record<string, unknown>;
+    raw.report = new Proxy(
+      {},
+      {
+        get: () => {
+          throw new Error("report body was opened");
+        },
+      },
+    );
+    const { envelopes, metas, warnings } = ingestReportDocuments([raw]);
+    expect(warnings).toEqual([]);
+    expect(envelopes).toHaveLength(1);
+    // The fields /reports renders per row, sourced exclusively from meta.
+    const row = metas[0];
+    expect({
+      repo: row.repo,
+      score: row.score,
+      tier: row.tier,
+      ranAt: row.ranAt,
+      durationMs: row.durationMs,
+      budgetMs: row.budgetMs,
+      engineSha7: row.engineSha7,
+      repoSha: row.repoSha,
+      status: row.status,
+      runId: row.runId,
+    }).toEqual({
+      repo: "django/django",
+      score: 58,
+      tier: "Moderate",
+      ranAt: "2026-08-12T00:00:00.000Z",
+      durationMs: 0,
+      budgetMs: 0,
+      engineSha7: "506fc82",
+      repoSha: "506fc82",
+      status: "complete",
+      runId: "django__django__506fc82__2026-08-12T000000-000Z",
+    });
   });
 });

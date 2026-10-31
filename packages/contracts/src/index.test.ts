@@ -21,6 +21,10 @@ import {
   formatPp,
   formatBandPathClause,
   bandPathBlock,
+  DELTA_DOCUMENT,
+  DELTA_SCHEMA_VERSION,
+  isDeltaDocument,
+  resolveRequestedIndicators,
 } from "./index";
 
 describe("runId grammar", () => {
@@ -225,5 +229,117 @@ describe("next-band path contract field (band-path)", () => {
     const envelope = { contractVersion: CONTRACT_VERSION, meta: {}, report: { next_band_path: path } };
     expect(() => assertContractVersion(envelope)).not.toThrow();
     expect(CONTRACT_VERSION).toBe(1);
+  });
+});
+
+describe("run-diff delta document (one definition, never an envelope)", () => {
+  const delta = {
+    document: DELTA_DOCUMENT,
+    delta_schema: DELTA_SCHEMA_VERSION,
+    baseline: { runId: "a__x__1", score: 44, tier: "High", suppressed: false },
+    current: { runId: "a__x__2", score: 48, tier: "High", suppressed: false },
+    verdict: {
+      status: "comparable",
+      inputs: [{ name: "subject", matched: true, detail: "a" }],
+    },
+    headline: {
+      baseline: 44,
+      current: 48,
+      movement: 4,
+      code_attributable: 0,
+      coverage_attributable: 4,
+      model_attributable: 0,
+      unattributable: 0,
+      policy: "frozen",
+      no_code_change_measured: true,
+      statement: "no code change was measured",
+      attribution_notes: [],
+    },
+    rows: [],
+    transitions: [],
+  };
+
+  it("recognises a delta and refuses an envelope", () => {
+    expect(isDeltaDocument(delta)).toBe(true);
+    expect(
+      isDeltaDocument({ contractVersion: CONTRACT_VERSION, meta: {}, report: {}, trace: [] }),
+    ).toBe(false);
+    expect(isDeltaDocument(null)).toBe(false);
+    expect(isDeltaDocument("run-delta")).toBe(false);
+    expect(isDeltaDocument({ document: "run-delta" })).toBe(false);
+  });
+
+  it("carries no score fingerprint of its own", () => {
+    expect(Object.keys(delta)).not.toContain("score_fingerprint");
+    expect(JSON.stringify(delta)).not.toContain("score_fingerprint");
+  });
+
+  it("both run references name run id, fingerprint, era, score, and tier", () => {
+    for (const ref of [
+      { ...delta.baseline, score_fingerprint: "f".repeat(64), fingerprint_version: 2 },
+      { ...delta.current, score_fingerprint: "g".repeat(64), fingerprint_version: 2 },
+    ]) {
+      expect(ref.runId).toBeTruthy();
+      expect(ref.score_fingerprint).toHaveLength(64);
+      expect(ref.fingerprint_version).toBe(2);
+      expect(typeof ref.score).toBe("number");
+      expect(ref.tier).toBeTruthy();
+    }
+  });
+
+  it("an incomparable delta carries a named cause and no numbers", () => {
+    const refused = {
+      ...delta,
+      verdict: {
+        status: "incomparable",
+        cause: "fingerprint-era-mismatch",
+        inputs: [{ name: "fingerprint-era", matched: false, detail: "2 vs 1" }],
+      },
+      headline: undefined,
+      rows: [],
+      transitions: [],
+    };
+    expect(isDeltaDocument(refused)).toBe(true);
+    expect(refused.verdict.cause).toBe("fingerprint-era-mismatch");
+    expect(refused.headline).toBeUndefined();
+    expect(refused.rows).toEqual([]);
+    expect(refused.transitions).toEqual([]);
+  });
+});
+
+describe("requested indicator set resolution (run-diff D3)", () => {
+  it("prefers the recorded set, including a recorded empty set", () => {
+    expect(
+      resolveRequestedIndicators({ meta: { requested_indicators: ["DOCS-01", "ARCH-05", "DOCS-01"] } }),
+    ).toEqual({ ok: true, indicators: ["ARCH-05", "DOCS-01"], source: "recorded" });
+    expect(resolveRequestedIndicators({ meta: { requested_indicators: [] } })).toEqual({
+      ok: true,
+      indicators: [],
+      source: "recorded",
+    });
+  });
+
+  it("reconstructs from full-table statuses when the field is absent", () => {
+    const report = {
+      full_table: [
+        { id: "DOCS-01", status: "measured" },
+        { id: "ARCH-05", status: "unknown" },
+        { id: "SEC-02", status: "not_applicable" },
+        { id: "SEC-07", status: "not_implemented" },
+      ],
+    };
+    expect(resolveRequestedIndicators({ meta: {}, report })).toEqual({
+      ok: true,
+      indicators: ["ARCH-05", "DOCS-01", "SEC-02"],
+      source: "reconstructed",
+    });
+  });
+
+  it("absent inputs are distinguishable from an empty set and refuse", () => {
+    const absent = resolveRequestedIndicators({ meta: {} });
+    expect(absent.ok).toBe(false);
+    if (!absent.ok) expect(absent.reason).toBe("missing-comparability-inputs");
+    expect(resolveRequestedIndicators({ meta: {}, report: { full_table: [] } }).ok).toBe(false);
+    expect(resolveRequestedIndicators({ meta: { requested_indicators: undefined } }).ok).toBe(false);
   });
 });
