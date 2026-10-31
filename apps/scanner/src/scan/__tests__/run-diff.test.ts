@@ -6,6 +6,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { computeDelta, formatDeltaLine, ratchetOutcome } from '../diff';
+import { FINGERPRINT_VERSION } from '../scoring/fingerprint';
 import { makeEnvelope, row } from './helpers/diff-fixtures';
 import type { DeltaDocument, DeltaKind, DeltaTransition, ReportEnvelope } from '@leapscore/contracts';
 
@@ -53,8 +54,11 @@ describe('3.1 subject matching refuses a cross-repo pair', () => {
 
 describe('3.2 era and rubric-version checks yield their own named causes', () => {
   it('a fingerprint era bump is refused with fingerprint-era-mismatch', () => {
+    // Cross-era fixture (release-packaging 1.4): a stored v2-era report vs the
+    // current era — v2 fingerprints are never equated with v3.
+    expect(FINGERPRINT_VERSION).toBe(3);
     const base = makeEnvelope({ fingerprintVersion: 2, rows: [row('ARCH-01', 'measured', 1)] });
-    const cur = makeEnvelope({ fingerprintVersion: 3, rows: [row('ARCH-01', 'measured', 2)] });
+    const cur = makeEnvelope({ fingerprintVersion: FINGERPRINT_VERSION, rows: [row('ARCH-01', 'measured', 2)] });
     const delta = computeDelta(base, cur);
     expect(delta.verdict.status).toBe('incomparable');
     expect(delta.verdict.cause).toBe('fingerprint-era-mismatch');

@@ -6,16 +6,14 @@
   "bin": {
     "surface": "./bin/surface.ts"
   },
-  "dependencies": {
-    "@leapscore/contracts": "^0.1.0",
-    "tsx": "^4.19.0"
-  },
   "scripts": {
     "test": "vitest run",
     "lint": "tsc --noEmit"
   },
   "devDependencies": {
+    "@leapscore/contracts": "*",
     "@types/node": "^26.6.5",
+    "tsx": "^4.19.0",
     "typescript": "^5",
     "vitest": "^4.1.11"
   }

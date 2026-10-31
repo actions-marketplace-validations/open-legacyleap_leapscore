@@ -1,6 +1,7 @@
 /** apps/scanner/src/scan/seal.ts — shared terminal composer (scanner service + workflow CLI) */
 import { scoreMvp } from './scorer/mvp';
 import { computeScoreFingerprint, FINGERPRINT_VERSION } from './fingerprint';
+import { ENGINE_VERSION } from '../../identity';
 import { bandPathRegistryFromRubric, deriveNextBandPath } from './bandpath';
 import type { FactRecord } from '../facts';
 import rubricData from './rubric.json' with { type: 'json' };
@@ -286,7 +287,7 @@ export function sealScan(input: SealInput): SealOutput {
   const engineSha7 = resolveEngineSha7({ env: input.env, engineRef: input.engineRef, execImpl: input.execImpl });
   const runId = buildRunId(repoSlug, engineSha7, ts);
   const durationMs = Date.now() - input.startMs;
-  const engineVersion = (report.snapshot.engine_version as string) ?? 'unified/1.0';
+  const engineVersion = (report.snapshot.engine_version as string) ?? ENGINE_VERSION;
   const rubricVersion = (report.snapshot.rubric_version as string) ?? 'docs/rubric@tranche-a';
   // Deterministic fingerprint (2.2): scored payload only — runId/scanned_at/durations excluded.
   const scoreFingerprint = computeScoreFingerprint({

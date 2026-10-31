@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { existsSync, mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { buildScanArgs, handleExitCode, readScore, readInputs, run, ratchetFlag, ratchetTolerance, readDelta } from './main.js';
+import { buildScanArgs, handleExitCode, readScore, readInputs, resolveScannerCli, run, ratchetFlag, ratchetTolerance, readDelta } from './main.js';
 import { main as scanMain } from '../../apps/scanner/bin/scan';
 import { headlineFromRows } from '../../apps/scanner/src/scan/diff';
 import { tierForScore, type RowStatus } from '@leapscore/contracts';
@@ -67,8 +67,8 @@ async function runAction(
     setFailed: (m) => collected.failed.push(m),
     setOutput: (n, v) => { collected.outputs[n] = v; },
     summary: (md) => collected.summaries.push(md),
-    // Execute the argv a workflow would: npx -y tsx@4 <scanBin> scan ... → scanner main.
-    execImpl: async (_cmd, args) => scanMain(args.slice(3), { env: {}, stdout: () => {}, stderr: () => {} }),
+    // Execute the argv a workflow would: node <bundle> scan ... → scanner main.
+    execImpl: async (_cmd, args) => scanMain(args.slice(1), { env: {}, stdout: () => {}, stderr: () => {} }),
   });
 }
 
@@ -77,12 +77,15 @@ function collector() {
 }
 
 describe('buildScanArgs', () => {
-  it('maps path/fail_under/strict/out_dir to scan <path>', () => {
+  it('maps path/fail_under/strict/out_dir to scan <path> on the runner node, no toolchain fetch', () => {
     const { cmd, args } = buildScanArgs(
       { path: '.', failUnder: '53', strict: true, outDir: 'out', engineRef: 'abc1234' },
-      '/repo/apps/scanner/bin/scan.ts',
+      '/runner/action/dist/leapscore-scan.mjs',
     );
-    assert.equal(cmd, 'npx');
+    // The artifact runs on the runner's node directly: no npx, no tsx, no registry.
+    assert.equal(cmd, process.execPath);
+    assert.equal(args[0], '/runner/action/dist/leapscore-scan.mjs');
+    assert.ok(!args.includes('npx') && !args.includes('tsx@4'));
     assert.ok(args.includes('scan'));
     assert.ok(args.includes('.'));
     assert.ok(args.includes('--out'));
@@ -128,6 +131,50 @@ describe('buildScanArgs', () => {
     assert.ok(!without.args.includes('--badge'));
     const empty = buildScanArgs({ path: '.', strict: false, outDir: 'out', badge: '' }, 'scan.ts');
     assert.ok(!empty.args.includes('--badge'));
+  });
+});
+
+describe('launcher artifact resolution (artifact-packaging 4.2)', () => {
+  it('resolves the bundle beside the committed wrapper (dist/index.js layout)', () => {
+    const cli = resolveScannerCli({}, '/runner/action/dist');
+    assert.equal(cli, '/runner/action/dist/leapscore-scan.mjs');
+  });
+  it('source-run layout finds the built bundle under action/dist', () => {
+    // This test file lives in action/src; the committed layout has the bundle in action/dist.
+    const srcDir = new URL('./', import.meta.url).pathname;
+    const cli = resolveScannerCli({}, srcDir);
+    assert.ok(cli.endsWith(join('dist', 'leapscore-scan.mjs')), cli);
+    assert.ok(cli.includes(join('action', 'dist')), cli);
+  });
+  it('LEAPSCORE_CLI override wins over the beside-wrapper default (air-gapped operator bundle)', () => {
+    const cli = resolveScannerCli({ LEAPSCORE_CLI: '/opt/operator/leapscore-scan.mjs' }, '/runner/action/dist');
+    assert.equal(cli, '/opt/operator/leapscore-scan.mjs');
+  });
+  it('a non-executable override fails the step with the usage-or-refused exit and never falls back', async () => {
+    const dir = makeActionFixture();
+    const outDir = tmpOut();
+    const c = collector();
+    const saved = process.env.LEAPSCORE_CLI;
+    process.env.LEAPSCORE_CLI = join(tmpdir(), 'leapscore-definitely-not-here-xyz.mjs');
+    try {
+      await run({
+        getInput: (name) => (name === 'path' ? dir : name === 'out_dir' ? outDir : ''),
+        setFailed: (m) => c.failed.push(m),
+        setOutput: (n, v) => { c.outputs[n] = v; },
+        summary: (md) => c.summaries.push(md),
+        execImpl: async () => { throw new Error('must never launch when the artifact is refused'); },
+      });
+      assert.equal(c.outputs['exit-code'], '2'); // usage-or-refused
+      assert.equal(c.failed.length, 1);
+      assert.match(c.failed[0], /leapscore-definitely-not-here-xyz\.mjs/);
+      assert.match(c.failed[0], /missing or not executable/);
+      assert.ok(!existsSync(join(outDir, 'report.json')), 'no scan ran — no silent fallback');
+    } finally {
+      if (saved === undefined) delete process.env.LEAPSCORE_CLI;
+      else process.env.LEAPSCORE_CLI = saved;
+      rmSync(dir, { recursive: true, force: true });
+      rmSync(outDir, { recursive: true, force: true });
+    }
   });
 });
 

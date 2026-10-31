@@ -22,17 +22,21 @@ aborts) and conflicts with `--repo` (exit 2, before any work).
 
 ## Entry point
 
-`leapscore-scan` resolves through two install topologies, and both must stay wired:
+`leapscore-scan` is the built release artifact — `apps/scanner/dist/leapscore-scan.mjs`, a
+single readable ESM bundle with zero runtime dependencies (JSON assets inlined; `git` is
+the only binary it spawns). It runs on stock Node ≥ 20; nothing else. The build is
+`npm run build:cli` at the repo root, and the root `prepare` script runs it on every
+`npm install`. Both install topologies point at the built file, and both must stay wired:
 
 - **Workspace install (local authority):** `apps/scanner/package.json` declares
-  `"bin": { "leapscore-scan": "./bin/scan.ts" }`. A `npm install` at the repo root links
-  `node_modules/.bin/leapscore-scan`, so the command runs from any npm context —
-  `npm run`, `npm exec`, Action scripts. Invoke it as `leapscore-scan …`; do not fall
-  back to `npx tsx apps/scanner/bin/scan.ts` (that form bypasses the wiring and hides a
-  broken shim).
+  `"bin": { "leapscore-scan": "./dist/leapscore-scan.mjs" }`. A `npm install` at the repo root
+  builds the bundle (root `prepare`) and links `node_modules/.bin/leapscore-scan`, so the
+  command runs from any npm context — `npm run`, `npm exec`, Action scripts. Invoke it as
+  `leapscore-scan …`; do not fall back to `npx tsx apps/scanner/bin/scan.ts` (that form
+  bypasses the wiring and hides a broken shim).
 - **Git install (`npx -p "<repo>#<ref>" leapscore-scan`):** a git install of this repo
   installs only the root package, so the root `package.json` `bin` block must keep the
-  same `leapscore-scan` → `apps/scanner/bin/scan.ts` mapping. This is the form
+  same `leapscore-scan` → `apps/scanner/dist/leapscore-scan.mjs` mapping. This is the form
   `.github/workflows` and `docs/plans/14_WORKFLOW_SCAN_V1.md` use.
 
 The workspace `bin` is the local authority: the shim is generated from it, and any
@@ -75,6 +79,33 @@ HTML:
 
 The link is a provenance citation to the sealed report, so it carries no
 assessment campaign parameters. The `alt` is the full sentence, not "badge".
+
+## Generic CI (any pipeline, not just GitHub Actions)
+
+The bundle is the portable unit: copy `leapscore-scan.mjs` (or the container image) into
+any pipeline that can run `node ≥ 20`, or run the container:
+
+```sh
+# direct — one file, zero install beyond node
+node leapscore-scan.mjs scan ./repo --out ./leapscore-report --strict --fail-under 53
+
+# container — same artifact, same seal (verified byte-parity of score/band/fingerprint)
+docker run --rm -v "$PWD/repo:/work/repo:ro" -v "$PWD/out:/work/out" leapscore-scan \
+  scan /work/repo --out /work/out --strict
+```
+
+Exit-code contract (stable across CLI, Action, and container):
+
+| exit | meaning | CI handling |
+| ---- | ------- | ----------- |
+| `0` | scan sealed, no gate tripped | pass |
+| `1` | scanner crash | fail loudly; artifacts may be absent |
+| `2` | usage error or refusal (bad path, `--strict`+`--repo`, incomparable ratchet, unreadable `LEAPSCORE_CLI`) | fail the invocation, not the repo |
+| `3` | threshold trip (`--fail-under <0-100>` or `--fail-under-band critical|high|moderate|low`) | fail; the three report files are still written |
+
+Gates run **after seal**, so a tripped gate still produces the full report trio —
+archive the `--out` directory on every outcome (`if: always()` / `when: always()`),
+that artifact is the evidence either way.
 
 ## Network posture
 

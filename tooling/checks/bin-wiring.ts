@@ -132,6 +132,53 @@ function samePath(a: string, b: string): boolean {
   };
   return normalize(a) === normalize(b);
 }
+
+// Shebang rule: a target whose shebang names a just-in-time interpreter extension (tsx,
+// ts-node, …) cannot run on a machine with only the declared runtime — "a target that
+// cannot run is reported" (cli-packaging). The check is deliberately scoped to compiled
+// commands: a package that declares `engines` (the compiled-command convention — the
+// scanner package is the one that ships the built artifact). JIT-form commands that the
+// workspace install runs via its own tsx devDependency (surface) are outside this rule.
+const JIT_INTERP = /(^|\/)(tsx|ts-node|ts-node-esm|swc-node|babel-node)$/;
+function shebangInterpreter(file: string): string | null {
+  try {
+    const first = readFileSync(file, 'utf-8').split('\n', 1)[0] ?? '';
+    const shebang = /^#!(.*)$/.exec(first)?.[1];
+    if (shebang == null) return null;
+    return shebang.trim().split(/\s+/).pop() ?? '';
+  } catch {
+    return null;
+  }
+}
+const compiledCommands = new Set<string>();
+for (const ws of workspaces) {
+  try {
+    const pkg = JSON.parse(readFileSync(join(ROOT, ws.dir, 'package.json'), 'utf-8'));
+    if (pkg.engines) for (const name of Object.keys(ws.bin)) compiledCommands.add(name);
+  } catch {
+    /* unreadable package.json: other rules report it */
+  }
+}
+
+// Compiled-target agreement (cli-packaging MODIFIED, release-packaging D6): both
+// topologies of a compiled command must map to the same built artifact — never a source
+// file that depends on a just-in-time toolchain.
+for (const [name, t] of wsTargets) {
+  if (compiledCommands.has(name)) {
+    const interp = shebangInterpreter(t.target);
+    if (interp != null && JIT_INTERP.test(interp)) {
+      violations.push(`${name}: ${t.pkg} maps a compiled command to a JIT-toolchain source ${relativeToRoot(t.target)} — the mapping must point at the built artifact (npm run build:cli)`);
+    }
+  }
+}
+for (const [name, t] of rootTargets) {
+  if (compiledCommands.has(name)) {
+    const interp = shebangInterpreter(t.target);
+    if (interp != null && JIT_INTERP.test(interp)) {
+      violations.push(`${name}: ${t.file} maps a compiled command to a JIT-toolchain source ${relativeToRoot(t.target)} — both topologies must map to the built artifact`);
+    }
+  }
+}
 function relativeToRoot(abs: string): string {
   const rel = abs.slice(ROOT.length + 1);
   return rel && !rel.startsWith('..') ? rel : abs;
@@ -175,6 +222,16 @@ if (existsSync(BIN_DIR)) {
       accessSync(real, constants.X_OK);
     } catch {
       violations.push(`${name}: target ${real} lacks the executable bit`);
+    }
+    // "A target that cannot run is reported": a compiled command's shim target must run
+    // on a machine with only the declared runtime — a shebang naming a just-in-time
+    // interpreter extension is a broken target. (JIT-form commands outside the compiled
+    // convention run through the workspace's own devDependency and are exempt.)
+    if (compiledCommands.has(name)) {
+      const interp = shebangInterpreter(real);
+      if (interp != null && JIT_INTERP.test(interp)) {
+        violations.push(`${name}: target ${relativeToRoot(real)} cannot run on the declared runtime alone — its shebang requires ${interp} (a just-in-time toolchain); report the command, do not fall back`);
+      }
     }
     shimsChecked++;
   }

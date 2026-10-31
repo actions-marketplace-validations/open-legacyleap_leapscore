@@ -11,6 +11,7 @@ import { detectSec07 } from './detectors/sec07';
 import { detectTest08 } from './detectors/test08';
 import type { Phase1ScanContext } from './detector';
 import { toolVersion } from './detectors/common';
+import { ENGINE_VERSION } from '../identity';
 import { factsToRows, scorePhase1 } from './scoring/scorer/phase1';
 import { tierForScore } from './scoring/seal';
 
@@ -71,7 +72,7 @@ export async function runPhase1Scan(repoUrl: string, opts: { token?: string; fet
   return {
     id: scanId,
     score: scored.score,
-    snapshot: { repo: normalized, scanned_at: new Date().toISOString(), engine_version: 'phase1/0.1.0', rubric_version: 'docs/rubric/@phase1' },
+    snapshot: { repo: normalized, scanned_at: new Date().toISOString(), engine_version: ENGINE_VERSION, rubric_version: 'docs/rubric/@phase1' },
     headline: { score: Math.round(scored.score * 100) / 100, tier },
     categories: scored.categories as unknown as Phase1Report['categories'],
     coverage: scored.coverage as unknown as Phase1Report['coverage'],

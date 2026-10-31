@@ -11,6 +11,7 @@ import { sniffEcosystems } from './ecosystem';
 import { classifyArchetype, classifyArchetypePerRoot } from './archetype';
 import { validateFact, type FactRecord } from './facts';
 import { createStrictFetch, StrictOfflineError } from './offline';
+import { ENGINE_VERSION } from '../identity';
 import { detectEcos01 } from './detectors/ecos01';
 import { detectEcos02 } from './detectors/ecos02';
 import { detectEcos03 } from './detectors/ecos03';
@@ -375,7 +376,7 @@ export async function* runLocalScan(
   const snapshot: Record<string, unknown> = {
     repo: absPath,
     scanned_at: new Date().toISOString(),
-    engine_version: 'unified/1.0',
+    engine_version: ENGINE_VERSION,
     rubric_version: 'docs/rubric@tranche-a',
     scanned_commit: commitSha,
     local_path: absPath,

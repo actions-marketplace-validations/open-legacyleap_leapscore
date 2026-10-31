@@ -4,21 +4,27 @@
   "private": true,
   "type": "module",
   "bin": {
-    "leapscore-scan": "./bin/scan.ts"
+    "leapscore-scan": "./dist/leapscore-scan.mjs"
+  },
+  "files": [
+    "dist/leapscore-scan.mjs",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20"
   },
   "scripts": {
     "dev": "tsx src/server.ts",
     "start": "tsx src/server.ts",
-    "build": "tsc --noEmit",
+    "build": "node scripts/build.mjs && tsc --noEmit",
+    "build:bundle": "node scripts/build.mjs",
     "lint": "tsc --noEmit",
     "test": "SCANNER_NO_LISTEN=1 vitest run"
   },
-  "dependencies": {
-    "@leapscore/contracts": "^0.1.0",
-    "tsx": "^4.19.0"
-  },
   "devDependencies": {
+    "@leapscore/contracts": "*",
     "@types/node": "^26.6.5",
+    "tsx": "^4.19.0",
     "typescript": "^5",
     "vitest": "^4.1.11"
   }

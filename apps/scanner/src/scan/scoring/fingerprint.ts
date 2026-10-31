@@ -5,8 +5,12 @@ import type { FactRecord } from '../facts';
 /** Fingerprint scheme version — bump when the hash input changes eras.
  * v2 (detector-honesty 4.4): measurement semantics — `measurement` +
  * `unknownMeasurePath` join the normalized fact, so a pre-demotion constant row
- * and a post-demotion unknown row hash differently. */
-export const FINGERPRINT_VERSION = 2;
+ * and a post-demotion unknown row hash differently.
+ * v3 (release-packaging D4): engine identity source — `engine_version` is the
+ * release version build-stamped into the artifact (package version, or the
+ * `unofficial-build` disclosure), no longer the `'unified/1.0'` source literal.
+ * Pre/post-change fingerprints are not comparable (measurement-honesty era rule). */
+export const FINGERPRINT_VERSION = 3;
 
 type FingerprintInput = {
   facts: FactRecord[];

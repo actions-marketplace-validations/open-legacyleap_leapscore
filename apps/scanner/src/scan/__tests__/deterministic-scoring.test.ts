@@ -12,6 +12,7 @@ import {
 } from '../budget';
 import { DETECTOR_TOOL_VERSIONS, toolVersion, buildToolVersions } from '../detectors/common';
 import { computeScoreFingerprint, FINGERPRINT_VERSION } from '../scoring/fingerprint';
+import { ENGINE_VERSION, UNOFFICIAL_ENGINE_VERSION } from '../../identity';
 import { scoreMvp } from '../scoring/scorer/mvp';
 import { evaluateGates } from '../scoring/scorer/rollup';
 import { sealScan } from '../scoring/seal';
@@ -155,7 +156,7 @@ describe('2.2 score fingerprint', () => {
     const b = computeScoreFingerprint({ ...base, facts: mk(9876) });
     expect(a).toBe(b);
     expect(a).toHaveLength(64);
-    expect(FINGERPRINT_VERSION).toBe(2);
+    expect(FINGERPRINT_VERSION).toBe(3);
   });
   it('flag change changes the fingerprint', () => {
     const facts = [fake('DOCS-01', { docs01: { adr_count: 1 } })];
@@ -169,7 +170,7 @@ describe('2.2 score fingerprint', () => {
     const s1 = sealScan({ facts, snapshot: snap(), budgetMs: 10_000, startMs: Date.now(), trace: [], subjectSlug: 'x', engineRef: 'abc1234' });
     const s2 = sealScan({ facts, snapshot: snap(), budgetMs: 10_000, startMs: Date.now(), trace: [], subjectSlug: 'x', engineRef: 'abc1234' });
     expect(s1.meta.score_fingerprint).toBeTruthy();
-    expect(s1.meta.fingerprint_version).toBe(2);
+    expect(s1.meta.fingerprint_version).toBe(3);
     expect(s1.meta.score_fingerprint).toBe(s2.meta.score_fingerprint);
     expect(s1.runId).not.toBe(s2.runId);
   });
@@ -318,4 +319,63 @@ describe('2.3 engine identity from release, not consumer tree', () => {
       for (const d of [a, b, outA, outB]) rmSync(d, { recursive: true, force: true });
     }
   }, 180_000);
+});
+
+describe('release-packaging 1.3 — release-derived engine identity', () => {
+  const fixture = () => {
+    const d = mkdtempSync(join(tmpdir(), 'leapscore-ident-'));
+    writeFileSync(join(d, 'package.json'), JSON.stringify({ name: 'f', version: '1.0.0' }));
+    return d;
+  };
+  async function sealWith(env: Record<string, string>) {
+    const dir = fixture();
+    const out = mkdtempSync(join(tmpdir(), 'leapscore-ident-out-'));
+    try {
+      const code = await main(['scan', dir, '--out', out, '--engine-ref', 'abc1234'], {
+        env,
+        stdout: () => {},
+        stderr: () => {},
+      });
+      expect(code).toBe(0);
+      return JSON.parse(readFileSync(join(out, 'report.json'), 'utf8'));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+      rmSync(out, { recursive: true, force: true });
+    }
+  }
+
+  it('the constant resolves in the unstamped (source-run) configuration: no released-version literal, unofficial disclosure instead', () => {
+    // Source-run dev/tests never see the esbuild define — the constant resolves
+    // to the disclosure, and it is never a released version string.
+    expect(ENGINE_VERSION).toBe(UNOFFICIAL_ENGINE_VERSION);
+    expect(ENGINE_VERSION).not.toBe('unified/1.0');
+  });
+
+  it('a sealed local run records the constant, and the fingerprint carries it', async () => {
+    const env = await sealWith({});
+    expect(env.meta.engine_version).toBe(ENGINE_VERSION);
+    expect(env.report.snapshot.engine_version).toBe(ENGINE_VERSION);
+    expect(env.meta.fingerprint_version).toBe(FINGERPRINT_VERSION);
+  });
+
+  it('different engine versions yield different fingerprints (engine_version is a fingerprinted input)', () => {
+    const facts = [fake('DOCS-01', { docs01: { adr_count: 1 } })] as FactRecord[];
+    const base = {
+      facts,
+      rubricVersion: 'docs/rubric@tranche-a',
+      engineSha7: 'abc1234',
+      strict: false,
+      indicatorSet: ['DOCS-01'],
+      archetype: 'library',
+    };
+    const a = computeScoreFingerprint({ ...base, engineVersion: '0.1.0' });
+    const b = computeScoreFingerprint({ ...base, engineVersion: '0.2.0' });
+    expect(a).not.toBe(b);
+  });
+
+  it('an explicit engine-ref override is recorded in the sealed identity beside the stamp', async () => {
+    const env = await sealWith({});
+    // --engine-ref abc1234 (set in sealWith) wins over env/checkout derivation.
+    expect(env.meta.engineSha7).toBe('abc1234');
+  });
 });

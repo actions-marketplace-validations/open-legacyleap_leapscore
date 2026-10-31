@@ -16,6 +16,7 @@ import { runUnifiedScan } from "./scan/orchestrator.js";
 import { sealScan } from "./scan/scoring/seal.js";
 import type { FactRecord } from "./scan/facts.js";
 import { AdmissionController } from "./admission.js";
+import { ENGINE_VERSION } from "./identity.js";
 import { CORS_HEADERS, NDJSON_HEADERS, frame, refusedFrame } from "./protocol.js";
 import { PROTOCOL_VERSION } from "./protocol.js";
 
@@ -205,7 +206,7 @@ async function handleScan(req: http.IncomingMessage, res: http.ServerResponse, u
       finish(() => res.end());
       return;
     }
-    const rawSnapshot = (snapshot as Record<string, unknown>) ?? { repo, scanned_at: new Date().toISOString(), engine_version: "unified/1.0", rubric_version: "docs/rubric/@mvp" };
+    const rawSnapshot = (snapshot as Record<string, unknown>) ?? { repo, scanned_at: new Date().toISOString(), engine_version: ENGINE_VERSION, rubric_version: "docs/rubric/@mvp" };
     const archetypeOverride = url.searchParams.get("archetype");
     const engineRef = process.env.LEAPSCORE_ENGINE_REF;
     const gitExec = (cmd: string): string =>

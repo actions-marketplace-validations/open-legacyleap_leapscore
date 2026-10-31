@@ -1,0 +1,44 @@
+# Bundle parity (release-packaging): every PR touching scanner sources builds the
+# release artifact and runs the source-vs-artifact sealed-equality suite — the same
+# engine identity sealed from source and from the built bundle must agree on score,
+# band, and score_fingerprint, and the bundle must run on a bare runtime with the
+# network disabled. Offline after checkout: no registry beyond npm install.
+name: Bundle parity
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - 'apps/scanner/**'
+      - 'packages/contracts/**'
+      - 'action/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/bundle-parity.yml'
+
+jobs:
+  bundle-parity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Build the release bundle
+        run: npm run build:cli
+      - name: Bundle exists and runs on a bare runtime
+        run: |
+          node apps/scanner/dist/leapscore-scan.mjs --help > /dev/null
+          grep -q "COMPILED from docs/rubric" apps/scanner/dist/leapscore-scan.mjs
+      - name: Source vs artifact parity + bare-environment smoke
+        run: npm run test --workspace @leapscore/scanner -- src/scan/__tests__/bundle-parity.test.ts
+      # The committed dist must match a rebuild from the sources in THIS checkout, not
+      # from the working tree — the tree may hold an uncommitted rebuild; only the git
+      # blob is what a `uses:` checkout actually runs.
+      - name: Committed action dist is byte-fresh (offline, token-free)
+        run: |
+          npm run check:dist
+          git checkout -- action/dist 2>/dev/null || true

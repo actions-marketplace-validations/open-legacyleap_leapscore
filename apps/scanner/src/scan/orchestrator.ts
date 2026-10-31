@@ -10,6 +10,7 @@ import { createQueue } from './queue';
 import type { FactRecord } from './facts';
 import { validateFact } from './facts';
 import { classifyArchetype, classifyArchetypePerRoot } from './archetype';
+import { ENGINE_VERSION } from '../identity';
 import { detectVel06 } from './detectors/vel06';
 import { detectVel09 } from './detectors/vel09';
 import { detectVel08 } from './detectors/vel08';
@@ -206,7 +207,7 @@ export async function* runUnifiedScan(repoUrl: string, opts: { token?: string; i
     const elapsedMs = Date.now() - start;
     yield { type: 'trace', ts: elapsedMs, elapsedMs, label: `Budget exceeded — sealing with ${ghFacts.length}/${ids.length} detectors`, phase: 'budget', status: 'error', errorKind: 'cap' };
     budget.cancel();
-    yield { type: 'done', facts: allFacts, snapshot: { repo: normalized, scanned_at: new Date().toISOString(), engine_version: 'unified/1.0', rubric_version: 'docs/rubric@tranche-a', scanned_commit: 'unknown' }, id: scanId };
+    yield { type: 'done', facts: allFacts, snapshot: { repo: normalized, scanned_at: new Date().toISOString(), engine_version: ENGINE_VERSION, rubric_version: 'docs/rubric@tranche-a', scanned_commit: 'unknown' }, id: scanId };
     return;
   }
 
@@ -419,7 +420,7 @@ export async function* runUnifiedScan(repoUrl: string, opts: { token?: string; i
     const status = unknownCount === 0 ? 'complete' : 'degraded';
     yield { type: 'trace', ts: elapsedMs, elapsedMs, label: `Seal — ${status} · ${allFacts.filter(f => !(f as unknown as { error?: unknown }).error).length}/${ids.length} measured`, phase: 'seal', status };
   }
-  const snapshot: Record<string, unknown> = { repo: normalized, scanned_at: new Date().toISOString(), engine_version: 'unified/1.0', rubric_version: 'docs/rubric@tranche-a', scanned_commit };
+  const snapshot: Record<string, unknown> = { repo: normalized, scanned_at: new Date().toISOString(), engine_version: ENGINE_VERSION, rubric_version: 'docs/rubric@tranche-a', scanned_commit };
   if (archetypeResult) {
     snapshot.archetype = archetypeResult.archetype;
     snapshot.archetype_confidence = archetypeResult.confidence;

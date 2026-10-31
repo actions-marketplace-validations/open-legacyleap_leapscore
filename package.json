@@ -3,16 +3,19 @@
   "name": "leapscore",
   "version": "0.1.0",
   "bin": {
-    "leapscore-scan": "./apps/scanner/bin/scan.ts",
+    "leapscore-scan": "./apps/scanner/dist/leapscore-scan.mjs",
     "surface": "./apps/surface/bin/surface.ts"
   },
   "workspaces": [
     "apps/*",
-    "packages/*"
+    "packages/*",
+    "action"
   ],
   "scripts": {
     "dev": "npm run dev --workspaces",
     "build": "npm run build --workspaces",
+    "build:cli": "npm run build:bundle --workspace @leapscore/scanner",
+    "prepare": "npm run build:cli",
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "check:rubric-consistency": "tsx tooling/scripts/compile-rubric.ts --check",
@@ -20,10 +23,12 @@
     "check:detector-isolation": "tsx tooling/checks/detector-isolation.ts",
     "check:site-boundary": "tsx tooling/checks/site-boundary.ts",
     "check:surface-boundary": "tsx tooling/checks/surface-boundary.ts",
-    "compile:rubric": "tsx tooling/scripts/compile-rubric.ts"
+    "compile:rubric": "tsx tooling/scripts/compile-rubric.ts",
+    "check:dist": "tsx tooling/checks/dist-freshness.ts"
   },
   "devDependencies": {
     "tsx": "^4.19.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "esbuild": "0.27.2"
   }
 }

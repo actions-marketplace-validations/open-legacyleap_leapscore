@@ -774,7 +774,10 @@ type RenderInput = {
 const invokedDirectly = (() => {
   try {
     const entry = process.argv[1] ?? '';
-    return entry.endsWith('/bin/scan.ts') || entry.endsWith('\\bin\\scan.ts') || entry.endsWith('/bin/scan.js') || entry.endsWith('leapscore-scan');
+    // The bundle runs this module as its main entry: the executable is node itself and
+    // argv[1] is the .mjs artifact (the npm bin shim execs `node <bundle>`), so the
+    // release artifact must match on the bundle file name, not on the interpreter.
+    return entry.endsWith('/bin/scan.ts') || entry.endsWith('\\bin\\scan.ts') || entry.endsWith('/bin/scan.js') || entry.endsWith('leapscore-scan') || entry.endsWith('leapscore-scan.mjs');
   } catch {
     return false;
   }

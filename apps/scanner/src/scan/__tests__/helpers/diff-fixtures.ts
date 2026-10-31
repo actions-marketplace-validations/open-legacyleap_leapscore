@@ -8,6 +8,7 @@
  */
 import { CONTRACT_VERSION, type ReportEnvelope, type RowStatus } from '@leapscore/contracts';
 import { headlineFromRows, type DiffRow } from '../../diff';
+import { FINGERPRINT_VERSION } from '../../scoring/fingerprint';
 
 export type RowSpec = {
   id: string;
@@ -106,7 +107,7 @@ export function makeEnvelope(spec: EnvelopeSpec): ReportEnvelope {
       filename: 'acme__app__abc1234__2026-08-12T000000-000Z.json',
       coverage: { measured: 0, estimated: 0, unknown: 0 },
       contractVersion: CONTRACT_VERSION,
-      fingerprint_version: spec.fingerprintVersion ?? 2,
+      fingerprint_version: spec.fingerprintVersion ?? FINGERPRINT_VERSION,
       ...(spec.fingerprint ? { score_fingerprint: spec.fingerprint } : {}),
       ...(spec.requested ? { requested_indicators: spec.requested } : {}),
       score_policy: policy,

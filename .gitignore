@@ -12,6 +12,12 @@ yarn-error.log
 
 # Build/Test
 dist/
+# The Action ships its built artifacts committed (Actions have no build step on the
+# user's runner) — un-ignore exactly the composed dist files (release-packaging D5);
+# tooling/checks/dist-freshness.ts keeps them byte-identical to their sources.
+!action/dist/
+!action/dist/index.js
+!action/dist/leapscore-scan.mjs
 coverage/
 
 # IDE

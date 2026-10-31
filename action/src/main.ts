@@ -1,6 +1,6 @@
 /** action/src/main.ts — checkout-first thin wrapper around `scan <path>` (spec: workflow-scan) */
 import { existsSync, readFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as core from '@actions/core';
 import * as exec from '@actions/exec';
@@ -57,10 +57,35 @@ export function ratchetTolerance(raw: string | undefined): number | undefined {
   return flag === '--ratchet' ? 0 : Number(flag.slice('--ratchet='.length));
 }
 
-/** Repo root relative to this file (action/ is a sibling of apps/). */
-export function repoRootFor(filePath: string = fileURLToPath(import.meta.url)): string {
-  // src/main.ts -> action/src -> action -> repo root
-  return resolve(dirname(filePath), '..', '..');
+/** The dist directory holding the committed scanner bundle. Source-run layout has this
+ *  file in action/src (bundle in action/dist); the built wrapper lives in action/dist
+ *  beside the bundle. */
+export function scannerCliDir(filePath: string = fileURLToPath(import.meta.url)): string {
+  const dir = dirname(filePath);
+  return basename(dir) === 'dist' ? dir : join(dirname(dir), 'dist');
+}
+
+/** Where the scanner bundle lives: LEAPSCORE_CLI override (air-gapped operator bundle)
+ *  → `leapscore-scan.mjs` beside the wrapper (the committed action/dist layout).
+ *  A missing artifact still resolves the canonical path so the refusal names it. */
+export function resolveScannerCli(
+  env: NodeJS.ProcessEnv = process.env,
+  here: string = scannerCliDir(),
+): string {
+  const override = env.LEAPSCORE_CLI?.trim();
+  if (override) return resolve(override);
+  // A source-run caller (action/src) resolves to the committed bundle in action/dist.
+  const base = basename(here) === 'src' ? join(dirname(here), 'dist') : here;
+  return join(base, 'leapscore-scan.mjs');
+}
+
+/** The artifact must exist and be non-empty for the runner's node to execute it. */
+function cliReadable(cli: string): boolean {
+  try {
+    return existsSync(cli) && readFileSync(cli).length > 0;
+  } catch {
+    return false;
+  }
 }
 
 /** Build the `scan <path>` argv. `--strict` + `--repo` can never occur: this wrapper never passes `--repo`. */
@@ -74,7 +99,8 @@ export function buildScanArgs(inputs: ActionInputs, scanBin: string): { cmd: str
   const ratchet = ratchetFlag(inputs.ratchet);
   if (ratchet) args.push(ratchet);
   if (inputs.badge) args.push('--badge', inputs.badge);
-  return { cmd: 'npx', args: ['-y', 'tsx@4', ...args] };
+  // The committed artifact runs on the runner's own node: no npx, no tsx, no registry.
+  return { cmd: process.execPath, args };
 }
 
 export function reportJsonPath(outDir: string): string {
@@ -178,8 +204,15 @@ export async function run(
   const inputs = readInputs(deps.getInput);
   const setFailed = deps.setFailed ?? core.setFailed;
   const setOutput = deps.setOutput ?? core.setOutput;
-  const root = repoRootFor();
-  const scanBin = join(root, 'apps', 'scanner', 'bin', 'scan.ts');
+  const scanBin = resolveScannerCli();
+  if (!cliReadable(scanBin)) {
+    // Exit-2 semantics (usage-or-refused) with the artifact named; never a fallback.
+    setOutput('exit-code', String(EXIT_USAGE));
+    setFailed(
+      `LeapScore refused (exit 2): scanner artifact ${scanBin} is missing or not executable (LEAPSCORE_CLI points at nothing?) — fix the artifact path; the action does not fall back`,
+    );
+    return;
+  }
   const { cmd, args } = buildScanArgs(inputs, scanBin);
   core.info(`LeapScore: ${cmd} ${args.join(' ')}`);
   let code: number;
