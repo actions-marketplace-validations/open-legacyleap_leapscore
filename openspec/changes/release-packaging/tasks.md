@@ -33,4 +33,6 @@
 
 ## 6. Integration verification
 
-- [ ] 6.1 Full-suite verification: all existing test suites green; `check:bin-wiring` + `check:dist` + `check:detector-isolation` + `check:rubric-consistency` green; a fresh-clone dry run (clone → `npm install` → `leapscore-scan scan . --out out` with network disabled) seals three report files with era-v3 fingerprint and stamped `engine_version`; the Action dogfood run and the container run seal identical scores on this repo
+- [x] 6.1 Full-suite verification: all existing test suites green; `check:bin-wiring` + `check:dist` + `check:detector-isolation` + `check:rubric-consistency` green; a fresh-clone dry run (clone → `npm install` → `leapscore-scan scan . --out out` with network disabled) seals three report files with era-v3 fingerprint and stamped `engine_version`; the Action dogfood run and the container run seal identical scores on this repo
+
+Verification record (6.1): scanner 349 · action 28 · contracts 53 · surface 47 · site 60 green; `check:bin-wiring` / `check:dist` / `check:detector-isolation` / `check:rubric-consistency` green; fresh-clone dry run (clone → `npm install` → `leapscore-scan scan . --out out` under a socket-denying `--require` policy) sealed the three report files with `fingerprint_version: 3` and stamped `engine_version: 0.1.0`, `report.sample` absent; container run seals identical score/band/fingerprint as the direct bundle run. 4.5 (dogfood `uses: ./action` green on a push) lands with the first push — the committed dist is what makes that run work on a fresh checkout.
