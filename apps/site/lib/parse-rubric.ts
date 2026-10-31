@@ -67,7 +67,7 @@ export function parseRubric(): Category[] {
           if (match) {
             const [_, id, name] = match;
             
-            let data: Partial<Indicator> = { id, name };
+            const data: Partial<Indicator> = { id, name };
             
             // Extract the engine fields line first
             for (let j = i + 1; j < i + 3; j++) {

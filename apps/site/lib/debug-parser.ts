@@ -1,5 +1,5 @@
-const fs = require('fs');
-const path = require('path');
+import fs from 'node:fs';
+import path from 'node:path';
 const RUBRIC_DIR = path.resolve(__dirname, "..", "..", "..", "docs/rubric");
 const files = fs.readdirSync(RUBRIC_DIR).filter(f => f.match(/^(?!00)\d{2}_.*\.md$/));
 console.log("Files:", files);

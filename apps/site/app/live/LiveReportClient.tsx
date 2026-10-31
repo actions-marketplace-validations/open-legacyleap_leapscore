@@ -33,7 +33,7 @@ export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
   const [detectorTraceOpen, setDetectorTraceOpen] = useState(false);
   const [traces, setTraces] = useState<TraceEntry[]>([]);
 
-  const startRef = useRef<number>(Date.now());
+  const startRef = useRef<number>(0);
   const budgetRef = useRef<number | null>(null);
   const sealedRef = useRef(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -68,22 +68,6 @@ export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
     timelineRef.current = [];
     tracesRef.current = [];
     prevCompletedRef.current = new Set();
-    setSealed(false);
-    setTimelineOpen(true);
-    setDetectorTraceOpen(false);
-    setTraces([]);
-    setTimeline([]);
-    setPct(0);
-    setElapsedMs(0);
-    setRemainingMs(null);
-    setCompletedIds([]);
-    setReport(null);
-    setPersistedMeta(null);
-    setPendingRunId(null);
-    setRefused(null);
-    setError(null);
-    setBudgetMs(null);
-    setIndicatorCount(null);
 
     const initLabel = `Starting scan — ${initialRepo}`;
     timelineRef.current = [{ ts: 0, label: initLabel }];
