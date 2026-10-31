@@ -663,7 +663,7 @@ export async function writeReportsAndExit(
   o: RunOpts,
 ): Promise<number> {
   const report = sealed.report as {
-    headline: { score: number; tier: string; suppressed?: boolean; verdict?: string };
+    headline: { score: number; tier: string; suppressed?: boolean; verdict?: string; gate_capped?: boolean; uncapped_tier?: string; capped_by_gates?: string[] };
     gates: unknown[];
     coverage: { measured: number; estimated: number; unknown: number };
     top_blockers: Array<{ row: string; name: string; points_lost: number; weight_pp: string; summary: string; evidence_file?: string; rule?: string }>;
@@ -689,6 +689,9 @@ export async function writeReportsAndExit(
     gates: (report.gates ?? []) as RenderInput['gates'],
     topBlockers: (report.top_blockers ?? []) as RenderInput['topBlockers'],
     nextBandPath: report.next_band_path,
+    gateCapped: report.headline.gate_capped === true,
+    uncappedTier: report.headline.uncapped_tier,
+    cappedByGates: report.headline.capped_by_gates,
     categories: (report.categories ?? []) as RenderInput['categories'],
   };
   await mkdir(o.outDir, { recursive: true });

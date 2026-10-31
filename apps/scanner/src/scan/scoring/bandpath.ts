@@ -8,7 +8,9 @@
  * score fingerprint by construction (design D1/D2).
  */
 import {
-  nextBandForScore,
+  bandPathDistance,
+  nextBandForTier,
+  tierForScore,
   type BandPathArrival,
   type BandPathClass,
   type BandPathCostClass,
@@ -67,6 +69,10 @@ type SealedPathCategory = {
 export type DeriveNextBandPathInput = {
   /** Sealed headline score. */
   score: number;
+  /** Sealed (possibly gate-capped) band the score is reported in. The next band
+   * is the next one above THIS band, so a capped run is never told to reach the
+   * band it already occupies. */
+  tier?: string;
   /** Suppressed headlines have no stated score to measure a distance from. */
   suppressed?: boolean;
   /** Sealed category scores — carry the weight/applicable arithmetic. */
@@ -92,7 +98,7 @@ function quickWinFor(row: SealedPathRow, registry?: BandPathRegistry): string | 
 export function deriveNextBandPath(input: DeriveNextBandPathInput): NextBandPath | undefined {
   // No stated score → no distance to measure (spec: Suppressed headline produces no path).
   if (input.suppressed) return undefined;
-  const next = nextBandForScore(input.score);
+  const next = nextBandForTier(input.score, input.tier ?? tierForScore(input.score));
   const sealedRows = sealedRowSource(input);
   // Ungraded debt is disclosed, never presented as absent: `unknown` and
   // `not_implemented` rows are unreached; `not_applicable` is correctly
@@ -111,7 +117,7 @@ export function deriveNextBandPath(input: DeriveNextBandPathInput): NextBandPath
       terminal: true,
     };
   }
-  const pointsNeeded = next.threshold - input.score;
+  const pointsNeeded = bandPathDistance(next.threshold, input.score, input.tier ?? tierForScore(input.score));
   const categoryById = new Map<string, SealedPathCategory>();
   for (const category of input.categories ?? []) {
     if (category?.id) categoryById.set(category.id, category);

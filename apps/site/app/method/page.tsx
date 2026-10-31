@@ -95,6 +95,31 @@ export default function MethodPage() {
       </section>
 
       <section className="mt-10">
+        <h2 className="text-lg font-semibold">Kill-switch gates</h2>
+        <p className="mt-3 text-sm leading-relaxed text-muted">
+          Eight gates describe conditions that must never be true — exposed
+          credentials, a critical CVE sitting unpatched, a runtime past end of
+          life, strong copyleft in a closed distribution. A gate is reported as{" "}
+          <span className="font-mono text-xs">proven</span>,{" "}
+          <span className="font-mono text-xs">not-proven</span>,{" "}
+          <span className="font-mono text-xs">needs-verification</span>, or{" "}
+          <span className="font-mono text-xs">unevaluable</span>, and only a{" "}
+          <span className="font-mono text-xs">proven</span> gate acts.
+        </p>
+        <p className="mt-3 text-sm leading-relaxed text-muted">
+          A proven gate caps the verdict at <strong>High</strong> whatever the
+          average says: a codebase with a live secret in it is not “Moderate”
+          because the rest scored well. The cap lowers the <em>band</em> and
+          never the score — the report keeps its honest number and states which
+          gates fired and what the score alone earned. A score already in{" "}
+          <strong>Critical</strong> stays there: the cap is a ceiling, never a
+          floor. A gate whose source rows are all unknown is{" "}
+          <span className="font-mono text-xs">unevaluable</span> and is disclosed
+          as such rather than silently counted as clear.
+        </p>
+      </section>
+
+      <section className="mt-10">
         <h2 className="text-lg font-semibold">What the number is not</h2>
         <ul className="mt-4 list-disc space-y-2 pl-5 text-sm leading-relaxed text-muted">
           <li>

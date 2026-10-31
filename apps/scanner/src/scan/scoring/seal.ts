@@ -16,6 +16,7 @@ import {
   resolveEngineSha7,
   tierForScore,
   tierLegacyFor,
+  gateCapForTier,
   localSlugFromPath,
   assessmentUrlForBand,
   assessmentCtaForBand,
@@ -142,7 +143,7 @@ export function truncateTrace(trace: SealTraceEntry[]): SealTraceEntry[] {
  * clause when the sealed report carries one, then the band-specific next-step
  * sentence and the tracked assessment URL as the final token — exactly once. */
 export function formatStdout(
-  report: { headline: { score: number; tier: string; suppressed?: boolean; verdict?: string }; gates: unknown[]; coverage: { measured: number; estimated: number; unknown: number }; next_band_path?: NextBandPath },
+  report: { headline: { score: number; tier: string; suppressed?: boolean; verdict?: string; gate_capped?: boolean; uncapped_tier?: string; capped_by_gates?: string[] }; gates: unknown[]; coverage: { measured: number; estimated: number; unknown: number }; next_band_path?: NextBandPath },
   opts: { thresholdState?: string } = {},
 ): string {
   const gates = report.gates as Array<{ status?: string }>;
@@ -154,9 +155,14 @@ export function formatStdout(
   // Band-path D7: the clause slots between the status fields and the band
   // sentence, so the funnel sentence and tracked URL keep their anchors.
   const pathPart = report.next_band_path ? ` ${formatBandPathClause(report.next_band_path, report.headline.tier)}` : '';
+  // Kill-switch disclosure: name the cap right after the band so a CI log reader
+  // learns the band was lowered, not just that it is what it is.
+  const capPart = report.headline.gate_capped
+    ? ` gate-capped from ${report.headline.uncapped_tier ?? 'a higher band'} by ${(report.headline.capped_by_gates ?? []).join('+') || 'a proven gate'}`
+    : '';
   const prefix = report.headline.suppressed
     ? `insufficient-signal ${gatePart} ${coveragePart}${thresholdPart}`
-    : `${report.headline.score}/${report.headline.tier} ${gatePart} ${coveragePart}${thresholdPart}${pathPart}`;
+    : `${report.headline.score}/${report.headline.tier}${capPart} ${gatePart} ${coveragePart}${thresholdPart}${pathPart}`;
   return `${prefix} — ${assessmentCtaForBand(report.headline.tier)} ${assessmentUrlForBand(report.headline.tier)}`;
 }
 
@@ -217,7 +223,23 @@ export function sealScan(input: SealInput): SealOutput {
   const headlineScore = policy === 'legacy'
     ? Math.round((((mvp as unknown as { renormalized_score?: number }).renormalized_score ?? mvp.score)) * 100) / 100
     : Math.round(mvp.score * 100) / 100;
-  const tier = tierForScore(headlineScore);
+  const scoreTier = tierForScore(headlineScore);
+
+  // Kill-switch cap (Gates G1–G8): a gate whose verdict is `proven` caps the
+  // band at High no matter how good the average is. The cap is applied to the
+  // SEALED band, not just to a display helper — otherwise "kill-switches beat
+  // averages" is a claim no artifact honours. The score is never altered: a
+  // capped run keeps its honest number and discloses the band it lost.
+  // Precedence: a suppressed headline has no stated verdict to cap, so
+  // `insufficient-signal` wins and the cap is not applied.
+  const suppressedHeadline = (mvp as unknown as { suppressed?: boolean }).suppressed ?? false;
+  const provenGateIds = (mvp.gates as Array<{ id: string; status: string }>)
+    .filter((g) => g.status === 'proven')
+    .map((g) => g.id);
+  const gateCap = suppressedHeadline
+    ? { tier: scoreTier, capped: false, cappedByGates: [] as string[] }
+    : gateCapForTier(scoreTier, provenGateIds);
+  const tier = gateCap.tier;
   const tierLegacy = tierLegacyFor(tier);
 
   // Derived next-band path (band-path D1): computed once, at seal time, so the
@@ -225,7 +247,8 @@ export function sealScan(input: SealInput): SealOutput {
   // view over already-sealed rows and never feeds back into sealing.
   const nextBandPath = deriveNextBandPath({
     score: headlineScore,
-    suppressed: (mvp as unknown as { suppressed?: boolean }).suppressed ?? false,
+    tier,
+    suppressed: suppressedHeadline,
     categories: mvp.categories as never,
     rows: mvp.rows as never,
     registry: bandPathRegistryFromRubric(rubricData),
@@ -250,10 +273,14 @@ export function sealScan(input: SealInput): SealOutput {
       canonical_score: headlineScore,
       renormalized_score: Math.round(((mvp as unknown as { renormalized_score?: number }).renormalized_score ?? mvp.score) * 100) / 100,
       score_policy: policy,
-      suppressed: (mvp as unknown as { suppressed?: boolean }).suppressed ?? false,
+      suppressed: suppressedHeadline,
       verdict: (mvp as unknown as { verdict?: string }).verdict,
       tier,
       tier_legacy: tierLegacy,
+      // Kill-switch disclosure: present only when a proven gate moved the band.
+      ...(gateCap.capped
+        ? { gate_capped: true, uncapped_tier: scoreTier, capped_by_gates: gateCap.cappedByGates }
+        : {}),
       ci_band: (mvp as unknown as { verdict?: string }).verdict === 'insufficient-signal' ? 'insufficient-signal' : mvp.status === 'complete' ? 'complete' : 'degraded',
     },
     categories: mvp.categories,

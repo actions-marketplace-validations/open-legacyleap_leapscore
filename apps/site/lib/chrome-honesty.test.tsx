@@ -42,6 +42,17 @@ describe("funnel-landing chrome tells the current truth", () => {
     expect(html).not.toMatch(/in development behind the waitlist/i);
   });
 
+  it("publishes the kill-switch cap the seal actually applies", () => {
+    const html = renderToStaticMarkup(MethodPage());
+    // The method page must describe the cap as enforced (band, not score) — the
+    // same behavior apps/scanner/scoring/seal.ts applies and reports disclose.
+    expect(html).toMatch(/Kill-switch gates/i);
+    expect(html).toMatch(/caps the verdict at\s*<[^>]*>High/i);
+    expect(html).toMatch(/never the score/i);
+    expect(html).toMatch(/ceiling, never a floor/i);
+    expect(html).toMatch(/unevaluable/i);
+  });
+
   it("no ../rubric/README.md relative link remains anywhere in the site source", () => {
     const files = ["app", "components", "lib"].flatMap((root) =>
       readdirSync(join(process.cwd(), root), { recursive: true })

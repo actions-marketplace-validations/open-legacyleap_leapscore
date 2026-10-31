@@ -212,6 +212,15 @@ export interface Report {
     tier: string;
     tier_legacy?: string;
     ci_band: string;
+    /** True when a proven kill-switch gate capped the band (Gates G1–G8): the
+     * tier was lowered to the cap regardless of the score. The score itself is
+     * never altered — a capped run reports its honest number with a capped band. */
+    gate_capped?: boolean;
+    /** The band the score alone would have earned, kept when `gate_capped` is
+     * true so a reader can see what the cap displaced. Never set otherwise. */
+    uncapped_tier?: string;
+    /** The proven gates that fired the cap (ids), ordered as sealed. */
+    capped_by_gates?: string[];
   };
   coverage: CoverageCounts;
   gates: Gate[];
@@ -390,6 +399,27 @@ export function tierForScore(score: number): string {
   return "Critical";
 }
 
+/** The band a proven kill-switch gate caps to: any proven gate caps the verdict
+ * at `High`; a score already in `Critical` stays there (the cap is a ceiling,
+ * never a floor). Single definition — the sealed verdict and every surface read
+ * this, so no display can disagree with the seal. */
+export const GATE_CAPPED_TIER: string = "High";
+
+/** Apply the kill-switch cap to a band. Returns the band plus the disclosure
+ * fields (what the score alone earned, which gates fired) when the cap moved it. */
+export function gateCapForTier(
+  tier: string,
+  provenGateIds: readonly string[],
+): { tier: string; capped: boolean; uncappedTier?: string; cappedByGates: string[] } {
+  const fired = provenGateIds.filter((id) => String(id).trim() !== "");
+  if (fired.length === 0) return { tier, capped: false, cappedByGates: [] };
+  if (tier === "Critical") return { tier, capped: false, cappedByGates: fired };
+  const capped = tier !== GATE_CAPPED_TIER;
+  return capped
+    ? { tier: GATE_CAPPED_TIER, capped: true, uncappedTier: tier, cappedByGates: fired }
+    : { tier, capped: false, cappedByGates: fired };
+}
+
 export function tierLegacyFor(tier: string): string {
   if (tier === "Low") return "Healthy";
   if (tier === "High") return "High Risk";
@@ -427,10 +457,51 @@ export function nextBandForScore(score: number): { band: string; threshold: numb
   return best;
 }
 
+/** The next band above a sealed score: the nearest band threshold the score has
+ * not already reached, walking the contract's band vocabulary. `scoreTier` is the
+ * sealed (possibly gate-capped) band and is never offered back as its own
+ * destination. Returns null at the top band, so no destination is invented. */
+export function nextBandForTier(
+  score: number,
+  scoreTier?: string,
+): { band: string; threshold: number } | null {
+  const normalized = String(scoreTier ?? "").trim().toLowerCase();
+  let best: { band: string; threshold: number } | null = null;
+  for (const [name, floor] of Object.entries(BAND_FLOORS) as Array<[PublicBandName, number]>) {
+    if (name.toLowerCase() === normalized) continue;
+    if (floor <= score) continue;
+    if (best === null || floor < best.threshold) best = { band: tierForScore(floor), threshold: floor };
+  }
+  return best;
+}
+
+/** Distance from a sealed verdict to the next band: `threshold − score`, exactly
+ * as the band-path spec pins it. A kill-switch cap caps the *band*; the score
+ * keeps its honest value, so the ground to cover stays `threshold − score` even
+ * when a proven gate lowered the band. Clamped at 0: a path never claims
+ * negative ground to cover. */
+export function bandPathDistance(
+  threshold: number,
+  score: number,
+  _scoreTier?: string,
+): number {
+  return Math.max(0, threshold - score);
+}
+
 /** Percentage-point display for a derived path: two decimals, trailing zeros
  * trimmed (6.1, 2.22). Display only — the sealed values stay exact. */
 export function formatPp(pp: number): string {
   return String(Number(pp.toFixed(2)));
+}
+
+/** The gate-cap disclosure as a sentence: what fired, what the score alone
+ * earned, and that the cap lifts when the gate clears. Rendered beside the
+ * path, so a capped reader is never told to "reach" the band the report says
+ * they are already in. */
+export function gateCapStatement(cappedByGates: readonly string[], uncappedTier: string): string {
+  const gates = cappedByGates.filter((id) => String(id).trim() !== "").join(", ");
+  const plural = cappedByGates.length === 1 ? "" : "s";
+  return `Proven gate${plural} ${gates || "—"} cap${plural === "" ? "s" : ""} this verdict at ${GATE_CAPPED_TIER} — the score alone earned ${uncappedTier}, and the cap lifts when the gate clears.`;
 }
 
 // ---------------------------------------------------------------------------
@@ -507,6 +578,14 @@ export function badgeCoverage(
  * not to the marketing surface; the assessment next-step link stays
  * single-sourced by `release-funnel`. */
 export const REPORT_BASE_URL = "https://leapscore.dev/reports";
+
+/** Site origin, and the methodology path every report closes with
+ * (release-funnel: "Methodology link resolves in-repo"). The emitters compose
+ * these two rather than typing a URL, so the CLI's link and the site's route
+ * cannot drift apart into a dead path. */
+export const SITE_BASE_URL = "https://leapscore.dev";
+export const METHODOLOGY_PATH = "/methodology";
+export const METHODOLOGY_URL = `${SITE_BASE_URL}${METHODOLOGY_PATH}`;
 
 /** Build the citation target for a sealed run. Shared so the CLI emitter and
  * any later surface cannot drift on the route (score-badge D9). */

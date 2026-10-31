@@ -1,4 +1,5 @@
 /** scanner/scan/scoring/scorer/rollup.ts — category% + headline + tiers + gates (11:§2, 02:§3) */
+import { gateCapForTier } from '@leapscore/contracts';
 import type { FactRecord } from '../../facts';
 
 export type GateStatus = 'proven' | 'not-proven' | 'needs-verification' | 'unevaluable';
@@ -91,10 +92,9 @@ export function evaluateGates(facts: FactRecord[]): Gate[] {
 }
 
 export function cappedTier(score: number, gates: Gate[]): { tier: string; capped: boolean } {
-  const proven = gates.some(g => g.status === 'proven');
-  if (!proven) return { tier: tierForScore(score), capped: false };
-  if (score < 27) return { tier: 'Critical', capped: true };
-  return { tier: 'High', capped: true };
+  const proven = gates.filter(g => g.status === 'proven').map(g => g.id);
+  const capped = gateCapForTier(tierForScore(score), proven);
+  return { tier: capped.tier, capped: capped.capped };
 }
 
 function tierForScore(score: number): string {

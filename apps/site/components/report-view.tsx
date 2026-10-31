@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { BandPath } from "@/components/band-path";
+import { gateCapStatement } from "@leapscore/contracts";
 import { DeepDiveScope, TopBlockers } from "@/components/blockers";
 import { CategorySection } from "@/components/category-section";
 import { DialGauge } from "@/components/dial-gauge";
@@ -109,6 +110,13 @@ export function ReportView({
   const archetype = (report.snapshot as unknown as { archetype?: string }).archetype;
   const archetypeConf = (report.snapshot as unknown as { archetype_confidence?: string }).archetype_confidence;
 
+  // Kill-switch cap: a proven gate lowered the band, and the report says so next
+  // to the number the cap displaced. Wording comes from the contract, so the site
+  // and the CLI reports state it identically.
+  const gateCapped = report.headline.gate_capped === true;
+  const uncappedTier = report.headline.uncapped_tier;
+  const cappedByGates = report.headline.capped_by_gates ?? [];
+
   return (
     <div className="mx-auto max-w-5xl px-4 py-10">
       <div className="mb-8">
@@ -175,6 +183,16 @@ export function ReportView({
             <div className={`text-sm ${tierLabel(tier.color)}`}>{report.headline.tier}</div>
             <div className="mt-1 text-xs text-faint">{report.headline.ci_band}</div>
           </div>
+          {gateCapped && uncappedTier ? (
+            <p
+              className="mt-3 rounded-lg border border-tier-critical/40 bg-panel/40 p-2.5 text-xs leading-relaxed text-muted"
+              role="note"
+            >
+              <span className="font-medium text-foreground">Verdict capped at {report.headline.tier}.</span>{" "}
+              {gateCapStatement(cappedByGates, uncappedTier)}{" "}
+              <span className="text-faint">The score itself is unchanged.</span>
+            </p>
+          ) : null}
           <div className="mt-6 w-full rounded-lg border border-hairline bg-panel/40 p-3">
             <p className="text-xs font-medium uppercase tracking-wider text-faint">Breakdown</p>
             <div className="mt-3 space-y-2">

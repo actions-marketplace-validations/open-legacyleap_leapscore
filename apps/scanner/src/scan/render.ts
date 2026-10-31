@@ -1,5 +1,5 @@
 /** apps/scanner/src/scan/render.ts — self-contained HTML + Markdown emitters (spec: report-rendering) */
-import { assessmentUrlForBand, assessmentCtaForBand, bandPathBlock, POSITIONING_LINE, type NextBandPath } from '@leapscore/contracts';
+import { assessmentUrlForBand, assessmentCtaForBand, bandPathBlock, gateCapStatement, METHODOLOGY_URL, POSITIONING_LINE, type NextBandPath } from '@leapscore/contracts';
 
 export type RenderInput = {
   score: number;
@@ -21,6 +21,11 @@ export type RenderInput = {
   /** Sealed next-band path (band-path): renders as one block after the top
    * risks and before the per-deduction detail; absent → no block at all. */
   nextBandPath?: NextBandPath;
+  /** Kill-switch cap disclosure (Gates G1–G8): when a proven gate lowered the
+   * band, the report states which gates fired and what the score alone earned. */
+  gateCapped?: boolean;
+  uncappedTier?: string;
+  cappedByGates?: string[];
   categories: Array<{ id: string; name: string; category_score: number | null; weight: number; applicable: number }>;
 };
 
@@ -28,7 +33,8 @@ function esc(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-const METHODOLOGY_URL = 'https://leapscore.dev/methodology';
+// METHODOLOGY_URL comes from the contract so the CLI's link and the site's
+// `/methodology` route cannot drift apart (release-funnel).
 
 /** Path block, HTML: destination statement, per-class steps with cumulative
  * arrival, shortfall disclosure, unreached count, and the stated assumption. */
@@ -80,6 +86,10 @@ export function renderHtml(r: RenderInput): string {
     return `<li><strong>${esc(b.row)} ${esc(b.name)}</strong> — ${esc(b.summary)} <em>${esc(b.weight_pp)} lost</em>${evidence}${rule}</li>`;
   }).join('\n');
   const gates = r.gates.map((g) => `<li><strong>${esc(g.id)}</strong> ${esc(g.name)} — ${esc(g.status)}: ${esc(g.note)}</li>`).join('\n');
+  const capNotice =
+    r.gateCapped && r.uncappedTier
+      ? `<p class="gatecap"><strong>Verdict capped at ${esc(r.tier)}.</strong> ${esc(gateCapStatement(r.cappedByGates ?? [], r.uncappedTier))}</p>\n`
+      : '';
   const cats = r.categories.map((c) => `<li>${esc(c.id)} — ${esc(c.name)}: ${c.category_score == null ? 'n/a' : `${Math.round(c.category_score)}`} (weight ${c.weight}%)</li>`).join('\n');
   return `<!DOCTYPE html>
 <html lang="en">
@@ -97,7 +107,7 @@ h2{margin-top:2rem}ul{padding-left:1.2rem}
 <body>
 ${headline}
 <p class="meta">${esc(r.repo)} · commit ${esc(commitShort)} · ${esc(r.scannedAt)} · ${esc(r.runId)} · ${esc(r.status)} · coverage ${r.coverage.measured}m/${r.coverage.estimated}e/${r.coverage.unknown}u${r.fingerprint ? ` · fingerprint ${esc(r.fingerprint.slice(0, 12))}` : ''}</p>
-<h2>Top risks</h2>
+${capNotice}<h2>Top risks</h2>
 <ul>${risks || '<li>No deductions — clean scan.</li>'}</ul>
 ${r.nextBandPath ? `${renderPathHtml(r.nextBandPath, r.tier, r.score)}\n` : ''}<h2>Detail</h2>
 <h3>Gates</h3>
@@ -121,6 +131,10 @@ export function renderMarkdown(r: RenderInput): string {
   lines.push(``);
   lines.push(`commit ${commitShort} · ${r.scannedAt} · \`${r.runId}\` · ${r.status} · coverage ${r.coverage.measured}m/${r.coverage.estimated}e/${r.coverage.unknown}u${r.fingerprint ? ` · fingerprint \`${r.fingerprint.slice(0, 12)}\`` : ''}`);
   lines.push(``);
+  if (r.gateCapped && r.uncappedTier) {
+    lines.push(`> **Verdict capped at ${r.tier}.** ${gateCapStatement(r.cappedByGates ?? [], r.uncappedTier)}`);
+    lines.push(``);
+  }
   lines.push(`## Top 5 risks`);
   if (!r.topBlockers.length) {
     lines.push(`- No deductions — clean scan.`);
