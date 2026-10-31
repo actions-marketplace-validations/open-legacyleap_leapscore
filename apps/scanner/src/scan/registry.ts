@@ -1,6 +1,8 @@
 /** apps/scanner/src/scan/registry.ts — detector discovery + manifest validation (05 §1.2) */
 import type { Detector } from './detector';
-// Discovers packages/detectors/*/manifest.json; validates tier/budget/planes/ecosystems.
+// Discovers the detector-manifest directory (packages/detectors/*/manifest.json, relative to
+// the repo root); validates tier/budget/planes/ecosystems. The engine-native detectors under
+// src/scan/detectors/ are the live path — this registry reads the per-indicator manifests.
 // Adding indicator 103 = adding a folder — orchestrator never edited (Q9).
 // Stub: real impl reads filesystem, checks SPECS skeleton §0-§9 exists, schema.json valid.
 

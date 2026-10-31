@@ -1,7 +1,7 @@
 # @leapscore/surface
 
 Standalone issue-surfacing app: sealed envelope in → GitHub issues out.
-Split out of `packages/engine` so the `contents:read` scanner and the
+Split out of the scanner so the `contents:read` scanner and the
 `issues:write` writer run in separate processes with separate tokens.
 
 ## Usage

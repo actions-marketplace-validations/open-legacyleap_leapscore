@@ -6,14 +6,14 @@ Provides canonical indicator display for every report surface so titles, categor
 
 ### Requirement: Canonical indicator names
 
-The system SHALL render every `IndicatorRow.name` and `IndicatorRow.category_id` display from a single rubric-derived registry (sourced from `docs/rubric/01_...10_...` + `11_WEIGHTS_THRESHOLDS_CONFIG.md` via `tooling/scripts/compile-rubric.ts` → `packages/engine/rubric.json` `indicators[]`). The raw indicator ID (e.g. `ECOS-01`) SHALL never be used as a title fallback. Category headers (e.g. `ECOS` → `Dependency & Ecosystem Health`) SHALL also be derived from the same registry.
+The system SHALL render every `IndicatorRow.name` and `IndicatorRow.category_id` display from a single rubric-derived registry (sourced from `docs/rubric/01_...10_...` + `11_WEIGHTS_THRESHOLDS_CONFIG.md` via `tooling/scripts/compile-rubric.ts` → `apps/scanner/src/scan/scoring/rubric.json` `indicators[]`). The raw indicator ID (e.g. `ECOS-01`) SHALL never be used as a title fallback. Category headers (e.g. `ECOS` → `Dependency & Ecosystem Health`) SHALL also be derived from the same registry.
 
 #### Scenario: Live placeholder row shows rubric title
 - **WHEN** `/live` renders `ECOS-01` as an `unknown` placeholder before its detector completes
 - **THEN** the row title reads `Runtime/Language EOL` (from registry) and the left mono column shows `ECOS-01`; the title never reads `ECOS-01`.
 
 #### Scenario: MVP extra rows show rubric title
-- **WHEN** `packages/engine/scorer/mvp.ts` creates rows for the 13 clone-based MVP indicators
+- **WHEN** `apps/scanner/src/scan/scoring/scorer/mvp.ts` creates rows for the 13 clone-based MVP indicators
 - **THEN** each row's `name` is looked up from the registry (e.g. `ECOS-02` → `Major package drift`) and the UI at `apps/site/components/category-section.tsx:113` displays that name.
 
 #### Scenario: Sample and live share one source
@@ -30,12 +30,12 @@ The system SHALL treat a registry miss as an error condition, not a silent fallb
 
 ### Requirement: Full-table consolidation uses registry
 
-The system SHALL build `full_table` (102 rows) and `deep_dive_scope` by iterating the registry's 102 IDs, marking requested-but-undone rows `unknown` with `unknown_measure_path` and FE rows `not_applicable` where the repo has no client. All placeholder rows SHALL carry the registry's `name` and `effort` (`⚡/🔶/🔷`). For `measured` and `estimated` rows where the encyclopedia defines a remediation playbook, the system SHALL also carry the registry's `remediation` (`quick_win`, `structural`, `gold_standard`, `effort`) on `IndicatorRow.remediation`; `unknown` and `not_applicable` rows SHALL NOT carry `remediation` (they carry `unknown_measure_path` instead). The registry source for `remediation` is `docs/rubric/01_...10_...` parsed by `tooling/scripts/compile-rubric.ts` into `packages/engine/rubric.json` and `apps/site/lib/generated/rubric.ts`; no detector or scorer SHALL hand-author remediation text.
+The system SHALL build `full_table` (102 rows) and `deep_dive_scope` by iterating the registry's 102 IDs, marking requested-but-undone rows `unknown` with `unknown_measure_path` and FE rows `not_applicable` where the repo has no client. All placeholder rows SHALL carry the registry's `name` and `effort` (`⚡/🔶/🔷`). For `measured` and `estimated` rows where the encyclopedia defines a remediation playbook, the system SHALL also carry the registry's `remediation` (`quick_win`, `structural`, `gold_standard`, `effort`) on `IndicatorRow.remediation`; `unknown` and `not_applicable` rows SHALL NOT carry `remediation` (they carry `unknown_measure_path` instead). The registry source for `remediation` is `docs/rubric/01_...10_...` parsed by `tooling/scripts/compile-rubric.ts` into `apps/scanner/src/scan/scoring/rubric.json` and `apps/site/lib/generated/rubric.ts`; no detector or scorer SHALL hand-author remediation text.
 
 Categories in the scorecard grid SHALL be derived only from indicator rows that were requested or have a measured/estimated/unknown status. A category with zero `indicator_rows` SHALL be omitted from `report.categories` and SHALL NOT contribute `category_score` or `weighted_contribution` to the headline; the headline is the sum over non-empty categories. This is the excluding-not-zero semantics for empty categories. `coverage` (`31/102`) is unchanged.
 
 #### Scenario: Measured row carries rubric-derived remediation
-- **WHEN** `provider.live.ts` or `sample.ts` builds a `measured` row for `ARCH-01` (Cognitive Complexity)
+- **WHEN** the scanner seal or `apps/site/lib/sample.ts` builds a `measured` row for `ARCH-01` (Cognitive Complexity)
 - **THEN** `row.remediation.quick_win` equals the encyclopedia `Remediation playbook: Quick win:` clause (e.g. contains `carve the top 5 offenders`), `row.remediation.structural` contains the `Structural fix:` clause, `row.remediation.gold_standard` contains the `Gold standard` clause, and `row.remediation.effort` equals the entry's `Verify effort` tag; `RowDetail` renders the three sections under a `Remediation` heading.
 
 #### Scenario: Estimated row also carries remediation
@@ -47,7 +47,7 @@ Categories in the scorecard grid SHALL be derived only from indicator rows that 
 - **THEN** the row has `unknown_measure_path` and no `remediation`; the deep-dive scope entry explains what it takes to make it measured.
 
 #### Scenario: Live full-table placeholders carry correct metadata
-- **WHEN** `provider.live.ts:buildFullTable()` constructs the 96 unknown placeholders for a 19-indicator scan
+- **WHEN** the scanner's full-table builder constructs the unknown placeholders for a partial-indicator scan
 - **THEN** each placeholder has `name` and `effort` from the registry, and `unknown_measure_path` per the encyclopedia/delta spec, not hardcoded `⚡ ≤30 min`.
 
 #### Scenario: API not in scorecard when no API rows requested

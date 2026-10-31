@@ -2,8 +2,8 @@
 
 > Execution-only slice: run LeapScore checks from a GitHub workflow against a self repo or a public target repo. No in-repo surfacing (checks/projects/comments) — that stays in `12_GITHUB_SURFACE_PLAN.md`.
 > Builds on: `05` (orchestrator), `08` (token model), `12` §2/§9 (triggers, rejected `workflow_dispatch` plumbing — re-scoped here to runner-side dispatch only).
-> Status: **SHIPPED (openspec `workflow-scan-v1`)** — engine seam live: shared composer `packages/engine/seal.ts`, thin CLI `apps/scanner/bin/scan.ts`, runner workflow `.github/workflows/leapscore-scan.yml`; `/api/scan` rewired to the composer.
-> Engine truth today: `packages/engine/orchestrator.ts:82` (`runUnifiedScan(repoUrl)`), `packages/engine/seal.ts` (shared `sealScan` composer used by both `/api/scan` and the CLI), `clone.ts:25` (`--filter=blob:none --depth 1`, always default-branch HEAD), `ingest.ts:58-61` (private → `private_requires_app` refusal), `gh.ts:118` (auth header only `if token`).
+> Status: **SHIPPED (openspec `workflow-scan-v1`)** — engine seam live: shared composer `apps/scanner/src/scan/scoring/seal.ts`, thin CLI `apps/scanner/bin/scan.ts`, runner workflow `.github/workflows/leapscore-scan.yml`; the scanner HTTP service rewired to the composer.
+> Engine truth today: `apps/scanner/src/scan/orchestrator.ts` (`runUnifiedScan(repoUrl)`), `apps/scanner/src/scan/scoring/seal.ts` (shared `sealScan` composer used by both the scanner service and the CLI), `clone.ts:25` (`--filter=blob:none --depth 1`, always default-branch HEAD), `ingest.ts:58-61` (private → `private_requires_app` refusal), `gh.ts:118` (auth header only `if token`).
 
 ---
 

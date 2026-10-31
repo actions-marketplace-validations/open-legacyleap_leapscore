@@ -1,20 +1,23 @@
 # LeapScore — Product Bible
 
-> One exhaustive product view of this repo. Implementation lives in `packages/engine` + `apps/site`;
-> this document describes what the product **is, does, shows, and promises** — not how it is coded.
-> Status: implementation live (unified scan, persisted reports, rubric browser). Stale "planning only" notes elsewhere are outdated.
+> One exhaustive product view of this repo. Implementation lives in `apps/scanner` (produce: engine +
+> CLI + scan service), `apps/surface` (sealed report → GitHub issues), `apps/site` (present) and
+> `packages/contracts` (the shared report contract); this document describes what the product
+> **is, does, shows, and promises** — not how it is coded. See `AGENTS.md` for the layout.
+> Status: implementation live (unified remote scan, offline local scan, rubric browser, GitHub Action).
+> Stale "planning only" notes elsewhere are outdated.
 
 ---
 
 ## 0. TL;DR
 
-- **LeapScore** turns any public GitHub repo URL into a **legacy / maintainability score (0–100)** with a tier, evidence, and fix plan.
-- **Product in one sentence:** paste a repo link → automatic checkup in seconds-to-minutes → shareable report (score + top risks + remedies) backed by a public 102-indicator rubric.
+- **LeapScore** turns a codebase — a local directory, or any public GitHub repo URL — into a **legacy / maintainability score (0–100)** with a band, evidence, and a cost-weighted fix plan.
+- **Product in one sentence:** point LeapScore at a repo → automatic checkup in seconds-to-minutes → shareable report (score + top risks + remedies) backed by a public 102-indicator rubric. Offline-first: `leapscore-scan scan <path>` runs with zero network and zero external binaries.
 - **Rubric:** 102 indicators across 10 categories (76 standard + 18 deep-dive + 8 conditional frontend). Every row scores 0–3 or N/A; 8 kill-switch gates can cap the verdict.
 - **Scan:** one unified run under a single time budget (fast path ~10–15s, full scan up to ~4 min), streaming progress + detector trace, terminal state is either a **report** or a **refused** explanation — never a silent zero.
-- **Report:** headline score + tier, gates cockpit, 9 scoring categories, per-indicator evidence, top blockers, remedies, deep-dive scope, coverage honesty (measured / estimated / unknown), persisted permalink with JSON + rerun.
+- **Report:** headline score + band, gates cockpit, 9 scoring categories, per-indicator evidence, top blockers, remedies, deep-dive scope, coverage honesty (measured / estimated / unknown), derived next-band path, and a deterministic `score_fingerprint`. Sealed as `report.json` + `report.html` + `report.md` on every run; a dated permalink exists for runs the site retains.
 - **Site:** marketing home + full pitch + method transparency + live scanner + scan history + per-run report + rubric browser + pinned sample. Sample repo (django/django) is pinned at **58 / Moderate**.
-- **Honesty model:** unknowns are excluded from the score and shown as "what it takes to measure" — the upsell, not a gap. Estimates are capped and labeled. Sample views are always labeled illustrative.
+- **Honesty model:** unknowns are counted as unscored in the frozen denominator and shown as "what it takes to measure" — the upsell, not a gap. Estimates are clamped and labeled. A headline whose gradeable coverage falls below half is suppressed as `insufficient-signal` rather than printed as a number. Sample views are always labeled illustrative.
 - **Coverage today:** 31 checks run live (of 102); the rest appear as honest stubs. The old 19-row MVP slice is a subset of what ships.
 
 ---

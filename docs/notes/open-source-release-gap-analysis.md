@@ -1,5 +1,7 @@
 # Open-Source Release — Gap Analysis
 
+> **Path note (2026-10-31):** this is a dated working note and its `packages/engine/…` paths are stale — the engine now lives at `apps/scanner/src/scan/…`, scoring at `apps/scanner/src/scan/scoring/…`, and the surface app at `apps/surface/…`. The findings themselves still apply.
+
 **Date:** 15 Oct 2026
 **Source brief:** `LeapScore — Open-Source Release Brief.docx` (@Rajat)
 **Scope:** a reading of the brief against the current repo. Evidence-forward gap analysis.

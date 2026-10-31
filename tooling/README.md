@@ -4,7 +4,7 @@ Repo automation: rubric compilation + enforcement checks.
 
 ## Scripts
 
-- `scripts/compile-rubric.ts` — canonical `docs/rubric/*.md` → `packages/engine/rubric.json` + `apps/site/lib/generated/rubric.ts` (indicators, weights, tiers, gates, applicability, remediation playbooks).
+- `scripts/compile-rubric.ts` — canonical `docs/rubric/*.md` → `apps/scanner/src/scan/scoring/rubric.json` + `apps/site/lib/generated/rubric.ts` (indicators, weights, tiers, gates, applicability, remediation playbooks).
   - `npm run compile:rubric` — regenerate (from repo root).
   - `npm run check:rubric-consistency` — `--check` mode: asserts the generated files match the encyclopedia (IDs, names, effort tags, ≤5% missing remediation). **This is the CI gate**, not `checks/rubric-consistency.ts`.
 

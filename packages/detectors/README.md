@@ -15,9 +15,9 @@ Short IDs drop the category prefix (`SEC-02` → `sec-02`); the full ID lives in
 
 ## Relationship to the engine
 
-The **live** detectors are engine-native (`packages/engine/detectors/*.ts`, 31 indicators) — they run inside the unified scan's `ctx` (`ctx.gh`, `ctx.readFile`). This package is the registry + contract surface: the engine's `registry.ts` discovers manifests/schemas, and `tooling/checks/detector-isolation.ts` enforces the isolation rule (no raw `fetch`/`fs`/`child_process` in detectors).
+The **live** detectors are engine-native (`apps/scanner/src/scan/detectors/*.ts`, 31 indicators) — they run inside the unified scan's `ctx` (`ctx.gh`, `ctx.readFile`). This package is the registry + contract surface: the engine's `registry.ts` discovers manifests/schemas, and `tooling/checks/detector-isolation.ts` enforces the isolation rule (no raw `fetch`/`fs`/`child_process` in detectors).
 
-`detector.ts` files here are the exception, not the rule — added only where a standalone implementation is cleaner than an engine-native module. New detectors: add the folder (manifest + schema per `docs/specs/<ID>` §1/§3), wire into `packages/engine/detectors/`, cover with `packages/engine/__tests__/detector.contract.test.ts`.
+`detector.ts` files here are the exception, not the rule — added only where a standalone implementation is cleaner than an engine-native module. New detectors: add the folder (manifest + schema per `docs/specs/<ID>` §1/§3), wire into `apps/scanner/src/scan/detectors/`, cover with `apps/scanner/src/scan/__tests__/detector.contract.test.ts`.
 
 ## Conventions
 
