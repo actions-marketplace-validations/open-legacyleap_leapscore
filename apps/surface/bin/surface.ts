@@ -1,5 +1,8 @@
 #!/usr/bin/env tsx
-/** apps/surface/src/../bin/surface.ts — standalone surface CLI (envelope file in → issues out). */
+/** apps/surface/src/../bin/surface.ts — standalone surface CLI (envelope file in → issues out).
+ *  Shebang rule: keep the plain `env tsx` form — the package declares `bin`, so npm links
+ *  this file into node_modules/.bin, where `npm run`/`npx`/package-internal installs put
+ *  node_modules/.bin (and tsx) on PATH before invoking it. `env -S` breaks that path. */
 import { readFile, appendFile } from 'node:fs/promises';
 import { normalizeTargetSlug } from '../src/slug';
 import { createSurfaceRestClient } from '../src/rest';

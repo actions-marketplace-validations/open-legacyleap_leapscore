@@ -95,7 +95,7 @@ Adopted from `12` §5 minus board adds (run identity in the timeline, not the ob
 
 ## 11. Execution (engine tasks to make v1 real — explore-revised)
 
-1. `packages/engine/bin/surface.ts` (or `scan --surface --repo-a <owner/repo>`): read envelope `{ report, meta, trace }`, derive non-Green applicable rows from `report.full_table`, run label-scoped discovery (§7) → open/comment/reopen/close + label sync → summary counts. REST-only (`issues: write`); reuses `sealScan` types; no scorer changes, no GraphQL.
+1. `apps/surface/bin/surface.ts` (or `scan --surface --repo-a <owner/repo>`): read envelope `{ report, meta, trace }`, derive non-Green applicable rows from `report.full_table`, run label-scoped discovery (§7) → open/comment/reopen/close + label sync → summary counts. REST-only (`issues: write`); reuses `sealScan` types; no scorer changes, no GraphQL.
 2. Workflow: extend `leapscore-scan.yml` with `surface` input + a surface step (`setup-node` reuse, `GH_TOKEN` passthrough, `if: always()` only when envelope exists and scan exit ∈ {0}).
 3. E2E: self-scan (dedup on re-run: second run = 0 opened) + two-target run from one runner (label-scoped, no cross-talk: `target-a` rows never touch `target-b` tickets) + private-T×public-A skip assertion + burst-summary assertion.
 4. Deferred to v2: board linkage (PAT-first vs direct-App TBD — grammar already compatible), check-run trailer, website links, `.github/leapscore.yml` file config + Pro keys, schedule/push triggers, `teardown` automation, Search-API matching.

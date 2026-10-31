@@ -20,6 +20,25 @@ Exits: `0` pass · `1` crash · `2` usage-or-refused · `3` threshold trip
 `--strict` is zero-socket mode (vendored snapshots only; any network attempt
 aborts) and conflicts with `--repo` (exit 2, before any work).
 
+## Entry point
+
+`leapscore-scan` resolves through two install topologies, and both must stay wired:
+
+- **Workspace install (local authority):** `apps/scanner/package.json` declares
+  `"bin": { "leapscore-scan": "./bin/scan.ts" }`. A `npm install` at the repo root links
+  `node_modules/.bin/leapscore-scan`, so the command runs from any npm context —
+  `npm run`, `npm exec`, Action scripts. Invoke it as `leapscore-scan …`; do not fall
+  back to `npx tsx apps/scanner/bin/scan.ts` (that form bypasses the wiring and hides a
+  broken shim).
+- **Git install (`npx -p "<repo>#<ref>" leapscore-scan`):** a git install of this repo
+  installs only the root package, so the root `package.json` `bin` block must keep the
+  same `leapscore-scan` → `apps/scanner/bin/scan.ts` mapping. This is the form
+  `.github/workflows` and `docs/plans/14_WORKFLOW_SCAN_V1.md` use.
+
+The workspace `bin` is the local authority: the shim is generated from it, and any
+rename must move it there. `npm run check:bin-wiring` at the repo root enforces both
+sides — declaration parity across topologies and a resolving, executable shim.
+
 ## Score badge
 
 `--badge <path>` writes a self-contained score badge SVG beside the report trio,

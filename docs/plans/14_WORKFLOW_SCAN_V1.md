@@ -2,7 +2,7 @@
 
 > Execution-only slice: run LeapScore checks from a GitHub workflow against a self repo or a public target repo. No in-repo surfacing (checks/projects/comments) — that stays in `12_GITHUB_SURFACE_PLAN.md`.
 > Builds on: `05` (orchestrator), `08` (token model), `12` §2/§9 (triggers, rejected `workflow_dispatch` plumbing — re-scoped here to runner-side dispatch only).
-> Status: **SHIPPED (openspec `workflow-scan-v1`)** — engine seam live: shared composer `packages/engine/seal.ts`, thin CLI `packages/engine/bin/scan.ts`, runner workflow `.github/workflows/leapscore-scan.yml`; `/api/scan` rewired to the composer.
+> Status: **SHIPPED (openspec `workflow-scan-v1`)** — engine seam live: shared composer `packages/engine/seal.ts`, thin CLI `apps/scanner/bin/scan.ts`, runner workflow `.github/workflows/leapscore-scan.yml`; `/api/scan` rewired to the composer.
 > Engine truth today: `packages/engine/orchestrator.ts:82` (`runUnifiedScan(repoUrl)`), `packages/engine/seal.ts` (shared `sealScan` composer used by both `/api/scan` and the CLI), `clone.ts:25` (`--filter=blob:none --depth 1`, always default-branch HEAD), `ingest.ts:58-61` (private → `private_requires_app` refusal), `gh.ts:118` (auth header only `if token`).
 
 ---
@@ -34,7 +34,7 @@
 ## 4. Execution (v2-Q3, Q4)
 
 - **No `actions/checkout` of T.** Engine clones internally from URL (v2-Q3 revert; local-path `runLocalScan` dropped).
-- New thin CLI `packages/engine/bin/scan.ts`: `scan --repo <owner/repo> [--sha <sha>] --out leapscore-report.json`. Reuses `runUnifiedScan` + `scoreMvp` exactly as `/api/scan` does. No Docker, no reusable-workflow in v1.
+- New thin CLI `apps/scanner/bin/scan.ts`: `scan --repo <owner/repo> [--sha <sha>] --out leapscore-report.json`. Reuses `runUnifiedScan` + `scoreMvp` exactly as `/api/scan` does. No Docker, no reusable-workflow in v1.
 - 3-step workflow: `setup-node` → `npx … scan` → `upload-artifact`. Pinned engine ref (`#<sha>`) in the `npx` line.
 
 ```yaml
@@ -81,7 +81,7 @@ jobs:
 
 ## 7. Engine tasks (to make v1 real)
 
-1. `packages/engine/bin/scan.ts` — arg parse, `runUnifiedScan("https://github.com/"+repo)`, `scoreMvp`, envelope write, exit-code map (§5), `--sha` non-empty → `exit 2` with message.
+1. `apps/scanner/bin/scan.ts` — arg parse, `runUnifiedScan("https://github.com/"+repo)`, `scoreMvp`, envelope write, exit-code map (§5), `--sha` non-empty → `exit 2` with message.
 2. E2E: one public self-scan + one public target-scan from a runner A; assert artifact shape + exit 0.
 3. Deferred (not v1): SHA pinning, private-T PAT flow, schedule/push triggers, markdown `$GITHUB_STEP_SUMMARY`, Docker/reusable packaging.
 

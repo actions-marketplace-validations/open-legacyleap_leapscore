@@ -1,0 +1,76 @@
+## Purpose
+
+Defines how a LeapScore command becomes an executable entry point: which package owns the `bin` mapping in each install topology, what a fresh install must produce, and the repo gate that keeps a command name from silently pointing at a path that no longer exists.
+
+## ADDED Requirements
+
+### Requirement: Command entry point resolves after a workspace install
+
+A fresh `npm install` at the repo root SHALL produce a resolving `node_modules/.bin/<command>` shim for every command the repo documents, and each shim's target SHALL be an existing file. A documented command whose shim is absent, dangling, or non-executable SHALL be treated as a defect, not as a fallback to a longer invocation form.
+
+#### Scenario: Scanner command resolves from a clean checkout
+
+- **WHEN** a clean checkout runs `npm install` at the repo root
+- **THEN** `node_modules/.bin/leapscore-scan` exists, resolves to `apps/scanner/bin/scan.ts`, and `leapscore-scan --help` prints the CLI usage without an error
+
+#### Scenario: A stale shim is a failure, not a fallback
+
+- **WHEN** a shim under `node_modules/.bin` points at a path that does not exist
+- **THEN** the wiring is reported as broken and named by its command and its dead target, rather than being satisfied by any equivalent long-form invocation
+
+#### Scenario: Non-executable target is reported
+
+- **WHEN** a shim resolves to an existing file that lacks the executable bit
+- **THEN** the wiring is reported as broken and names that file
+
+### Requirement: Each install topology exposes the same command set
+
+The repo SHALL expose its commands in both supported topologies — a workspace install (shim under `node_modules/.bin`) and an install of the repo package itself (the `npx -p <repo>#<ref> <command>` form the release workflow and docs use) — and both SHALL map the same command name to the same target path. Neither topology SHALL expose a command the other cannot run.
+
+#### Scenario: Both topologies agree on the target
+
+- **WHEN** the command name `leapscore-scan` is mapped in both the workspace package and the repo package
+- **THEN** both mappings resolve to `apps/scanner/bin/scan.ts`
+
+#### Scenario: Divergent targets are reported
+
+- **WHEN** the repo-package mapping for a command name and the workspace mapping for that same name resolve to different files
+- **THEN** the wiring is reported as broken and names both targets
+
+#### Scenario: Repo-package invocation keeps working
+
+- **WHEN** the repo package is installed from a git reference and its command is invoked as `npx -p "<repo>#<ref>" surface`
+- **THEN** the command resolves and runs, so removing a workspace-only mapping cannot break that path and adding one cannot shadow it
+
+### Requirement: One command name maps to one target
+
+A command name SHALL NOT be claimed by two different targets, and a repo-level command mapping SHALL NOT be removed while a documented workflow, Action, or README still invokes that command.
+
+#### Scenario: Duplicate names with different targets are reported
+
+- **WHEN** two packages in the workspace declare the same command name with different targets
+- **THEN** the wiring is reported as broken and names the competing packages
+
+#### Scenario: Removing a still-invoked mapping is reported
+
+- **WHEN** a command mapping is dropped while a documented invocation of that command remains in the repo
+- **THEN** the wiring is reported as broken and names the command and the invocation site
+
+### Requirement: The wiring check is a repo gate
+
+The repo SHALL provide a single non-interactive check that validates every declared command mapping and every produced shim, SHALL exit non-zero with a per-command diagnostic when any mapping or shim fails the requirements above, and SHALL exit zero with no output noise when all of them pass. The check SHALL NOT require network access, a scan, or a token.
+
+#### Scenario: Healthy wiring passes quietly
+
+- **WHEN** every declared command resolves to an existing executable target in both topologies
+- **THEN** the check exits `0` without naming any command
+
+#### Scenario: Broken wiring fails the gate
+
+- **WHEN** any declared command is missing a shim, points at a missing target, or maps to divergent targets across topologies
+- **THEN** the check exits non-zero and its output names each failing command with the reason
+
+#### Scenario: Gate runs offline
+
+- **WHEN** the check runs with no network access and no `GH_TOKEN` set
+- **THEN** it still completes and reports the same verdict

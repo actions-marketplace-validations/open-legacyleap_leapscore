@@ -1,5 +1,8 @@
 #!/usr/bin/env tsx
-/** apps/scanner/bin/scan.ts — thin workflow CLI over runUnifiedScan/runLocalScan + sealScan (spec: workflow-scan, scan-local) */
+/** apps/scanner/bin/scan.ts — thin workflow CLI over runUnifiedScan/runLocalScan + sealScan (spec: workflow-scan, scan-local)
+ *  Shebang rule: keep the plain `env tsx` form — the package declares `bin`, so npm links
+ *  this file into node_modules/.bin, where `npm run`/`npx`/package-internal installs put
+ *  node_modules/.bin (and tsx) on PATH before invoking it. `env -S` breaks that path. */
 import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import { stat } from 'node:fs/promises';
 import { resolve, basename, dirname } from 'node:path';

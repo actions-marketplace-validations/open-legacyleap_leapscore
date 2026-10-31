@@ -16,6 +16,7 @@
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "check:rubric-consistency": "tsx tooling/scripts/compile-rubric.ts --check",
+    "check:bin-wiring": "tsx tooling/checks/bin-wiring.ts",
     "check:detector-isolation": "tsx tooling/checks/detector-isolation.ts",
     "check:site-boundary": "tsx tooling/checks/site-boundary.ts",
     "check:surface-boundary": "tsx tooling/checks/surface-boundary.ts",

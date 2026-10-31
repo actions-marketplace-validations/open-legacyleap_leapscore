@@ -73,7 +73,7 @@ The brief reads like a packaging brief (requirements 1, 2, 7). Two of the three 
 ## 3. What a scan does today
 
 ```
-leapscore-scan --repo owner/repo --out x.json      (packages/engine/bin/scan.ts)
+leapscore-scan --repo owner/repo --out x.json      (apps/scanner/bin/scan.ts)
    |
    +-- ingestRepoUrl()        GET api.github.com/repos/o/r            [NETWORK]
    |
@@ -233,7 +233,7 @@ For the enterprise the brief targets, "the vendor's server clones your repo and 
     /reports  persisted runs           JSON + HTML + MD
     /api/scan NDJSON                   exit code + threshold
     surface/ files GH issues           README + methodology + licence
-    engine/bin/scan.ts --repo          site = landing page + assessment link
+    apps/scanner/bin/scan.ts --repo    site = landing page + assessment link
 ```
 
 This is a large scope decision hiding in a document that reads like a packaging brief.
@@ -310,8 +310,8 @@ grep -n "ecosystem:" packages/engine/ecosystem.ts
 grep -rn "VB6\|Delphi\|Pascal" docs/rubric/ | wc -l    # expect 0
 
 # Finding E — CLI shape, refusal-only exit codes, tier names
-sed -n '13,25p' packages/engine/bin/scan.ts
-sed -n '90,92p' packages/engine/bin/scan.ts
+sed -n '13,25p' apps/scanner/bin/scan.ts
+sed -n '90,92p' apps/scanner/bin/scan.ts
 sed -n '99,101p' packages/engine/seal.ts
 if [ -n "$(find . -maxdepth 1 -iname 'LICENSE*' -print -quit)" ]; then echo 'LICENSE present'; else echo 'no LICENSE file'; fi
 
