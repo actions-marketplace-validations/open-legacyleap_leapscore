@@ -8009,6 +8009,15 @@ function tierForScore(score) {
   return "Critical";
 }
 __name(tierForScore, "tierForScore");
+var GATE_CAPPED_TIER = "High";
+function gateCapForTier(tier, provenGateIds) {
+  const fired = provenGateIds.filter((id) => String(id).trim() !== "");
+  if (fired.length === 0) return { tier, capped: false, cappedByGates: [] };
+  if (tier === "Critical") return { tier, capped: false, cappedByGates: fired };
+  const capped = tier !== GATE_CAPPED_TIER;
+  return capped ? { tier: GATE_CAPPED_TIER, capped: true, uncappedTier: tier, cappedByGates: fired } : { tier, capped: false, cappedByGates: fired };
+}
+__name(gateCapForTier, "gateCapForTier");
 function tierLegacyFor(tier) {
   if (tier === "Low") return "Healthy";
   if (tier === "High") return "High Risk";
@@ -8026,20 +8035,31 @@ function bandThresholdFor(name) {
   return Object.prototype.hasOwnProperty.call(BAND_FLOORS, key) ? BAND_FLOORS[key] : void 0;
 }
 __name(bandThresholdFor, "bandThresholdFor");
-function nextBandForScore(score) {
+function nextBandForTier(score, scoreTier) {
+  const normalized = String(scoreTier ?? "").trim().toLowerCase();
   let best = null;
-  for (const floor of Object.values(BAND_FLOORS)) {
-    if (floor > score && (best === null || floor < best.threshold)) {
-      best = { band: tierForScore(floor), threshold: floor };
-    }
+  for (const [name, floor] of Object.entries(BAND_FLOORS)) {
+    if (name.toLowerCase() === normalized) continue;
+    if (floor <= score) continue;
+    if (best === null || floor < best.threshold) best = { band: tierForScore(floor), threshold: floor };
   }
   return best;
 }
-__name(nextBandForScore, "nextBandForScore");
+__name(nextBandForTier, "nextBandForTier");
+function bandPathDistance(threshold, score, _scoreTier) {
+  return Math.max(0, threshold - score);
+}
+__name(bandPathDistance, "bandPathDistance");
 function formatPp(pp) {
   return String(Number(pp.toFixed(2)));
 }
 __name(formatPp, "formatPp");
+function gateCapStatement(cappedByGates, uncappedTier) {
+  const gates = cappedByGates.filter((id) => String(id).trim() !== "").join(", ");
+  const plural = cappedByGates.length === 1 ? "" : "s";
+  return `Proven gate${plural} ${gates || "\u2014"} cap${plural === "" ? "s" : ""} this verdict at ${GATE_CAPPED_TIER} \u2014 the score alone earned ${uncappedTier}, and the cap lifts when the gate clears.`;
+}
+__name(gateCapStatement, "gateCapStatement");
 var BAND_PALETTE = {
   Low: "#22c55e",
   Moderate: "#e0a00a",
@@ -8075,6 +8095,9 @@ function badgeCoverage(coverage) {
 }
 __name(badgeCoverage, "badgeCoverage");
 var REPORT_BASE_URL = "https://leapscore.dev/reports";
+var SITE_BASE_URL = "https://leapscore.dev";
+var METHODOLOGY_PATH = "/methodology";
+var METHODOLOGY_URL = `${SITE_BASE_URL}${METHODOLOGY_PATH}`;
 function reportPermalinkFor(runId) {
   return `${REPORT_BASE_URL}/${encodeURIComponent(String(runId ?? ""))}`;
 }
@@ -9785,7 +9808,7 @@ function quickWinFor(row, registry) {
 __name(quickWinFor, "quickWinFor");
 function deriveNextBandPath(input2) {
   if (input2.suppressed) return void 0;
-  const next = nextBandForScore(input2.score);
+  const next = nextBandForTier(input2.score, input2.tier ?? tierForScore(input2.score));
   const sealedRows = sealedRowSource(input2);
   const unreachedRows = sealedRows.filter(
     (row) => row.status === "unknown" || row.status === "not_implemented"
@@ -9800,7 +9823,7 @@ function deriveNextBandPath(input2) {
       terminal: true
     };
   }
-  const pointsNeeded = next.threshold - input2.score;
+  const pointsNeeded = bandPathDistance(next.threshold, input2.score, input2.tier ?? tierForScore(input2.score));
   const categoryById = /* @__PURE__ */ new Map();
   for (const category of input2.categories ?? []) {
     if (category?.id) categoryById.set(category.id, category);
@@ -9927,7 +9950,8 @@ function formatStdout(report, opts = {}) {
   const thresholdPart = opts.thresholdState ?? "";
   const coveragePart = `coverage:${report.coverage.measured}m/${report.coverage.estimated}e/${report.coverage.unknown}u`;
   const pathPart = report.next_band_path ? ` ${formatBandPathClause(report.next_band_path, report.headline.tier)}` : "";
-  const prefix = report.headline.suppressed ? `insufficient-signal ${gatePart} ${coveragePart}${thresholdPart}` : `${report.headline.score}/${report.headline.tier} ${gatePart} ${coveragePart}${thresholdPart}${pathPart}`;
+  const capPart = report.headline.gate_capped ? ` gate-capped from ${report.headline.uncapped_tier ?? "a higher band"} by ${(report.headline.capped_by_gates ?? []).join("+") || "a proven gate"}` : "";
+  const prefix = report.headline.suppressed ? `insufficient-signal ${gatePart} ${coveragePart}${thresholdPart}` : `${report.headline.score}/${report.headline.tier}${capPart} ${gatePart} ${coveragePart}${thresholdPart}${pathPart}`;
   return `${prefix} \u2014 ${assessmentCtaForBand(report.headline.tier)} ${assessmentUrlForBand(report.headline.tier)}`;
 }
 __name(formatStdout, "formatStdout");
@@ -9948,11 +9972,16 @@ function sealScan(input2) {
   const deepDiveScope = buildDeepDiveScope(mvp.rows);
   const policy = input2.scorePolicy ?? "frozen";
   const headlineScore = policy === "legacy" ? Math.round((mvp.renormalized_score ?? mvp.score) * 100) / 100 : Math.round(mvp.score * 100) / 100;
-  const tier = tierForScore(headlineScore);
+  const scoreTier = tierForScore(headlineScore);
+  const suppressedHeadline = mvp.suppressed ?? false;
+  const provenGateIds = mvp.gates.filter((g) => g.status === "proven").map((g) => g.id);
+  const gateCap = suppressedHeadline ? { tier: scoreTier, capped: false, cappedByGates: [] } : gateCapForTier(scoreTier, provenGateIds);
+  const tier = gateCap.tier;
   const tierLegacy = tierLegacyFor(tier);
   const nextBandPath = deriveNextBandPath({
     score: headlineScore,
-    suppressed: mvp.suppressed ?? false,
+    tier,
+    suppressed: suppressedHeadline,
     categories: mvp.categories,
     rows: mvp.rows,
     registry: bandPathRegistryFromRubric(rubric_default)
@@ -9976,10 +10005,12 @@ function sealScan(input2) {
       canonical_score: headlineScore,
       renormalized_score: Math.round((mvp.renormalized_score ?? mvp.score) * 100) / 100,
       score_policy: policy,
-      suppressed: mvp.suppressed ?? false,
+      suppressed: suppressedHeadline,
       verdict: mvp.verdict,
       tier,
       tier_legacy: tierLegacy,
+      // Kill-switch disclosure: present only when a proven gate moved the band.
+      ...gateCap.capped ? { gate_capped: true, uncapped_tier: scoreTier, capped_by_gates: gateCap.cappedByGates } : {},
       ci_band: mvp.verdict === "insufficient-signal" ? "insufficient-signal" : mvp.status === "complete" ? "complete" : "degraded"
     },
     categories: mvp.categories,
@@ -10060,7 +10091,6 @@ function esc(s) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 __name(esc, "esc");
-var METHODOLOGY_URL = "https://leapscore.dev/methodology";
 function renderPathHtml(path, tier, score) {
   const block = bandPathBlock(path, { tier, score });
   const classes = block.classes.map((c) => {
@@ -10108,6 +10138,8 @@ function renderHtml(r) {
     return `<li><strong>${esc(b.row)} ${esc(b.name)}</strong> \u2014 ${esc(b.summary)} <em>${esc(b.weight_pp)} lost</em>${evidence}${rule}</li>`;
   }).join("\n");
   const gates = r.gates.map((g) => `<li><strong>${esc(g.id)}</strong> ${esc(g.name)} \u2014 ${esc(g.status)}: ${esc(g.note)}</li>`).join("\n");
+  const capNotice = r.gateCapped && r.uncappedTier ? `<p class="gatecap"><strong>Verdict capped at ${esc(r.tier)}.</strong> ${esc(gateCapStatement(r.cappedByGates ?? [], r.uncappedTier))}</p>
+` : "";
   const cats = r.categories.map((c) => `<li>${esc(c.id)} \u2014 ${esc(c.name)}: ${c.category_score == null ? "n/a" : `${Math.round(c.category_score)}`} (weight ${c.weight}%)</li>`).join("\n");
   return `<!DOCTYPE html>
 <html lang="en">
@@ -10125,7 +10157,7 @@ h2{margin-top:2rem}ul{padding-left:1.2rem}
 <body>
 ${headline}
 <p class="meta">${esc(r.repo)} \xB7 commit ${esc(commitShort)} \xB7 ${esc(r.scannedAt)} \xB7 ${esc(r.runId)} \xB7 ${esc(r.status)} \xB7 coverage ${r.coverage.measured}m/${r.coverage.estimated}e/${r.coverage.unknown}u${r.fingerprint ? ` \xB7 fingerprint ${esc(r.fingerprint.slice(0, 12))}` : ""}</p>
-<h2>Top risks</h2>
+${capNotice}<h2>Top risks</h2>
 <ul>${risks || "<li>No deductions \u2014 clean scan.</li>"}</ul>
 ${r.nextBandPath ? `${renderPathHtml(r.nextBandPath, r.tier, r.score)}
 ` : ""}<h2>Detail</h2>
@@ -10149,6 +10181,10 @@ function renderMarkdown(r) {
   lines.push(``);
   lines.push(`commit ${commitShort} \xB7 ${r.scannedAt} \xB7 \`${r.runId}\` \xB7 ${r.status} \xB7 coverage ${r.coverage.measured}m/${r.coverage.estimated}e/${r.coverage.unknown}u${r.fingerprint ? ` \xB7 fingerprint \`${r.fingerprint.slice(0, 12)}\`` : ""}`);
   lines.push(``);
+  if (r.gateCapped && r.uncappedTier) {
+    lines.push(`> **Verdict capped at ${r.tier}.** ${gateCapStatement(r.cappedByGates ?? [], r.uncappedTier)}`);
+    lines.push(``);
+  }
   lines.push(`## Top 5 risks`);
   if (!r.topBlockers.length) {
     lines.push(`- No deductions \u2014 clean scan.`);
@@ -11360,6 +11396,9 @@ async function writeReportsAndExit(sealed, o) {
     gates: report.gates ?? [],
     topBlockers: report.top_blockers ?? [],
     nextBandPath: report.next_band_path,
+    gateCapped: report.headline.gate_capped === true,
+    uncappedTier: report.headline.uncapped_tier,
+    cappedByGates: report.headline.capped_by_gates,
     categories: report.categories ?? []
   };
   await mkdir(o.outDir, { recursive: true });
