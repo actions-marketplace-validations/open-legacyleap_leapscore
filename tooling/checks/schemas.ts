@@ -14,8 +14,9 @@ const violations: string[] = [];
 
 function canonicalFiles(): Map<string, { path: string; text: string }> {
   const files = new Map<string, { path: string; text: string }>();
-  for (const dir of readdirSync(INDICATORS).filter((entry) => /^\d\d_/.test(entry))) {
-    for (const file of readdirSync(join(INDICATORS, dir)).filter((entry) => entry.endsWith('.md'))) {
+  for (const dir of readdirSync(INDICATORS).filter((entry) => /^\d\d-/.test(entry))) {
+    // `README.md` is the category charter, not an indicator file.
+    for (const file of readdirSync(join(INDICATORS, dir)).filter((entry) => entry.endsWith('.md') && entry !== 'README.md')) {
       const path = join(INDICATORS, dir, file);
       const text = readFileSync(path, 'utf-8');
       const id = text.match(/^#\s+([A-Z]+-\d+)\s+[—-]\s+/m)?.[1];

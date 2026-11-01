@@ -23,11 +23,11 @@ There is **no `/api/scan` and no `/api/reports/[runId]`** — those site-side sc
 - `lib/types.ts` — the report contract, re-exported from `@leapscore/contracts` (producer-owned; the site declares no second authoritative `Report`).
 - `lib/scanner.ts` — scanner-service URL + typed refusal copy for the NDJSON `refused` reasons.
 - `lib/categories.ts` — the 10-category metadata (name, one-liner, weight), single-sourced; imported by both `/product` and `/method`. Weights come from `lib/scoring.ts` `BASE_WEIGHTS`.
-- `lib/scoring.ts` — exact rational scoring (BigInt lcm denominators); mirrors `docs/rubric/11 §1–§3`. Band vocabulary `Low/Moderate/High/Critical` with the one-release legacy aliases (`Healthy`/`High Risk`) mapped.
+- `lib/scoring.ts` — exact rational scoring (BigInt lcm denominators); mirrors `docs/rubric/model/config.md` §1–§3. Band vocabulary `Low/Moderate/High/Critical` with the one-release legacy aliases (`Healthy`/`High Risk`) mapped.
 - `lib/sample.ts` — authored seed for `django/django`: 76 standard rows + 18 deep-dive + 8 FE-annex.
 - `lib/provider.ts` — the `ReportProvider` seam for the **sample** report only. UI talks to this interface; live reports arrive over HTTP in `app/live/LiveReportClient.tsx`, never through this in-process seam.
 - `lib/reports.ts` — site-owned run history: `runId` grammar (`owner__repo__engineSha7__timestamp`, shared with the contract), document classification/ingest, read/list. Read-only: the site writes no reports.
-- `lib/generated/rubric.ts` — compiled registry (do not hand-edit; `npm run compile:rubric` from root regenerates it from `docs/rubric/`).
+- `lib/generated/rubric.ts` — compiled registry (do not hand-edit; `npm run compile:rubric` from root regenerates it from `docs/rubric/indicators/` and `docs/rubric/model/config.md`).
 - `app/actions.ts` — waitlist server action (Buttondown, env-keyed, honest not-wired fallback).
 
 ## Commands

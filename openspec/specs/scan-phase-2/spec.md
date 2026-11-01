@@ -90,7 +90,7 @@ The system SHALL emit ECOS-05 via `syft` SBOM + license classifier, marking `cop
 
 #### Scenario: Clean SBOM clears G8
 - **WHEN** SBOM attested `copyleft_strong=[]`, `unknown_licenses=0` with `closed-source` packaging absent
-- **THEN** G8 is `not-proven`; otherwise if SBOM failed or truncated G8 is `needs-verification`; proven G8 caps verdict to at least `High Risk / Obsolete` per `11_WEIGHTS_THRESHOLDS_CONFIG.md` gate override
+- **THEN** G8 is `not-proven`; otherwise if SBOM failed or truncated G8 is `needs-verification`; proven G8 caps verdict to at least `High Risk / Obsolete` per the `docs/rubric/model/config.md` gate override
 
 ### Requirement: ECOS-07 lockfile reproducibility fact
 The system SHALL emit ECOS-07 via `git ls-files` lockfile presence, pin ratio, staleness vs manifest mtime, and CI immutable install (`npm ci` vs `npm install`).
@@ -261,7 +261,7 @@ The system SHALL compute `budgetMs` via the existing generic formula `baseMs + �
 - **THEN** `budgetMs` = `5s base + 11*5 + 1*10 = ~70s` (no slow, so base 5s) and progress reaches 100% at 70s, not 240s
 
 ### Requirement: Coverage and roll-up over 8 categories
-The system SHALL include the 12 new facts in category roll-ups (`DOCS` grows 0→5, `PERF` 0→2, `DATA` 0→1, `ECOS` 5→7, `SEC` 4→6) per `11_WEIGHTS_THRESHOLDS_CONFIG.md §2` (`Category% = Σ scores ÷ applicable×3 ×100`), and SHALL compute coverage from the rows actually measured, estimated, and unknown — not a fixed expectation. Rows demoted by measurement honesty count as `unknown`, so the historical expectation of 31 measured rows no longer holds; consumers SHALL read coverage from the report rather than assume a count. Tier thresholds (`11 §3`) and gate caps (`G1/G2/G3/G8 proven` only) SHALL be unchanged.
+The system SHALL include the 12 new facts in category roll-ups (`DOCS` grows 0→5, `PERF` 0→2, `DATA` 0→1, `ECOS` 5→7, `SEC` 4→6) per `docs/rubric/model/config.md` §2 (`Category% = Σ scores ÷ applicable×3 ×100`), and SHALL compute coverage from the rows actually measured, estimated, and unknown — not a fixed expectation. Rows demoted by measurement honesty count as `unknown`, so the historical expectation of 31 measured rows no longer holds; consumers SHALL read coverage from the report rather than assume a count. Tier thresholds (`docs/rubric/model/config.md` §3) and gate caps (`G1/G2/G3/G8 proven` only) SHALL be unchanged.
 
 #### Scenario: Report roll-up with Tranche A
 - **WHEN** scan completes with measured DOCS rows

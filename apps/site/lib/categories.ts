@@ -1,7 +1,7 @@
 /*
  * Category metadata — single source for the 10 categories across the site.
  * Weights live on the category rows; FE is scored only when a repo has a
- * real client (weight set applied in docs/rubric/11 §1, decision C1).
+ * real client (weight set applied in docs/rubric/model/config.md §1, decision C1).
  */
 
 import type { CategoryId } from "@/lib/scoring";

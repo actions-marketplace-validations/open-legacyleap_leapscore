@@ -4,7 +4,8 @@ Repo automation: rubric compilation + enforcement checks.
 
 ## Scripts
 
-- `scripts/compile-rubric.ts` — canonical `docs/rubric/indicators/<NN_CATEGORY>/*.md` → `apps/scanner/src/scan/scoring/rubric.json` + `apps/site/lib/generated/rubric.ts` (indicators, weights, tiers, gates, applicability, remediation playbooks).
+- `lib/rubric-catalog.ts` — the one derivation of the category table from the tree (`indicators/<NN-slug>/` order and label, category code from the ID prefix); imported by the compiler and the structure check.
+- `scripts/compile-rubric.ts` — canonical `docs/rubric/indicators/<NN-slug>/<ID>-<slug>.md` + `docs/rubric/model/config.md` → `apps/scanner/src/scan/scoring/rubric.json` + `apps/site/lib/generated/rubric.ts` + `docs/rubric/sheets/*` (indicators, weights, tiers, gates, applicability, remediation playbooks).
   - `npm run compile:rubric` — regenerate (from repo root).
   - `npm run check:rubric-consistency` — `--check` mode: validates the canonical catalog (one-to-one IDs, category membership, identity metadata, shared configuration) and asserts the generated files match it (IDs, names, effort tags, ≤5% missing remediation). **This is the CI gate**, not `checks/rubric-consistency.ts`.
 

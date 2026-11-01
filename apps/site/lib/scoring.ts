@@ -1,5 +1,5 @@
 /*
- * Scoring math — mirrors docs/rubric/11 §1–§3.
+ * Scoring math — mirrors docs/rubric/model/config.md §1–§3.
  *   Category% = (Σ applicable row scores ÷ applicable × 3) × 100
  *   System    = Σ (category% × weight)
  * Exact by construction: contributions are computed over a shared integer
@@ -19,7 +19,7 @@ import type {
 export type CategoryId =
   "ECOS" | "ARCH" | "TEST" | "SEC" | "DATA" | "API" | "VEL" | "PERF" | "DOCS";
 
-/** Base weight set — canonical source: docs/rubric/11 §1. */
+/** Base weight set — canonical source: docs/rubric/model/config.md §1. */
 export const BASE_WEIGHTS: Record<CategoryId, number> = {
   ECOS: 10,
   ARCH: 15,

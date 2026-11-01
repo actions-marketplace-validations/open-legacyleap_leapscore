@@ -1,16 +1,28 @@
 /** tooling/scripts/compile-rubric.ts — canonical markdown -> apps/scanner rubric.json + generated registry */
-import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { createHash } from 'node:crypto';
+import {
+  CONFIG_FILE,
+  INDICATORS_DIR,
+  RUBRIC_DIR,
+  SHEETS_DIR,
+  findMalformedEntries,
+  loadCatalog,
+  type RubricCategory,
+} from '../lib/rubric-catalog';
 
 const ROOT = join(import.meta.dirname ?? '.', '../..');
-const RUBRIC_DIR = join(ROOT, 'docs/rubric');
-const INDICATORS_DIR = join(RUBRIC_DIR, 'indicators');
+const MODEL_DIR_PATH = join(RUBRIC_DIR, 'model');
 const OUT_JSON = join(ROOT, 'apps/scanner/src/scan/scoring/rubric.json');
 const OUT_TS = join(ROOT, 'apps/site/lib/generated/rubric.ts');
-const OUT_SCORE_SHEET = join(RUBRIC_DIR, '00_SCORE_SHEET.md');
-const OUT_SERVICE_TEMPLATE = join(RUBRIC_DIR, 'templates/SERVICE_SCORE_SHEET.md');
-const OUT_SYSTEM_TEMPLATE = join(RUBRIC_DIR, 'templates/SYSTEM_SCORE_SHEET.md');
+const OUT_SCORE_SHEET = join(SHEETS_DIR, 'score-sheet.md');
+const OUT_SERVICE_TEMPLATE = join(SHEETS_DIR, 'service-score-sheet.md');
+const OUT_SYSTEM_TEMPLATE = join(SHEETS_DIR, 'system-score-sheet.md');
+
+/** Order, directory, code, and label all come from the tree (design D5); none are restated here. */
+const CATEGORIES: RubricCategory[] = loadCatalog();
+const CATEGORY_LABELS: Record<string, string> = Object.fromEntries(CATEGORIES.map((category) => [category.code, category.label]));
 
 type Remediation = {
   quick_win: string;
@@ -42,25 +54,11 @@ type DocFacts = {
   red_flag: string;
 };
 
-/** A row of `11_WEIGHTS_THRESHOLDS_CONFIG.md` §3's canonical gate roster. */
+/** A row of `model/config.md` §3's canonical gate roster. */
 type GateRow = { id: string; name: string; trigger: string; sources: string[] };
-/** A row of `11_WEIGHTS_THRESHOLDS_CONFIG.md` §3's canonical band table. */
+/** A row of `model/config.md` §3's canonical band table. */
 type TierRow = { tier: string; score: string; verdict: string };
 
-const CATEGORY_FILES: Array<{ file: string; dir: string; cat: string; label: string }> = [
-  { file: '01_DEPENDENCY_ECOSYSTEM.md', dir: '01_DEPENDENCY_ECOSYSTEM', cat: 'ECOS', label: 'Dependency & Ecosystem Health' },
-  { file: '02_ARCHITECTURE_CODE.md', dir: '02_ARCHITECTURE_CODE', cat: 'ARCH', label: 'Architecture & Code Quality' },
-  { file: '03_TESTING_QUALITY.md', dir: '03_TESTING_QUALITY', cat: 'TEST', label: 'Testing & Quality Engineering' },
-  { file: '04_SECURITY_COMPLIANCE.md', dir: '04_SECURITY_COMPLIANCE', cat: 'SEC', label: 'Security, Compliance & Vulnerability' },
-  { file: '05_DATA_SCHEMA.md', dir: '05_DATA_SCHEMA', cat: 'DATA', label: 'Data & Schema Evolution' },
-  { file: '06_API_INTEGRATION.md', dir: '06_API_INTEGRATION', cat: 'API', label: 'API & Integration Surface' },
-  { file: '07_VELOCITY_OPERATIONAL.md', dir: '07_VELOCITY_OPERATIONAL', cat: 'VEL', label: 'Developer Velocity & Operational Drag' },
-  { file: '08_PERFORMANCE_CLOUD.md', dir: '08_PERFORMANCE_CLOUD', cat: 'PERF', label: 'Performance & Cloud/Infrastructure Fit' },
-  { file: '09_DOCS_KNOWLEDGE.md', dir: '09_DOCS_KNOWLEDGE', cat: 'DOCS', label: 'Documentation & Knowledge Continuity' },
-  { file: '10_FRONTEND_CLIENT.md', dir: '10_FRONTEND_CLIENT', cat: 'FE', label: 'Frontend & Client Health' },
-];
-
-const CATEGORY_LABELS: Record<string, string> = Object.fromEntries(CATEGORY_FILES.map(f => [f.cat, f.label]));
 
 /** Read one field from the §1 Identity table (`| field | value |`). */
 function identityField(text: string, field: string): string {
@@ -75,20 +73,16 @@ function numericId(id: string): number {
 /**
  * Enumerate the canonical unified indicator files under docs/rubric/indicators/ in
  * deterministic category/numeric order. Each file is the single source of identity,
- * remediation, and the implementation contract; the category pages are navigation only.
+ * remediation, and the implementation contract; the category charters are navigation only.
  */
 function parseIndicators(): Indicator[] {
   const indicators: Indicator[] = [];
-  for (const { dir, cat } of CATEGORY_FILES) {
-    const categoryDir = join(INDICATORS_DIR, dir);
-    const files = readdirSync(categoryDir)
-      .filter((file) => file.endsWith('.md'))
-      .sort((a, b) => numericId(a) - numericId(b));
-    for (const file of files) {
-      const text = readFileSync(join(categoryDir, file), 'utf-8');
+  for (const { indicators: canonical } of CATEGORIES) {
+    for (const { path, text } of canonical) {
+      const pathLabel = path.slice(INDICATORS_DIR.length + 1);
       // H1 like "# ECOS-01 — Runtime/Language EOL"
       const heading = text.match(/^#\s+([A-Z]+-\d+)\s+[—-]\s+([^\n]+)$/m);
-      if (!heading) throw new Error(`${dir}/${file}: missing "# <ID> — <Name>" heading`);
+      if (!heading) throw new Error(`${pathLabel}: missing "# <ID> — <Name>" heading`);
       const id = heading[1].trim();
       const name = heading[2].trim();
 
@@ -147,11 +141,11 @@ function parseIndicators(): Indicator[] {
         // still keep playbook as quick_win, warn later in doCheck
       }
       const remediation: Remediation = { quick_win, structural, gold_standard, effort };
-      indicators.push({ id, category: id.split('-')[0] ?? cat, name, tier, default_status, effort, raw_effort: raw, remediation });
+      indicators.push({ id, category: id.split('-')[0] ?? '', name, tier, default_status, effort, raw_effort: raw, remediation });
     }
   }
-  // Sort by category order then numeric
-  const catOrder = CATEGORY_FILES.map(f => f.cat);
+  // Sort by category order (already the catalog's directory order) then numeric
+  const catOrder = CATEGORIES.map((category) => category.code);
   indicators.sort((a, b) => {
     const ai = catOrder.indexOf(a.category);
     const bi = catOrder.indexOf(b.category);
@@ -211,16 +205,11 @@ function cell(value: string): string {
  */
 function parseDocFacts(): Map<string, DocFacts> {
   const facts = new Map<string, DocFacts>();
-  for (const { dir } of CATEGORY_FILES) {
-    const categoryDir = join(INDICATORS_DIR, dir);
-    const files = readdirSync(categoryDir)
-      .filter((file) => file.endsWith('.md'))
-      .sort((a, b) => numericId(a) - numericId(b));
-    for (const file of files) {
-      const path = `${dir}/${file}`;
-      const text = readFileSync(join(categoryDir, file), 'utf-8');
+  for (const { indicators: canonical } of CATEGORIES) {
+    for (const { path, text } of canonical) {
+      const pathLabel = path.slice(INDICATORS_DIR.length + 1);
       const heading = text.match(/^#\s+([A-Z]+-\d+)\s+[—-]\s+([^\n]+)$/m);
-      if (!heading) throw new Error(`${path}: missing "# <ID> — <Name>" heading`);
+      if (!heading) throw new Error(`${pathLabel}: missing "# <ID> — <Name>" heading`);
       const id = heading[1].trim();
       const rollupValue = identityField(text, 'Rollup / deep-dive');
       if (!/^(standard|deep-dive)\b/.test(rollupValue)) {
@@ -243,12 +232,12 @@ function parseDocFacts(): Map<string, DocFacts> {
   return facts;
 }
 
-/** Read the canonical G1–G8 roster from `11_WEIGHTS_THRESHOLDS_CONFIG.md` §3. */
+/** Read the canonical G1–G8 roster from `model/config.md` §3. */
 function readGateRoster(configText: string): GateRow[] {
   const heading = '### Gate roster (G1–G8)';
   const start = configText.indexOf(heading);
   if (start === -1) {
-    throw new Error(`11_WEIGHTS_THRESHOLDS_CONFIG.md: missing "${heading}" — gate rules have no canonical home`);
+    throw new Error(`docs/rubric/model/config.md: missing "${heading}" — gate rules have no canonical home`);
   }
   const rest = configText.slice(start + heading.length);
   const next = rest.search(/\n#{2,3} /);
@@ -267,7 +256,7 @@ function readGateRoster(configText: string): GateRow[] {
   return rows;
 }
 
-/** Read the canonical band table from `11_WEIGHTS_THRESHOLDS_CONFIG.md` §3. */
+/** Read the canonical band table from `model/config.md` §3. */
 function readTierRows(configText: string): TierRow[] {
   const rows: TierRow[] = [];
   for (const line of configText.split('\n')) {
@@ -278,7 +267,7 @@ function readTierRows(configText: string): TierRow[] {
 }
 
 function readConfig(): string {
-  return readFileSync(join(RUBRIC_DIR, '11_WEIGHTS_THRESHOLDS_CONFIG.md'), 'utf-8');
+  return readFileSync(CONFIG_FILE, 'utf-8');
 }
 
 /** Category weights, read from the compiled payload so the headings cannot drift from §1. */
@@ -295,7 +284,7 @@ function weightPair(cat: string, weights: ReturnType<typeof buildWeights>): stri
 }
 
 function buildWeights() {
-  // keep canonical from 11_WEIGHTS_THRESHOLDS_CONFIG.md — hardcoded but validated by consistency check
+  // Mirror of docs/rubric/model/config.md §1 — hardcoded but validated by the consistency check.
   return {
     base: { SEC: 20, ARCH: 15, ECOS: 10, TEST: 10, DATA: 10, API: 10, VEL: 10, PERF: 10, DOCS: 5 },
     feActive: { SEC: 18, ARCH: 13.5, ECOS: 9, TEST: 9, DATA: 9, API: 9, VEL: 9, PERF: 9, DOCS: 4.5, FE: 10 },
@@ -359,14 +348,14 @@ function buildPayload(indicators: Indicator[]) {
   const gates = ['G1', 'G2', 'G3', 'G4', 'G5', 'G6', 'G7', 'G8'];
   const rubricVersion = createHash('sha256').update(JSON.stringify(indicators)).digest('hex').slice(0, 7);
   return {
-    _comment: 'COMPILED from docs/rubric/indicators/<NN_CATEGORY>/*.md + 11_WEIGHTS_THRESHOLDS_CONFIG.md — do not hand-edit. Run npm run compile:rubric.',
+    _comment: 'COMPILED from docs/rubric/indicators/<NN-slug>/<ID>-<slug>.md + docs/rubric/model/config.md — do not hand-edit. Run npm run compile:rubric.',
     rubricVersion,
     weights,
     applicability,
     tiers,
     gates,
     indicators,
-    categories: CATEGORY_FILES.map(f => ({ id: f.cat, name: f.label, weight_base: (weights.base as Record<string, number>)[f.cat] ?? (f.cat === 'FE' ? 0 : 0), weight_fe: (weights.feActive as Record<string, number>)[f.cat] ?? (f.cat === 'FE' ? 10 : 0) })),
+    categories: CATEGORIES.map((category) => ({ id: category.code, name: category.label, weight_base: (weights.base as Record<string, number>)[category.code] ?? 0, weight_fe: (weights.feActive as Record<string, number>)[category.code] ?? 0 })),
   };
 }
 
@@ -383,33 +372,30 @@ function validateSources(
 
   // 1. Canonical file enumeration: one file per ID, category membership, filename identity.
   const seen = new Map<string, string>();
-  for (const { dir, cat, file } of CATEGORY_FILES) {
-    const categoryDir = join(INDICATORS_DIR, dir);
-    if (!existsSync(categoryDir)) {
-      problems.push(`missing canonical directory docs/rubric/indicators/${dir}`);
-      continue;
-    }
-    const files = readdirSync(categoryDir).filter((f) => f.endsWith('.md')).sort((a, b) => numericId(a) - numericId(b));
-    if (!files.length) problems.push(`docs/rubric/indicators/${dir} has no indicator files`);
+  for (const malformed of findMalformedEntries()) {
+    problems.push(`${malformed.path.slice(ROOT.length + 1)}: ${malformed.reason}`);
+  }
+  for (const { dir, code, indicators: canonical } of CATEGORIES) {
+    if (!canonical.length) problems.push(`docs/rubric/indicators/${dir} has no indicator files`);
     const ids: string[] = [];
-    for (const canonicalFile of files) {
-      const text = readFileSync(join(categoryDir, canonicalFile), 'utf-8');
+    for (const { file: canonicalFile, text } of canonical) {
+      const path = `${dir}/${canonicalFile}`;
       const heading = text.match(/^#\s+([A-Z]+-\d+)\s+[—-]\s+([^\n]+)$/m);
       if (!heading) {
-        problems.push(`${dir}/${canonicalFile}: missing "# <ID> — <Name>" heading`);
+        problems.push(`${path}: missing "# <ID> — <Name>" heading`);
         continue;
       }
       const id = heading[1].trim();
-      const fileId = canonicalFile.split('_')[0]?.toUpperCase();
-      if (!idPattern.test(id)) problems.push(`${dir}/${canonicalFile}: malformed ID ${id}`);
-      if (fileId !== id) problems.push(`${dir}/${canonicalFile}: filename ID ${fileId} does not match heading ID ${id}`);
-      if (id.split('-')[0] !== cat) problems.push(`${dir}/${canonicalFile}: ID ${id} does not belong to category ${cat}`);
+      const fileId = canonicalFile.split('-').slice(0, 2).join('-');
+      if (!idPattern.test(id)) problems.push(`${path}: malformed ID ${id}`);
+      if (fileId !== id) problems.push(`${path}: filename ID ${fileId} does not match heading ID ${id}`);
+      if (id.split('-')[0] !== code) problems.push(`${path}: ID ${id} does not belong to category ${code}`);
       const previous = seen.get(id);
-      if (previous) problems.push(`duplicate ID ${id}: ${previous} and ${dir}/${canonicalFile}`);
-      seen.set(id, `${dir}/${canonicalFile}`);
+      if (previous) problems.push(`duplicate ID ${id}: ${previous} and ${path}`);
+      seen.set(id, path);
       ids.push(id);
     }
-    byCategory.set(file, ids);
+    byCategory.set(dir, ids);
   }
   if (seen.size !== 102) problems.push(`expected exactly 102 unique IDs, found ${seen.size}`);
 
@@ -438,28 +424,27 @@ function validateSources(
     if (indicator.default_status !== identity.Status) problems.push(`${path}: compiled status "${indicator.default_status}" does not match identity "${identity.Status}"`);
   }
 
-  // 3. Category indexes enumerate exactly the canonical IDs, in order.
-  for (const { file, cat, dir } of CATEGORY_FILES) {
-    const indexPath = join(RUBRIC_DIR, file);
-    if (!existsSync(indexPath)) {
-      problems.push(`missing category index ${file}`);
+  // 3. Category charters enumerate exactly the canonical IDs of their directory, in order.
+  for (const { dir, code, charterPath, charter } of CATEGORIES) {
+    const relative = charterPath.slice(ROOT.length + 1);
+    if (!existsSync(charterPath)) {
+      problems.push(`missing category charter docs/rubric/indicators/${dir}/README.md`);
       continue;
     }
-    const indexText = readFileSync(indexPath, 'utf-8');
-    const indexIds = [...indexText.matchAll(/^\|\s*([A-Z]+-\d+)\s*\|/gm)].map((m) => m[1]);
-    const canonicalIds = byCategory.get(file) ?? [];
+    const indexIds = [...charter.matchAll(/^\|\s*([A-Z]+-\d+)\s*\|/gm)].map((m) => m[1]);
+    const canonicalIds = byCategory.get(dir) ?? [];
     if (indexIds.join(',') !== canonicalIds.join(',')) {
-      problems.push(`${file}: index IDs [${indexIds.join(',')}] do not match canonical ${cat} files [${canonicalIds.join(',')}]`);
+      problems.push(`${relative}: charter IDs [${indexIds.join(',')}] do not match canonical ${code} files [${canonicalIds.join(',')}]`);
     }
     for (const id of canonicalIds) {
-      const slug = seen.get(id)?.split('/')[1];
-      if (slug && !indexText.includes(`./indicators/${dir}/${slug}`)) problems.push(`${file}: missing link to ${slug}`);
+      const file = seen.get(id)?.split('/')[1];
+      if (file && !charter.includes(`](./${file})`)) problems.push(`${relative}: missing link to ${file}`);
     }
   }
 
-  // 4. Shared configuration: weights and tiers in 11 match the compiled payload.
+  // 4. Shared configuration: weights and tiers in model/config.md match the compiled payload.
   const expected = buildPayload(indicators);
-  const configText = readFileSync(join(RUBRIC_DIR, '11_WEIGHTS_THRESHOLDS_CONFIG.md'), 'utf-8');
+  const configText = readFileSync(CONFIG_FILE, 'utf-8');
   const weightTable = (heading: string): Record<string, number> => {
     const start = configText.indexOf(heading);
     if (start === -1) return {};
@@ -468,39 +453,39 @@ function validateSources(
     const table: Record<string, number> = {};
     for (const match of block.matchAll(/^\|\s*([^|*]+?)\s*\|\s*([\d.]+)%\s*\|/gm)) {
       const label = match[1].trim();
-      const category = CATEGORY_FILES.find((entry) => entry.label === label)?.cat;
+      const category = CATEGORIES.find((entry) => entry.label === label)?.code;
       if (category) table[category] = Number(match[2]);
     }
     return table;
   };
   const base = weightTable('### Base weight set');
   const feActive = weightTable('### FE-active weight set');
-  for (const { cat } of CATEGORY_FILES) {
+  for (const { code: cat } of CATEGORIES) {
     if (cat !== 'FE') {
-      if (base[cat] == null) problems.push(`11 base weights: missing category ${cat}`);
-      else if (base[cat] !== expected.weights.base[cat as keyof typeof expected.weights.base]) problems.push(`11 base weight for ${cat}: ${base[cat]} vs compiled ${expected.weights.base[cat as keyof typeof expected.weights.base]}`);
+      if (base[cat] == null) problems.push(`model/config.md base weights: missing category ${cat}`);
+      else if (base[cat] !== expected.weights.base[cat as keyof typeof expected.weights.base]) problems.push(`model/config.md base weight for ${cat}: ${base[cat]} vs compiled ${expected.weights.base[cat as keyof typeof expected.weights.base]}`);
     } else if (base[cat] != null) {
-      problems.push(`11 base weights: FE must be absent from the base set (FE is conditional)`);
+      problems.push(`model/config.md base weights: FE must be absent from the base set (FE is conditional)`);
     }
-    if (feActive[cat] == null) problems.push(`11 FE-active weights: missing category ${cat}`);
-    else if (feActive[cat] !== expected.weights.feActive[cat as keyof typeof expected.weights.feActive]) problems.push(`11 FE-active weight for ${cat}: ${feActive[cat]} vs compiled ${expected.weights.feActive[cat as keyof typeof expected.weights.feActive]}`);
+    if (feActive[cat] == null) problems.push(`model/config.md FE-active weights: missing category ${cat}`);
+    else if (feActive[cat] !== expected.weights.feActive[cat as keyof typeof expected.weights.feActive]) problems.push(`model/config.md FE-active weight for ${cat}: ${feActive[cat]} vs compiled ${expected.weights.feActive[cat as keyof typeof expected.weights.feActive]}`);
   }
   const low = configText.match(/^\|\s*Low\s*\|\s*≥\s*(\d+)%/m)?.[1];
   const moderate = configText.match(/^\|\s*Moderate\s*\|\s*(\d+)–(\d+)%/m);
   const high = configText.match(/^\|\s*High\s*\|\s*(\d+)–(\d+)%/m);
   const critical = configText.match(/^\|\s*Critical\s*\|\s*<\s*(\d+)%/m)?.[1];
-  if (Number(low) !== expected.tiers.healthy) problems.push(`11 tier threshold Low: ${low} vs compiled ${expected.tiers.healthy}`);
-  if (!moderate || [Number(moderate[1]), Number(moderate[2])].join(',') !== expected.tiers.moderate.join(',')) problems.push(`11 tier threshold Moderate does not match compiled ${expected.tiers.moderate.join('–')}`);
-  if (!high || [Number(high[1]), Number(high[2])].join(',') !== expected.tiers.highRisk.join(',')) problems.push(`11 tier threshold High does not match compiled ${expected.tiers.highRisk.join('–')}`);
-  if (Number(critical) !== expected.tiers.critical) problems.push(`11 tier threshold Critical: ${critical} vs compiled ${expected.tiers.critical}`);
-  // 5. Gate rules: the roster lives canonically in 11 §3, and its source column must agree
+  if (Number(low) !== expected.tiers.healthy) problems.push(`model/config.md tier threshold Low: ${low} vs compiled ${expected.tiers.healthy}`);
+  if (!moderate || [Number(moderate[1]), Number(moderate[2])].join(',') !== expected.tiers.moderate.join(',')) problems.push(`model/config.md tier threshold Moderate does not match compiled ${expected.tiers.moderate.join('–')}`);
+  if (!high || [Number(high[1]), Number(high[2])].join(',') !== expected.tiers.highRisk.join(',')) problems.push(`model/config.md tier threshold High does not match compiled ${expected.tiers.highRisk.join('–')}`);
+  if (Number(critical) !== expected.tiers.critical) problems.push(`model/config.md tier threshold Critical: ${critical} vs compiled ${expected.tiers.critical}`);
+  // 5. Gate rules: the roster lives canonically in model/config.md §3, and its source column must agree
   //    with the indicators' own §1 "Gates fed" rows. Neither derived document is consulted.
   if (expected.indicators.length !== facts.size) {
     problems.push(`§2 criteria parsed for ${facts.size} indicators, expected ${expected.indicators.length}`);
   }
   const rosterIds = gateRoster.map((row) => row.id);
   if (rosterIds.length !== expected.gates.length || rosterIds.some((gate, index) => gate !== expected.gates[index])) {
-    problems.push(`11 §3 gate roster [${rosterIds.join(',')}] does not match compiled [${expected.gates.join(',')}]`);
+    problems.push(`model/config.md §3 gate roster [${rosterIds.join(',')}] does not match compiled [${expected.gates.join(',')}]`);
   }
   const derivedSources = new Map<string, string[]>(expected.gates.map((gate) => [gate, []]));
   for (const [id, fact] of facts) {
@@ -510,22 +495,22 @@ function validateSources(
     const wanted = [...(derivedSources.get(row.id) ?? [])].sort();
     const stated = [...row.sources].sort();
     if (stated.join(',') !== wanted.join(',')) {
-      problems.push(`11 §3 ${row.id} source indicators [${stated.join(', ')}] do not match the "Gates fed" rows [${wanted.join(', ')}]`);
+      problems.push(`model/config.md §3 ${row.id} source indicators [${stated.join(', ')}] do not match the "Gates fed" rows [${wanted.join(', ')}]`);
     }
   }
 
   // 6. Band table: exactly the four canonical bands, in order.
   const bandNames = tierRows.map((row) => row.tier);
   if (bandNames.join(',') !== 'Low,Moderate,High,Critical') {
-    problems.push(`11 §3 band table [${bandNames.join(',')}] must list Low, Moderate, High, Critical`);
+    problems.push(`model/config.md §3 band table [${bandNames.join(',')}] must list Low, Moderate, High, Critical`);
   }
 
   // 7. The canonical configuration must not defer a weight, threshold, band, or gate rule to a
   //    derived document — that is the circularity this check exists to prevent.
-  for (const derivedDoc of ['00_SCORE_SHEET', '00_EXECUTIVE_RUBRIC', 'templates/SERVICE_SCORE_SHEET', 'templates/SYSTEM_SCORE_SHEET']) {
+  for (const derivedDoc of ['sheets/score-sheet', 'model/scale', 'sheets/service-score-sheet', 'sheets/system-score-sheet']) {
     const deferral = configText.match(new RegExp(`\\b(?:see|per|refer to|defined in|documented in)\\b[^\\n]{0,60}${derivedDoc}`, 'i'));
     if (deferral) {
-      problems.push(`11_WEIGHTS_THRESHOLDS_CONFIG.md defers to the derived document ${derivedDoc} — "${deferral[0].trim()}" — weights, thresholds, bands, and gate rules are defined here`);
+      problems.push(`model/config.md defers to the derived document ${derivedDoc} — "${deferral[0].trim()}" — weights, thresholds, bands, and gate rules are defined here`);
     }
   }
 
@@ -542,7 +527,7 @@ function writeGeneratedTs(indicators: Indicator[]) {
   mkdirSync(dir, { recursive: true });
   const esc = (s: string) => s.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
   const lines: string[] = [];
-  lines.push('// Generated by tooling/scripts/compile-rubric.ts — do not hand-edit. Source: docs/rubric/indicators/*');
+  lines.push('// Generated by tooling/scripts/compile-rubric.ts — do not hand-edit. Source: docs/rubric/indicators/** + docs/rubric/model/config.md');
   lines.push('export type RemediationMeta = { quick_win: string; structural: string; gold_standard: string; effort: string };');
   lines.push('export type IndicatorMeta = { id: string; category: string; name: string; tier: string; default_status: string; effort: string; remediation: RemediationMeta };');
   lines.push('export const INDICATOR_REGISTRY: Record<string, IndicatorMeta> = {');
@@ -557,7 +542,19 @@ function writeGeneratedTs(indicators: Indicator[]) {
   }
   lines.push('};');
   lines.push('');
-  lines.push('export const CATEGORY_ORDER = ["ECOS","ARCH","TEST","SEC","DATA","API","VEL","PERF","DOCS","FE"] as const;');
+  lines.push(`export const CATEGORY_ORDER = [${CATEGORIES.map((category) => `"${category.code}"`).join(',')}] as const;`);
+  lines.push('');
+  lines.push('export type CategoryWeight = { base: number | null; feActive: number | null };');
+  lines.push('// Canonical source: docs/rubric/model/config.md §1. `base: null` marks a conditional category.');
+  lines.push('export const CATEGORY_WEIGHTS: Record<string, CategoryWeight> = {');
+  const weights = buildWeights();
+  for (const { code } of CATEGORIES) {
+    const base = (weights.base as Record<string, number>)[code];
+    const fe = (weights.feActive as Record<string, number>)[code];
+    lines.push(`  "${code}": { base: ${base == null ? 'null' : base}, feActive: ${fe == null ? 'null' : fe} },`);
+  }
+  lines.push('};');
+  lines.push('');
   lines.push('export function getIndicatorName(id: string): string {');
   lines.push('  const e = INDICATOR_REGISTRY[id];');
   lines.push('  if (!e) { console.warn(`Unknown indicator ${id}`); return `Unknown indicator (${id})`; }');
@@ -573,7 +570,7 @@ function writeGeneratedTs(indicators: Indicator[]) {
 const GENERATED_BANNER = [
   '> **GENERATED FILE — do not hand-edit.** Written by `tooling/scripts/compile-rubric.ts`',
   '> (`npm run compile:rubric`) from `docs/rubric/indicators/**` and',
-  '> `docs/rubric/11_WEIGHTS_THRESHOLDS_CONFIG.md`. `npm run check:rubric-consistency` fails on any hand edit.',
+  '> `docs/rubric/model/config.md`. `npm run check:rubric-consistency` fails on any hand edit.',
 ].join('\n');
 
 type DerivedDoc = { path: string; content: string };
@@ -606,15 +603,15 @@ function scoreSheet(
   const standard = indicators.filter((indicator) => facts.get(indicator.id)?.rollup === 'standard').length;
   const deepDive = indicators.length - standard;
   const lines: string[] = [
-    '# 00 — Score Sheet *(generated)*',
+    '# Score Sheet *(generated)*',
     '',
     GENERATED_BANNER,
     '',
     'Print this sheet and write on it. Each row echoes its canonical file\'s §2 Yellow and Red flag',
     'verbatim, with only the parenthetical rationale removed — no paraphrase, no truncation. The 0–3',
-    'scale and the core-path taxonomy live in [`00_EXECUTIVE_RUBRIC.md`](./00_EXECUTIVE_RUBRIC.md);',
+    'scale and the core-path taxonomy live in [`model/scale.md`](../model/scale.md);',
     'weights, formulas, bands, and the gate roster are canonical in',
-    '[`11_WEIGHTS_THRESHOLDS_CONFIG.md`](./11_WEIGHTS_THRESHOLDS_CONFIG.md).',
+    '[`model/config.md`](../model/config.md).',
     '',
     `**Rows:** ${indicators.length} indicators (${standard} standard · ${deepDive} deep-dive) · **Gates:** ${gates.length} · **Bands:** ${tiers.length}`,
     '',
@@ -622,7 +619,7 @@ function scoreSheet(
     '',
     '## Part A — Gate roster (G1–G8)',
     '',
-    'Restated from [`11_WEIGHTS_THRESHOLDS_CONFIG.md`](./11_WEIGHTS_THRESHOLDS_CONFIG.md) §3, which also',
+    'Restated from [`model/config.md`](../model/config.md) §3, which also',
     'carries the trigger text and the escalation semantics.',
     '',
     '| # | Gate | Red Flag trigger | Source indicator |',
@@ -634,7 +631,7 @@ function scoreSheet(
     '## Part B — Bands',
     '',
     'Thresholds and verdict guidance are canonical in',
-    '[`11_WEIGHTS_THRESHOLDS_CONFIG.md`](./11_WEIGHTS_THRESHOLDS_CONFIG.md) §3.',
+    '[`model/config.md`](../model/config.md) §3.',
     '',
     '| Tier | Score | Verdict |',
     '|------|-------|---------|',
@@ -648,7 +645,7 @@ function scoreSheet(
     '',
   ];
   let position = 0;
-  for (const { cat, label } of CATEGORY_FILES) {
+  for (const { code: cat, label } of CATEGORIES) {
     const rows = indicators.filter((indicator) => indicator.category === cat);
     if (!rows.length) continue;
     position++;
@@ -681,9 +678,9 @@ function serviceTemplate(
     '',
     '**Scoring legend:** 3 = Healthy (no flags) · 2 = Minor debt (yellow in non-core paths) · 1 = Severe debt (yellow in core OR red in isolated paths) · 0 = Critical (red in core OR across multiple paths) · **N/A** = not applicable (reason recorded; excluded) · **Unknown** = applicable but unmeasurable (unscored; included in the frozen denominator) · **Not implemented** = no detector in this scanner release (excluded).',
     '',
-    '**Core-path rule:** core = files reachable from public entry points touching money / auth / PII / compliance (global taxonomy — [`00_EXECUTIVE_RUBRIC.md`](../00_EXECUTIVE_RUBRIC.md) Part 1). Per-indicator criteria live in its unified file under [`indicators/`](../indicators/).',
+    '**Core-path rule:** core = files reachable from public entry points touching money / auth / PII / compliance (global taxonomy — [`model/scale.md`](../model/scale.md) §2). Per-indicator criteria live in its canonical file under [`indicators/`](../indicators/).',
     '',
-    '**Category %** is the frozen-denominator formula in [`11_WEIGHTS_THRESHOLDS_CONFIG.md`](../11_WEIGHTS_THRESHOLDS_CONFIG.md) §2a: unknown rows add denominator without numerator points; N/A and not-implemented rows are excluded; deep-dive rows fold in only when run and applicable.',
+    '**Category %** is the frozen-denominator formula in [`model/config.md`](../model/config.md) §2a: unknown rows add denominator without numerator points; N/A and not-implemented rows are excluded; deep-dive rows fold in only when run and applicable.',
     '',
     'When a row is applicable but cannot be measured, leave its score blank and record `Unknown` in Notes/Evidence; include it in the applicable count. Record `Not implemented` distinctly and exclude it from the count.',
     '',
@@ -691,7 +688,7 @@ function serviceTemplate(
     '',
   ];
   let position = 0;
-  for (const { cat, label } of CATEGORY_FILES) {
+  for (const { code: cat, label } of CATEGORIES) {
     const rows = indicators.filter((indicator) => indicator.category === cat);
     if (!rows.length) continue;
     position++;
@@ -718,7 +715,7 @@ function serviceTemplate(
   lines.push('## Service rollup', '');
   lines.push('| Category | Category % | Weight (base / FE-active) | Weighted |');
   lines.push('|----------|-----------:|:-------------------------:|---------:|');
-  for (const { cat, label } of CATEGORY_FILES) {
+  for (const { code: cat, label } of CATEGORIES) {
     const name = cat === 'FE' ? `${label} *(FE-active only)*` : label;
     lines.push(`| ${cell(name)} | __% | ${weightPair(cat, weights)} | __% |`);
   }
@@ -741,9 +738,9 @@ function systemTemplate(
     '',
     '**System:** ______ · **Auditor:** ______ · **Date:** ______ · **Audit type:** ☐ Screen (1 day) ☐ Standard (2–3 days) ☐ Deep (1–2 weeks)',
     '',
-    '**Scoring legend:** 3 = Healthy · 2 = Minor debt · 1 = Severe debt · 0 = Critical · N/A = not applicable (excluded, reason in notes) · Unknown = applicable but unmeasurable (unscored, included in the frozen denominator) · Not implemented = no detector in this scanner release (excluded). Category % is the frozen-denominator formula in [`11_WEIGHTS_THRESHOLDS_CONFIG.md`](../11_WEIGHTS_THRESHOLDS_CONFIG.md) §2a. Deep-dive rows are recorded on the service sheets and fold into category % when run and applicable. Weights come from [`11`](../11_WEIGHTS_THRESHOLDS_CONFIG.md) §1 — use the **FE-active** column if the system has a client.',
+    '**Scoring legend:** 3 = Healthy · 2 = Minor debt · 1 = Severe debt · 0 = Critical · N/A = not applicable (excluded, reason in notes) · Unknown = applicable but unmeasurable (unscored, included in the frozen denominator) · Not implemented = no detector in this scanner release (excluded). Category % is the frozen-denominator formula in [`model/config.md`](../model/config.md) §2a. Deep-dive rows are recorded on the service sheets and fold into category % when run and applicable. Weights come from [`model/config.md`](../model/config.md) §1 — use the **FE-active** column if the system has a client.',
     '',
-    '**Instructions:** Fill one [`SERVICE_SCORE_SHEET.md`](./SERVICE_SCORE_SHEET.md) per service. Enter each service\'s weighted score and criticality below, then compute the system rollup.',
+    '**Instructions:** Fill one [`service-score-sheet.md`](./service-score-sheet.md) per service. Enter each service\'s weighted score and criticality below, then compute the system rollup.',
     '',
     '---',
     '',
@@ -753,7 +750,7 @@ function systemTemplate(
     '|---|------|:---------:|----------|',
     ...gates.map((gate) => `| ${gate.id} | ${cell(gate.name)} (${gate.sources.join(', ')}) | ☐ Y ☐ N | |`),
     '',
-    '> Any ☐ Y → see the escalation semantics in [`11_WEIGHTS_THRESHOLDS_CONFIG.md`](../11_WEIGHTS_THRESHOLDS_CONFIG.md) §3.',
+    '> Any ☐ Y → see the escalation semantics in [`model/config.md`](../model/config.md) §3.',
     '',
     '---',
     '',
@@ -769,10 +766,10 @@ function systemTemplate(
   lines.push('> **Note:** If you scored categories per-service, roll up **per category** instead (use the category % columns from each service sheet), then apply Part C weights.', '');
   lines.push('---', '');
   lines.push('## Part C — System rollup', '');
-  lines.push('**Weights:** from [`11_WEIGHTS_THRESHOLDS_CONFIG.md`](../11_WEIGHTS_THRESHOLDS_CONFIG.md) §1. Mark which set applies: ☐ Base (no client) ☐ FE-active (client present).', '');
+  lines.push('**Weights:** from [`model/config.md`](../model/config.md) §1. Mark which set applies: ☐ Base (no client) ☐ FE-active (client present).', '');
   lines.push('| Category | System category % | Weight | Weighted |');
   lines.push('|----------|:-----------------:|:------:|:--------:|');
-  for (const { cat, label } of CATEGORY_FILES) {
+  for (const { code: cat, label } of CATEGORIES) {
     const name = cat === 'FE' ? `${label} *(FE-active only)*` : label;
     lines.push(`| ${cell(name)} | __% | ${weightPair(cat, weights)} | __% |`);
   }
@@ -780,11 +777,11 @@ function systemTemplate(
   lines.push('**Option 2 — service-level rollup (quick):** System score = Σ weighted ÷ Σ criticality weights (from Part B) = **____%** *(approximation; ignores FE renormalization)*.', '');
   lines.push('---', '');
   lines.push('## Part D — Verdict', '');
-  lines.push('Band labels follow the canonical [`11_WEIGHTS_THRESHOLDS_CONFIG.md`](../11_WEIGHTS_THRESHOLDS_CONFIG.md) §3.', '');
+  lines.push('Band labels follow the canonical [`model/config.md`](../model/config.md) §3.', '');
   lines.push('| Tier | Threshold | Result |');
   lines.push('|------|-----------|:------:|');
   for (const tier of tiers) lines.push(`| ${tier.tier} | ${tier.score} | ☐ |`);
-  lines.push(`| **Gate override** (any G1–G8 Red Flag → see [\`11\`](../11_WEIGHTS_THRESHOLDS_CONFIG.md) §3) | | ☐ Applied ☐ Not applicable |`, '');
+  lines.push(`| **Gate override** (any G1–G8 Red Flag → see [\`model/config.md\`](../model/config.md) §3) | | ☐ Applied ☐ Not applicable |`, '');
   lines.push('**FINAL VERDICT:** ______', '');
   lines.push('---', '');
   lines.push('## Part E — Modernization decision', '');
@@ -794,7 +791,7 @@ function systemTemplate(
   lines.push('- ☐ **Rewrite / Rescue:** critical risk; scope a rescue or containment strategy; freeze new debt.', '');
   lines.push('**Recommended first 90 days (top blockers, one line each):**', '1. ______', '2. ______', '3. ______', '');
   lines.push('**Required before next audit (verification):** ______', '');
-  lines.push('**Calibration feedback:** ☐ Any threshold here misclassified reality? If so, record it in [`11_WEIGHTS_THRESHOLDS_CONFIG.md`](../11_WEIGHTS_THRESHOLDS_CONFIG.md) §5.', '');
+  lines.push('**Calibration feedback:** ☐ Any threshold here misclassified reality? If so, record it in [`model/config.md`](../model/config.md) §5.', '');
   return lines.join('\n');
 }
 
@@ -913,24 +910,38 @@ function doCheck() {
     derivedProblems.push(`    actual:   ${(found[line] ?? '<end of file>').slice(0, 160)}`);
   }
 
-  // The authored guide must not restate a value that has a canonical or generated home
-  // (design D6). Each rule targets one thing that is defined elsewhere; the message says where.
-  const guidePath = join(RUBRIC_DIR, '00_EXECUTIVE_RUBRIC.md');
-  const GUIDE_RULES: Array<{ rule: string; pattern: RegExp; home: string }> = [
-    { rule: 'per-indicator table row', pattern: /^\|\s*[A-Z]+-\d+\s*\|/m, home: '00_SCORE_SHEET.md Part C or the indicator file' },
-    { rule: 'category weight percentage', pattern: /\bweight\s+\d+(?:\.\d+)?\s*%/i, home: '11_WEIGHTS_THRESHOLDS_CONFIG.md §1' },
-    { rule: 'category weight percentage', pattern: /^\|[^|\n]*\|\s*\d+(?:\.\d+)?\s*%\s*\|/m, home: '11_WEIGHTS_THRESHOLDS_CONFIG.md §1' },
-    { rule: 'band threshold literal', pattern: /\b(?:80|53|27)\s*%|\d+(?:\.\d+)?\s*–\s*\d+(?:\.\d+)?\s*%/, home: '11_WEIGHTS_THRESHOLDS_CONFIG.md §3' },
-    { rule: 'gate roster row', pattern: /^\|\s*G[1-8]\b/m, home: '11_WEIGHTS_THRESHOLDS_CONFIG.md §3' },
-    { rule: 'rollup formula block', pattern: /```[^`]*?(?:Category%|System score|System category%)[^`]*?```/s, home: '11_WEIGHTS_THRESHOLDS_CONFIG.md §2' },
+  // Scoring rules have exactly one home: `model/config.md`. The authored scale, every
+  // category charter, and the rubric entry README may link those rules but never restate a
+  // value (spec: "Rubric directory declares its layers", design D4). The message says where
+  // the duplicated rule belongs.
+  const VALUE_RULES: Array<{ rule: string; pattern: RegExp; home: string }> = [
+    { rule: 'category weight percentage', pattern: /\bweight\s*:?\s*\d+(?:\.\d+)?\s*%/i, home: 'model/config.md §1' },
+    { rule: 'category weight percentage', pattern: /^\|[^|\n]*\|\s*\d+(?:\.\d+)?\s*%\s*\|/m, home: 'model/config.md §1' },
+    { rule: 'band threshold literal', pattern: /\b(?:80|53|27)\s*%|\d+(?:\.\d+)?\s*–\s*\d+(?:\.\d+)?\s*%/, home: 'model/config.md §3' },
+    { rule: 'gate roster row', pattern: /^\|\s*G[1-8]\b/m, home: 'model/config.md §3' },
   ];
-  if (!existsSync(guidePath)) {
-    derivedProblems.push('00_EXECUTIVE_RUBRIC.md: missing authored guide');
-  } else {
-    const guide = readFileSync(guidePath, 'utf-8');
-    for (const { rule, pattern, home } of GUIDE_RULES) {
-      const match = guide.match(pattern);
-      if (match) derivedProblems.push(`00_EXECUTIVE_RUBRIC.md: duplicated ${rule} — "${match[0].trim().replace(/\s+/g, ' ').slice(0, 80)}" (canonical home: ${home})`);
+  const SCALE_RULES: Array<{ rule: string; pattern: RegExp; home: string }> = [
+    { rule: 'per-indicator table row', pattern: /^\|\s*[A-Z]+-\d+\s*\|/m, home: 'sheets/score-sheet.md Part C or the indicator file' },
+    ...VALUE_RULES,
+    { rule: 'rollup formula block', pattern: /```[^`]*?(?:Category%|System score|System category%)[^`]*?```/s, home: 'model/config.md §2' },
+  ];
+  const RESTATEMENT_SOURCES: Array<{ path: string; rules: typeof SCALE_RULES; missing: string }> = [
+    { path: join(MODEL_DIR_PATH, 'scale.md'), rules: SCALE_RULES, missing: 'model/scale.md: missing authored scale' },
+    { path: join(RUBRIC_DIR, 'README.md'), rules: VALUE_RULES, missing: 'docs/rubric/README.md: missing rubric entry point' },
+  ];
+  for (const { dir, charterPath } of CATEGORIES) {
+    RESTATEMENT_SOURCES.push({ path: charterPath, rules: VALUE_RULES, missing: `docs/rubric/indicators/${dir}/README.md: missing category charter` });
+  }
+  for (const source of RESTATEMENT_SOURCES) {
+    const relative = source.path.slice(ROOT.length + 1);
+    if (!existsSync(source.path)) {
+      derivedProblems.push(source.missing);
+      continue;
+    }
+    const text = readFileSync(source.path, 'utf-8');
+    for (const { rule, pattern, home } of source.rules) {
+      const match = text.match(pattern);
+      if (match) derivedProblems.push(`${relative}: duplicated ${rule} — "${match[0].trim().replace(/\s+/g, ' ').slice(0, 80)}" (canonical home: ${home})`);
     }
   }
   if (derivedProblems.length) {

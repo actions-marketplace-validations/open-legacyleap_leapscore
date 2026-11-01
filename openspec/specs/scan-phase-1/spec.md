@@ -95,7 +95,7 @@ The system SHALL emit a TEST-08 fact by parsing CI YAML fetched via contents API
 - **THEN** fact `gates={lint:{present:true,blocking:true}, sast:{present:false}}` and scorer maps to measured score per TEST-08
 
 ### Requirement: Partial scorer and coverage
-The system SHALL roll up the requested MVP facts into the canonical scoring math (`11_WEIGHTS_THRESHOLDS_CONFIG.md:50` — Category% and weighted headline) over the requested set (MVP 19 = VEL 4 + SEC 4 + ECOS 5 + ARCH 3 + TEST 3). All non-requested indicators SHALL be `unknown` with `unknown_measure_path`; the report's `coverage` SHALL show a single terminal value `measured:N, estimated:0, unknown:102-N` (MVP `19/83`) and `status` SHALL be `complete` or `degraded`. No intermediate coverage (e.g. `measured:6` dial) SHALL be rendered.
+The system SHALL roll up the requested MVP facts into the canonical scoring math (`docs/rubric/model/config.md` §2 — Category% and weighted headline) over the requested set (MVP 19 = VEL 4 + SEC 4 + ECOS 5 + ARCH 3 + TEST 3). All non-requested indicators SHALL be `unknown` with `unknown_measure_path`; the report's `coverage` SHALL show a single terminal value `measured:N, estimated:0, unknown:102-N` (MVP `19/83`) and `status` SHALL be `complete` or `degraded`. No intermediate coverage (e.g. `measured:6` dial) SHALL be rendered.
 
 #### Scenario: Full Phase 1 success
 - **WHEN** all 19 requested MVP facts are `measured` before budget expiry
@@ -198,7 +198,7 @@ The system SHALL surface gates G1/G2/G3/G8 as `needs-verification` when a scan h
 
 #### Scenario: Unified scan promotes gates when clone facts present
 - **WHEN** a unified scan requests the 19 MVP indicators and clone detectors emit SEC-02/ECOS-01/ECOS-05/SEC-01 facts before `budgetMs` expiry
-- **THEN** G1/G3/G8/G2 are evaluated via their Phase-2 predicates in that same scan (see `scan-phase-2` gate predicates) and may become `proven` or `not-proven`, and a `proven` gate caps the verdict per `docs/rubric/11_WEIGHTS_THRESHOLDS_CONFIG.md` §3
+- **THEN** G1/G3/G8/G2 are evaluated via their Phase-2 predicates in that same scan (see `scan-phase-2` gate predicates) and may become `proven` or `not-proven`, and a `proven` gate caps the verdict per `docs/rubric/model/config.md` §3
 
 #### Scenario: No intermediate Phase-1 seal in unified scan
 - **WHEN** GH-API detectors finish early in a 19-indicator unified scan

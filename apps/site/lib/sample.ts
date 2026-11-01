@@ -70,7 +70,7 @@ function row(s: RowSeed): IndicatorRow {
 }
 
 const FE_NA =
-  "No user-facing client in this repo (server-rendered templates only); FE module is N/A and the base weight set applies — 11 §1.";
+  "No user-facing client in this repo (server-rendered templates only); FE module is N/A and the base weight set applies — docs/rubric/model/config.md §1.";
 
 export const ECOS_ROWS: IndicatorRow[] = [
   row({
@@ -1585,7 +1585,7 @@ export const FE_ROWS: IndicatorRow[] = [
   }),
 ];
 
-/* — G1–G8 (00_EXECUTIVE_RUBRIC.md Part 0) — */
+/* — G1–G8 (docs/rubric/model/config.md §3) — */
 export const GATES: Gate[] = [
   {
     id: "G1",

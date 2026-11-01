@@ -4451,7 +4451,7 @@
         "name": "UI Framework / Stack EOL & Deprecation",
         "category_id": "FE",
         "status": "unknown",
-        "reason": "No user-facing client in this repo (server-rendered templates only); FE module is N/A and the base weight set applies \u2014 11 \u00a71.",
+        "reason": "No user-facing client in this repo (server-rendered templates only); FE module is N/A and the base weight set applies \u2014 docs/rubric/model/config.md \u00a71.",
         "not_applicable": true,
         "effort": "\u26a1 \u226430 min"
       },
@@ -4460,7 +4460,7 @@
         "name": "Bundle Size & Load Performance",
         "category_id": "FE",
         "status": "unknown",
-        "reason": "No user-facing client in this repo (server-rendered templates only); FE module is N/A and the base weight set applies \u2014 11 \u00a71.",
+        "reason": "No user-facing client in this repo (server-rendered templates only); FE module is N/A and the base weight set applies \u2014 docs/rubric/model/config.md \u00a71.",
         "not_applicable": true,
         "effort": "\ud83d\udd36 ~2\u20134 h"
       },
@@ -4469,7 +4469,7 @@
         "name": "Accessibility Deficits",
         "category_id": "FE",
         "status": "unknown",
-        "reason": "No user-facing client in this repo (server-rendered templates only); FE module is N/A and the base weight set applies \u2014 11 \u00a71.",
+        "reason": "No user-facing client in this repo (server-rendered templates only); FE module is N/A and the base weight set applies \u2014 docs/rubric/model/config.md \u00a71.",
         "not_applicable": true,
         "effort": "\u26a1 \u226430 min"
       },
@@ -4478,7 +4478,7 @@
         "name": "Browser / Platform Support Drift",
         "category_id": "FE",
         "status": "unknown",
-        "reason": "No user-facing client in this repo (server-rendered templates only); FE module is N/A and the base weight set applies \u2014 11 \u00a71.",
+        "reason": "No user-facing client in this repo (server-rendered templates only); FE module is N/A and the base weight set applies \u2014 docs/rubric/model/config.md \u00a71.",
         "not_applicable": true,
         "effort": "\u26a1 \u226430 min"
       },
@@ -4487,7 +4487,7 @@
         "name": "Client-Side Architecture Debt",
         "category_id": "FE",
         "status": "unknown",
-        "reason": "No user-facing client in this repo (server-rendered templates only); FE module is N/A and the base weight set applies \u2014 11 \u00a71.",
+        "reason": "No user-facing client in this repo (server-rendered templates only); FE module is N/A and the base weight set applies \u2014 docs/rubric/model/config.md \u00a71.",
         "not_applicable": true,
         "effort": "\u26a1 \u226430 min"
       },
@@ -4496,7 +4496,7 @@
         "name": "Design System / UI Consistency Drift",
         "category_id": "FE",
         "status": "unknown",
-        "reason": "No user-facing client in this repo (server-rendered templates only); FE module is N/A and the base weight set applies \u2014 11 \u00a71.",
+        "reason": "No user-facing client in this repo (server-rendered templates only); FE module is N/A and the base weight set applies \u2014 docs/rubric/model/config.md \u00a71.",
         "not_applicable": true,
         "effort": "\u26a1 \u226430 min"
       },
@@ -4505,7 +4505,7 @@
         "name": "Internationalization / Localization Debt",
         "category_id": "FE",
         "status": "unknown",
-        "reason": "No user-facing client in this repo (server-rendered templates only); FE module is N/A and the base weight set applies \u2014 11 \u00a71.",
+        "reason": "No user-facing client in this repo (server-rendered templates only); FE module is N/A and the base weight set applies \u2014 docs/rubric/model/config.md \u00a71.",
         "not_applicable": true,
         "effort": "\u26a1 \u226430 min"
       },
@@ -4514,7 +4514,7 @@
         "name": "Mobile / Responsive Adaptation & Offline Support",
         "category_id": "FE",
         "status": "unknown",
-        "reason": "No user-facing client in this repo (server-rendered templates only); FE module is N/A and the base weight set applies \u2014 11 \u00a71.",
+        "reason": "No user-facing client in this repo (server-rendered templates only); FE module is N/A and the base weight set applies \u2014 docs/rubric/model/config.md \u00a71.",
         "not_applicable": true,
         "effort": "\u26a1 \u226430 min"
       }

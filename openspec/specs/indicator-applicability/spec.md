@@ -82,7 +82,7 @@ The system SHALL assign each indicator an applicability tier per archetype: `req
 
 ### Requirement: Weight renormalization over implemented-and-applicable categories
 
-The system SHALL renormalize category weights to sum to 100% over the *implemented-and-applicable* categories only (those with at least one row that is `measured` or `estimated`; `not_applicable` and `not_implemented` rows do not count as applicable). Renormalization SHALL be proportional to the canonical weights in `docs/rubric/11_WEIGHTS_THRESHOLDS_CONFIG.md:10-42` (same as FE-active `×0.9` pattern, generalized). Both the canonical weighted headline and the renormalized headline SHALL be persisted; the renormalized headline is the primary display, the canonical headline is footnoted. A category with zero implemented-and-applicable rows SHALL be omitted or shown dimmed as `N/A` / `Not implemented` with no percentage.
+The system SHALL renormalize category weights to sum to 100% over the *implemented-and-applicable* categories only (those with at least one row that is `measured` or `estimated`; `not_applicable` and `not_implemented` rows do not count as applicable). Renormalization SHALL be proportional to the canonical weights in `docs/rubric/model/config.md` §1 (same as FE-active `×0.9` pattern, generalized). Both the canonical weighted headline and the renormalized headline SHALL be persisted; the renormalized headline is the primary display, the canonical headline is footnoted. A category with zero implemented-and-applicable rows SHALL be omitted or shown dimmed as `N/A` / `Not implemented` with no percentage.
 
 #### Scenario: Library excludes DATA+PERF
 - **WHEN** archetype `library` yields DATA and PERF categories with zero applicable rows
