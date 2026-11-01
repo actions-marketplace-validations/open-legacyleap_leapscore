@@ -26,6 +26,7 @@ Use this page to find the right source. Documentation is split by authority: Ope
 
 - [`rubric/`](./rubric/): the rubric in three layers — the measured set under `indicators/`, the composing rules under `model/`, and the generated instrument under `sheets/`.
 - [`sample-report/`](./sample-report/): guide and scripts for illustrative report assets.
+- [`diagrams/`](./diagrams/README.md): nine architecture diagrams as matched `.html`/`.json` pairs — illustrative only; revision-pinned snapshots, not a requirements source.
 - [`roadmap/`](./roadmap/): planning material — status, baseline, and ordered backlog; not a requirements source.
 - [`PRODUCT.md`](./PRODUCT.md): explanatory product overview; not a requirements source.
 

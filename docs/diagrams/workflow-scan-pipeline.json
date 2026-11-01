@@ -1,0 +1,233 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Remote scan pipeline",
+    "subtitle": "A single indicator-count budget spans GitHub-API detectors, the shallow clone, clone detectors, and terminal sealing.",
+    "output": "docs/diagrams/workflow-scan-pipeline.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/open-legacyleap/leapscore",
+      "provider": "github",
+      "revision": "48779977913e15d11d3563adbe337a5c125fe1a2"
+    }
+  },
+  "lanes": [
+    { "id": "caller", "label": "Caller" },
+    { "id": "service", "label": "Scanner service" },
+    { "id": "engine", "label": "Scan engine" },
+    { "id": "inputs", "label": "Remote inputs" },
+    { "id": "failure", "label": "Refusal + degradation", "variant": "exception" }
+  ],
+  "phases": [
+    { "id": "intake", "label": "Admit + budget", "fromCol": 0, "toCol": 1 },
+    { "id": "discovery", "label": "Ingest + data lanes", "fromCol": 2, "toCol": 3, "variant": "emphasis" },
+    { "id": "outcome", "label": "Detect + seal", "fromCol": 4, "toCol": 5, "variant": "dashed" }
+  ],
+  "groups": [
+    { "id": "admission", "label": "Before any GH or clone work", "lane": "service", "fromCol": 0, "toCol": 1, "variant": "security" },
+    { "id": "remote_lane", "label": "Two data lanes, one deadline", "lane": "inputs", "fromCol": 2, "toCol": 3, "variant": "dashed" },
+    { "id": "degrade", "label": "Fail loud or degrade honestly", "lane": "failure", "fromCol": 1, "toCol": 4, "variant": "security" }
+  ],
+  "mainPath": ["request", "admit", "budget", "ingest", "ghdet", "clone", "clonedet", "seal", "stream", "sealed"],
+  "nodes": [
+    {
+      "id": "request",
+      "lane": "caller",
+      "col": 0,
+      "type": "external",
+      "label": "GET /scan?repo",
+      "sublabel": "browser or CI",
+      "icon": "person",
+      "width": 140,
+      "sources": [{ "path": "apps/scanner/src/server.ts", "line": 56, "end_line": 70 }]
+    },
+    {
+      "id": "admit",
+      "lane": "service",
+      "col": 1,
+      "type": "security",
+      "label": "Admission control",
+      "sublabel": "10 starts/min · 3 live",
+      "tag": "per client IP",
+      "width": 145,
+      "sources": [{ "path": "apps/scanner/src/admission.ts", "line": 14, "end_line": 31 }]
+    },
+    {
+      "id": "budget",
+      "lane": "engine",
+      "col": 1,
+      "type": "backend",
+      "label": "Unified budget",
+      "sublabel": "10s–240s by indicator",
+      "tag": "one deadline",
+      "width": 145,
+      "sources": [{ "path": "apps/scanner/src/scan/budget.ts", "line": 74, "end_line": 100 }]
+    },
+    {
+      "id": "ingest",
+      "lane": "engine",
+      "col": 2,
+      "type": "backend",
+      "label": "Ingest URL",
+      "sublabel": "normalize owner/repo",
+      "width": 140,
+      "sources": [{ "path": "apps/scanner/src/scan/ingest.ts", "line": 30, "end_line": 63 }]
+    },
+    {
+      "id": "gh",
+      "lane": "inputs",
+      "col": 2,
+      "type": "cloud",
+      "label": "GitHub REST",
+      "sublabel": "existence + visibility",
+      "icon": "cloud",
+      "width": 140
+    },
+    {
+      "id": "ghdet",
+      "lane": "engine",
+      "col": 3,
+      "type": "backend",
+      "label": "GH-API detectors",
+      "sublabel": "6 indicators",
+      "width": 140,
+      "sources": [{ "path": "apps/scanner/src/scan/orchestrator.ts", "line": 129, "end_line": 144 }]
+    },
+    {
+      "id": "clone",
+      "lane": "inputs",
+      "col": 3,
+      "type": "database",
+      "label": "Shallow clone",
+      "sublabel": "--filter=blob:none",
+      "tag": "4 MiB read cap",
+      "icon": "database",
+      "width": 140,
+      "sources": [{ "path": "apps/scanner/src/scan/clone.ts", "line": 20, "end_line": 37 }]
+    },
+    {
+      "id": "clonedet",
+      "lane": "engine",
+      "col": 4,
+      "type": "backend",
+      "label": "Clone detectors",
+      "sublabel": "25 · partitioned reads",
+      "tag": "applicability filtered",
+      "width": 150,
+      "sources": [
+        { "path": "apps/scanner/src/scan/orchestrator.ts", "line": 267, "end_line": 300 },
+        { "path": "apps/scanner/src/scan/scoring/scorer/applicability.ts", "line": 40, "end_line": 80 }
+      ]
+    },
+    {
+      "id": "seal",
+      "lane": "engine",
+      "col": 5,
+      "type": "backend",
+      "label": "sealScan",
+      "sublabel": "rows · gates · band",
+      "tag": "frozen denominator",
+      "width": 145,
+      "sources": [{ "path": "apps/scanner/src/scan/scoring/seal.ts", "line": 201, "end_line": 255 }]
+    },
+    {
+      "id": "stream",
+      "lane": "service",
+      "col": 5,
+      "type": "messagebus",
+      "label": "NDJSON frames",
+      "sublabel": "meta · progress · trace",
+      "width": 140,
+      "sources": [{ "path": "apps/scanner/src/server.ts", "line": 234, "end_line": 240 }]
+    },
+    {
+      "id": "sealed",
+      "lane": "caller",
+      "col": 5,
+      "type": "frontend",
+      "label": "Terminal report",
+      "sublabel": "report frame rendered",
+      "icon": "success",
+      "width": 140
+    },
+    {
+      "id": "refused",
+      "lane": "failure",
+      "col": 1,
+      "type": "security",
+      "label": "Refused",
+      "sublabel": "rate-limit · not-found",
+      "tag": "no work attempted",
+      "icon": "failure",
+      "width": 140
+    },
+    {
+      "id": "degraded",
+      "lane": "failure",
+      "col": 4,
+      "type": "backend",
+      "label": "Unknown rows",
+      "sublabel": "clone or detector failure",
+      "tag": "seal still happens",
+      "icon": "waiting",
+      "width": 145
+    },
+    {
+      "id": "killer",
+      "lane": "failure",
+      "col": 2,
+      "type": "security",
+      "label": "Killer trip",
+      "sublabel": "240s wall clock",
+      "tag": "no headline",
+      "icon": "stop",
+      "width": 135
+    }
+  ],
+  "edges": [
+    { "id": "request-admit", "from": "request", "to": "admit", "label": "start", "variant": "emphasis" },
+    { "id": "admit-budget", "from": "admit", "to": "budget", "label": "admitted", "variant": "emphasis" },
+    { "id": "admit-refused", "from": "admit", "to": "refused", "label": "over limit", "variant": "security", "role": "error" },
+    { "id": "budget-ingest", "from": "budget", "to": "ingest", "label": "budgetMs" },
+    { "id": "budget-killer", "from": "budget", "to": "killer", "label": "timer", "variant": "security", "role": "error" },
+    { "id": "ingest-gh", "from": "ingest", "to": "gh", "label": "GET /repos", "variant": "emphasis" },
+    { "id": "ingest-ghdet", "from": "ingest", "to": "ghdet", "label": "normalized" },
+    { "id": "ghdet-clone", "from": "ghdet", "to": "clone", "label": "then clone" },
+    { "id": "clone-clonedet", "from": "clone", "to": "clonedet", "label": "readFile" },
+    { "id": "clone-degraded", "from": "clone", "to": "degraded", "label": "clone fails", "variant": "security", "role": "error" },
+    { "id": "degraded-seal", "from": "degraded", "to": "seal", "label": "unknown rows", "variant": "dashed", "role": "branch" },
+    { "id": "clonedet-seal", "from": "clonedet", "to": "seal", "label": "facts", "variant": "emphasis" },
+    { "id": "seal-stream", "from": "seal", "to": "stream", "label": "report", "variant": "emphasis" },
+    { "id": "stream-sealed", "from": "stream", "to": "sealed", "label": "one terminal frame", "variant": "emphasis" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Budget Is the Control Plane",
+      "items": [
+        "The budget is computed from the requested indicator classes, not from wall-clock guesses",
+        "GH detectors and clone detectors share one deadline; a 240s killer fails the run without sealing",
+        "A plain expiry seals remaining rows as unknown with a capped disclosure"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Two Data Lanes",
+      "items": [
+        "GitHub API lane: repo metadata, contents, and pull history for six indicators",
+        "Clone lane: a blobless shallow clone read through a byte-capped readFile proxy",
+        "Archetype and ecosystem sniffing happen between clone and detector fan-out"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Honest Failure",
+      "items": [
+        "Admission refusal happens before any GitHub or clone work",
+        "A failed clone does not cancel the seal; affected rows become unknown",
+        "Exactly one terminal frame is emitted: report, refused, or run-failure"
+      ]
+    }
+  ]
+}

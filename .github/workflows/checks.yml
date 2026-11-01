@@ -1,0 +1,44 @@
+# Documentation and boundary checks: the canonical catalog, its generated views, the
+# docs tree (including docs/diagrams/), detector isolation, and the process boundaries.
+# Every step is a documented `npm run check:*` command that must pass from the repo root.
+# No path filter: a docs-only change can break documentation-structure or diagrams, and
+# a scanner-only change can break detector isolation. Offline after `npm ci`.
+name: Checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Documentation structure
+        run: npm run check:documentation-structure
+      - name: Diagrams (pairs, index, pin, receipts, ignore)
+        run: npm run check:diagrams
+      - name: Detector schemas
+        run: npm run check:schemas
+      - name: Rubric consistency (generated views byte-equal)
+        run: npm run check:rubric-consistency
+      - name: Detector isolation
+        run: npm run check:detector-isolation
+      - name: Site boundary
+        run: npm run check:site-boundary
+      - name: Surface boundary
+        run: npm run check:surface-boundary
+      - name: Bin wiring
+        run: npm run check:bin-wiring
+      - name: Committed Action dist is byte-fresh
+        run: npm run check:dist

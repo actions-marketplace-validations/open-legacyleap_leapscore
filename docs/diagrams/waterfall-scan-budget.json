@@ -1,0 +1,141 @@
+{
+  "schema_version": 1,
+  "diagram_type": "waterfall",
+  "meta": {
+    "title": "Remote scan wall-clock breakdown",
+    "subtitle": "Illustrative shares for a 31-indicator remote scan inside its 240s indicator-driven budget; timings are not measured.",
+    "output": "docs/diagrams/waterfall-scan-budget.html",
+    "quality_profile": "showcase",
+    "evidence": "illustrative",
+    "unit": "ms",
+    "repository": {
+      "url": "https://github.com/open-legacyleap/leapscore",
+      "provider": "github",
+      "revision": "48779977913e15d11d3563adbe337a5c125fe1a2"
+    }
+  },
+  "layout": {
+    "width": 1180
+  },
+  "spans": [
+    {
+      "id": "scan",
+      "name": "Unified remote scan",
+      "service": "scanner",
+      "start": 0,
+      "end": 95000,
+      "status": "ok",
+      "detail": "Parent span; children are sequential phases and are not added to its duration.",
+      "sources": [{ "path": "apps/scanner/src/scan/orchestrator.ts", "line": 84, "end_line": 90 }]
+    },
+    {
+      "id": "budget",
+      "name": "Budget + client setup",
+      "service": "engine",
+      "start": 0,
+      "duration": 300,
+      "parent": "scan",
+      "status": "ok",
+      "sources": [{ "path": "apps/scanner/src/scan/budget.ts", "line": 74, "end_line": 100 }]
+    },
+    {
+      "id": "ingest",
+      "name": "URL ingest + repo check",
+      "service": "scanner",
+      "start": 300,
+      "duration": 2000,
+      "parent": "scan",
+      "status": "ok",
+      "sources": [{ "path": "apps/scanner/src/scan/ingest.ts", "line": 30, "end_line": 63 }]
+    },
+    {
+      "id": "ghdet",
+      "name": "Six GH-API detectors",
+      "service": "detectors",
+      "start": 2300,
+      "duration": 5500,
+      "parent": "scan",
+      "status": "ok",
+      "sources": [{ "path": "apps/scanner/src/scan/orchestrator.ts", "line": 129, "end_line": 144 }]
+    },
+    {
+      "id": "clone",
+      "name": "Shallow clone",
+      "service": "engine",
+      "start": 7800,
+      "duration": 9000,
+      "parent": "scan",
+      "status": "ok",
+      "sources": [{ "path": "apps/scanner/src/scan/clone.ts", "line": 20, "end_line": 37 }]
+    },
+    {
+      "id": "sniff",
+      "name": "Ecosystem sniff",
+      "service": "engine",
+      "start": 16800,
+      "duration": 2600,
+      "parent": "scan",
+      "status": "ok",
+      "sources": [{ "path": "apps/scanner/src/scan/ecosystem.ts", "line": 1, "end_line": 14 }]
+    },
+    {
+      "id": "archetype",
+      "name": "Archetype + plane inventory",
+      "service": "engine",
+      "start": 19400,
+      "duration": 4400,
+      "parent": "scan",
+      "status": "ok",
+      "sources": [{ "path": "apps/scanner/src/scan/archetype.ts", "line": 17, "end_line": 23 }]
+    },
+    {
+      "id": "clonedet",
+      "name": "25 clone detectors",
+      "service": "detectors",
+      "start": 23800,
+      "duration": 62400,
+      "parent": "scan",
+      "status": "ok",
+      "sources": [{ "path": "apps/scanner/src/scan/orchestrator.ts", "line": 290, "end_line": 300 }]
+    },
+    {
+      "id": "seal",
+      "name": "Score + gates + seal",
+      "service": "engine",
+      "start": 86200,
+      "duration": 8600,
+      "parent": "scan",
+      "status": "ok",
+      "sources": [{ "path": "apps/scanner/src/scan/scoring/seal.ts", "line": 201, "end_line": 255 }]
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Budget Arithmetic",
+      "items": [
+        "31 indicators: 21 fast, 7 API-budgeted, 3 slow-dissolvable",
+        "30s clone base + class costs totals 325s, clamped to 240s",
+        "The separate 240s wall-clock killer fails the run without sealing"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Not a Measurement",
+      "items": [
+        "These durations are illustrative, not a recorded trace",
+        "Real traces are emitted as NDJSON frames and persisted in the envelope",
+        "The diagram shows where the budget goes, not what any one repo took"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Likely Hot Spots",
+      "items": [
+        "The clone lane and its 25 detectors dominate the wall clock",
+        "GH detectors precede the clone because the API lane has no tree dependency",
+        "Seal time covers row grading, gate evaluation, and band derivation"
+      ]
+    }
+  ]
+}

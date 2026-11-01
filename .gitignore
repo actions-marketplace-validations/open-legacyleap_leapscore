@@ -23,3 +23,6 @@ coverage/
 # IDE
 .vscode/
 .idea/
+
+# Diagram tool working directory — published artifacts are curated into docs/diagrams/
+.archify/

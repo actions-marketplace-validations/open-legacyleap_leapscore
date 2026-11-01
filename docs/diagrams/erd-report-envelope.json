@@ -1,0 +1,246 @@
+{
+  "schema_version": 1,
+  "diagram_type": "erd",
+  "meta": {
+    "title": "Sealed report envelope model",
+    "subtitle": "The persisted document contract, expressed as entities: identity and trace, the report rollup, row/gate evidence, and the optional baseline delta.",
+    "output": "docs/diagrams/erd-report-envelope.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/open-legacyleap/leapscore",
+      "provider": "github",
+      "revision": "48779977913e15d11d3563adbe337a5c125fe1a2"
+    }
+  },
+  "layout": {
+    "mode": "grid",
+    "entityW": 226,
+    "gapX": 96,
+    "gapY": 64
+  },
+  "entities": [
+    {
+      "id": "envelope_meta",
+      "label": "envelope_meta",
+      "sublabel": "meta block of report.json",
+      "tag": "identity",
+      "row": 0,
+      "col": 0,
+      "sources": [{ "path": "packages/contracts/src/index.ts", "line": 245, "end_line": 279 }],
+      "attributes": [
+        { "name": "runId", "type": "TEXT", "key": "pk" },
+        { "name": "repo", "type": "TEXT" },
+        { "name": "repoUrl", "type": "TEXT" },
+        { "name": "repoSlug", "type": "TEXT" },
+        { "name": "engineSha7", "type": "TEXT" },
+        { "name": "ranAt", "type": "TIMESTAMP" },
+        { "name": "repoSha", "type": "TEXT" },
+        { "name": "score", "type": "REAL" },
+        { "name": "tier", "type": "TEXT" },
+        { "name": "status", "type": "TEXT" },
+        { "name": "contractVersion", "type": "INTEGER" },
+        { "name": "score_fingerprint", "type": "TEXT" },
+        { "name": "score_policy", "type": "TEXT" },
+        { "name": "requested_indicators", "type": "JSON" }
+      ]
+    },
+    {
+      "id": "trace_entry",
+      "label": "trace_entry",
+      "sublabel": "ordered seal trace",
+      "tag": "identity",
+      "row": 1,
+      "col": 0,
+      "sources": [{ "path": "packages/contracts/src/index.ts", "line": 296, "end_line": 309 }],
+      "attributes": [
+        { "name": "seq", "type": "INTEGER", "key": "pk" },
+        { "name": "runId", "type": "TEXT", "key": "fk", "references": "envelope_meta.runId" },
+        { "name": "ts", "type": "INTEGER" },
+        { "name": "label", "type": "TEXT" },
+        { "name": "phase", "type": "TEXT" },
+        { "name": "detectorId", "type": "TEXT" },
+        { "name": "status", "type": "TEXT" },
+        { "name": "errorKind", "type": "TEXT" }
+      ]
+    },
+    {
+      "id": "report",
+      "label": "report",
+      "sublabel": "sealed report body",
+      "tag": "rollup",
+      "row": 0,
+      "col": 1,
+      "sources": [{ "path": "packages/contracts/src/index.ts", "line": 183, "end_line": 244 }],
+      "attributes": [
+        { "name": "reportId", "type": "TEXT", "key": "pk" },
+        { "name": "runId", "type": "TEXT", "key": ["fk", "uk"], "references": "envelope_meta.runId" },
+        { "name": "report_schema", "type": "TEXT" },
+        { "name": "status", "type": "TEXT" },
+        { "name": "score", "type": "REAL" },
+        { "name": "tier", "type": "TEXT" },
+        { "name": "suppressed", "type": "BOOLEAN" },
+        { "name": "verdict", "type": "TEXT" },
+        { "name": "gate_capped", "type": "BOOLEAN" },
+        { "name": "uncapped_tier", "type": "TEXT" },
+        { "name": "coverage", "type": "JSON" }
+      ]
+    },
+    {
+      "id": "category_score",
+      "label": "category_score",
+      "sublabel": "weighted category row",
+      "tag": "rollup",
+      "row": 1,
+      "col": 1,
+      "sources": [{ "path": "packages/contracts/src/index.ts", "line": 77, "end_line": 93 }],
+      "attributes": [
+        { "name": "categoryKey", "type": "TEXT", "key": "pk" },
+        { "name": "reportId", "type": "TEXT", "key": "fk", "references": "report.reportId" },
+        { "name": "categoryId", "type": "TEXT" },
+        { "name": "weight", "type": "REAL" },
+        { "name": "applicable", "type": "INTEGER" },
+        { "name": "scored_sum", "type": "REAL" },
+        { "name": "category_score", "type": "REAL" },
+        { "name": "status_counts", "type": "JSON" }
+      ]
+    },
+    {
+      "id": "indicator_row",
+      "label": "indicator_row",
+      "sublabel": "graded or disclosed row",
+      "tag": "evidence",
+      "row": 1,
+      "col": 2,
+      "sources": [{ "path": "packages/contracts/src/index.ts", "line": 60, "end_line": 75 }],
+      "attributes": [
+        { "name": "rowKey", "type": "TEXT", "key": "pk" },
+        { "name": "rowId", "type": "TEXT" },
+        { "name": "reportId", "type": "TEXT", "key": "fk", "references": "report.reportId" },
+        { "name": "categoryKey", "type": "TEXT", "key": "fk", "references": "category_score.categoryKey" },
+        { "name": "status", "type": "TEXT" },
+        { "name": "score", "type": "INTEGER" },
+        { "name": "reason", "type": "TEXT" },
+        { "name": "unknown_measure_path", "type": "TEXT" },
+        { "name": "effort", "type": "TEXT" },
+        { "name": "evidence", "type": "JSON" }
+      ]
+    },
+    {
+      "id": "gate",
+      "label": "gate",
+      "sublabel": "G1–G8 verdict",
+      "tag": "evidence",
+      "row": 0,
+      "col": 2,
+      "sources": [{ "path": "packages/contracts/src/index.ts", "line": 95, "end_line": 101 }],
+      "attributes": [
+        { "name": "gateKey", "type": "TEXT", "key": "pk" },
+        { "name": "reportId", "type": "TEXT", "key": "fk", "references": "report.reportId" },
+        { "name": "gateId", "type": "TEXT" },
+        { "name": "status", "type": "TEXT" },
+        { "name": "source_rows", "type": "JSON" },
+        { "name": "note", "type": "TEXT" }
+      ]
+    },
+    {
+      "id": "delta_document",
+      "label": "delta_document",
+      "sublabel": "optional baseline comparison",
+      "tag": "comparison",
+      "row": 0,
+      "col": 3,
+      "sources": [{ "path": "packages/contracts/src/index.ts", "line": 926, "end_line": 960 }],
+      "attributes": [
+        { "name": "deltaId", "type": "TEXT", "key": "pk" },
+        { "name": "baselineRunId", "type": "TEXT", "key": "fk", "references": "envelope_meta.runId" },
+        { "name": "currentRunId", "type": "TEXT", "key": "fk", "references": "envelope_meta.runId" },
+        { "name": "schemaVersion", "type": "INTEGER" },
+        { "name": "verdict", "type": "JSON" },
+        { "name": "movement", "type": "REAL" },
+        { "name": "code_attributable", "type": "REAL" }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "id": "meta-report",
+      "from": "envelope_meta",
+      "to": "report",
+      "label": "seals",
+      "fromCardinality": "one",
+      "toCardinality": "one",
+      "identifying": true
+    },
+    {
+      "id": "meta-trace",
+      "from": "envelope_meta",
+      "to": "trace_entry",
+      "label": "records",
+      "fromCardinality": "one",
+      "toCardinality": "many",
+      "identifying": true
+    },
+    {
+      "id": "report-category",
+      "from": "report",
+      "to": "category_score",
+      "label": "rolls up",
+      "fromCardinality": "one",
+      "toCardinality": "many",
+      "identifying": true
+    },
+    {
+      "id": "category-row",
+      "from": "category_score",
+      "to": "indicator_row",
+      "label": "groups",
+      "fromCardinality": "one",
+      "toCardinality": "many"
+    },
+    {
+      "id": "report-gate",
+      "from": "report",
+      "to": "gate",
+      "label": "evaluates",
+      "fromCardinality": "one",
+      "toCardinality": "many",
+      "identifying": true
+    },
+    {
+      "id": "delta-baseline",
+      "from": "delta_document",
+      "to": "envelope_meta",
+      "label": "baseline",
+      "fromCardinality": "many",
+      "toCardinality": "one"
+    },
+    {
+      "id": "delta-current",
+      "from": "delta_document",
+      "to": "envelope_meta",
+      "label": "current",
+      "fromCardinality": "many",
+      "toCardinality": "one"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Document, Not Database",
+      "items": [
+        "The real artifact is one JSON envelope; these entities are the stable shape its fields imply",
+        "rowKey and categoryKey are document-local identities (reportId plus the row or category id)",
+        "JSON columns keep evidence, status counts, coverage, and source-row lists lossless"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Comparability",
+      "items": [
+        "meta carries the contract version and the semantic inputs a differ needs",
+        "requested_indicators is absent rather than empty on older envelopes",
+        "The delta document is derived and never mutates the sealed envelope"
+      ]
+    }
+  ]
+}

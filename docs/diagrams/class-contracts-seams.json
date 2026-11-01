@@ -1,0 +1,250 @@
+{
+  "schema_version": 1,
+  "diagram_type": "class",
+  "meta": {
+    "title": "Contract and detector types",
+    "subtitle": "The report envelope, its rollup parts, the presentation seam, and the detector contract every producer implements.",
+    "output": "docs/diagrams/class-contracts-seams.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/open-legacyleap/leapscore",
+      "provider": "github",
+      "revision": "48779977913e15d11d3563adbe337a5c125fe1a2"
+    }
+  },
+  "layout": {
+    "mode": "grid",
+    "gapX": 96,
+    "gapY": 76,
+    "typeW": 210,
+    "typeMaxW": 300
+  },
+  "types": [
+    {
+      "id": "report_envelope",
+      "label": "ReportEnvelope",
+      "kind": "record",
+      "sublabel": "the persisted document",
+      "row": 0,
+      "col": 0,
+      "sources": [{ "path": "packages/contracts/src/index.ts", "line": 311, "end_line": 316 }],
+      "attributes": [
+        { "name": "meta", "type": "EnvelopeMeta", "visibility": "public" },
+        { "name": "report", "type": "Report", "visibility": "public" },
+        { "name": "trace", "type": "TraceEntry[]", "visibility": "public" },
+        { "name": "contractVersion", "type": "number", "visibility": "public" }
+      ]
+    },
+    {
+      "id": "report",
+      "label": "Report",
+      "kind": "class",
+      "sublabel": "producer-owned wire shape",
+      "row": 0,
+      "col": 1,
+      "sources": [{ "path": "packages/contracts/src/index.ts", "line": 183, "end_line": 244 }],
+      "attributes": [
+        { "name": "id", "type": "string", "visibility": "public" },
+        { "name": "report_schema", "type": "string", "visibility": "public" },
+        { "name": "status", "type": "string", "visibility": "public" },
+        { "name": "headline", "type": "Headline", "visibility": "public" },
+        { "name": "coverage", "type": "CoverageCounts", "visibility": "public" },
+        { "name": "categories", "type": "CategoryScore[]", "visibility": "public" },
+        { "name": "gates", "type": "Gate[]", "visibility": "public" },
+        { "name": "full_table", "type": "IndicatorRow[]", "visibility": "public" },
+        { "name": "next_band_path", "type": "NextBandPath | null", "visibility": "public" }
+      ]
+    },
+    {
+      "id": "report_provider",
+      "label": "ReportProvider",
+      "kind": "interface",
+      "sublabel": "presentation seam",
+      "row": 0,
+      "col": 2,
+      "sources": [{ "path": "apps/site/lib/provider.ts", "line": 32, "end_line": 34 }],
+      "methods": [
+        { "name": "getReport", "parameters": "query: ReportQuery", "returns": "Promise<Report>", "visibility": "public", "abstract": true }
+      ]
+    },
+    {
+      "id": "envelope_meta",
+      "label": "EnvelopeMeta",
+      "kind": "record",
+      "sublabel": "identity + comparability",
+      "row": 1,
+      "col": 0,
+      "sources": [{ "path": "packages/contracts/src/index.ts", "line": 245, "end_line": 279 }],
+      "attributes": [
+        { "name": "runId", "type": "string", "visibility": "public" },
+        { "name": "repoSlug", "type": "string", "visibility": "public" },
+        { "name": "engineSha7", "type": "string", "visibility": "public" },
+        { "name": "score", "type": "number", "visibility": "public" },
+        { "name": "tier", "type": "string", "visibility": "public" },
+        { "name": "score_fingerprint", "type": "string | null", "visibility": "public" },
+        { "name": "requested_indicators", "type": "string[] | null", "visibility": "public" },
+        { "name": "score_policy", "type": "string | null", "visibility": "public" }
+      ]
+    },
+    {
+      "id": "category_score",
+      "label": "CategoryScore",
+      "kind": "class",
+      "sublabel": "one weighted category",
+      "row": 1,
+      "col": 1,
+      "sources": [{ "path": "packages/contracts/src/index.ts", "line": 77, "end_line": 93 }],
+      "attributes": [
+        { "name": "id", "type": "string", "visibility": "public" },
+        { "name": "weight", "type": "number", "visibility": "public" },
+        { "name": "applicable", "type": "number", "visibility": "public" },
+        { "name": "category_score", "type": "number | null", "visibility": "public" },
+        { "name": "indicator_rows", "type": "IndicatorRow[]", "visibility": "public" }
+      ]
+    },
+    {
+      "id": "gate",
+      "label": "Gate",
+      "kind": "class",
+      "sublabel": "absolute kill-switch",
+      "row": 1,
+      "col": 2,
+      "sources": [{ "path": "packages/contracts/src/index.ts", "line": 95, "end_line": 101 }],
+      "attributes": [
+        { "name": "id", "type": "string", "visibility": "public" },
+        { "name": "status", "type": "GateStatus", "visibility": "public" },
+        { "name": "source_rows", "type": "string[]", "visibility": "public" },
+        { "name": "note", "type": "string", "visibility": "public" }
+      ]
+    },
+    {
+      "id": "trace_entry",
+      "label": "TraceEntry",
+      "kind": "record",
+      "sublabel": "ordered run evidence",
+      "row": 2,
+      "col": 0,
+      "sources": [{ "path": "packages/contracts/src/index.ts", "line": 296, "end_line": 309 }],
+      "attributes": [
+        { "name": "ts", "type": "number", "visibility": "public" },
+        { "name": "label", "type": "string", "visibility": "public" },
+        { "name": "phase", "type": "TracePhase | null", "visibility": "public" },
+        { "name": "detectorId", "type": "string | null", "visibility": "public" },
+        { "name": "durationMs", "type": "number | null", "visibility": "public" }
+      ]
+    },
+    {
+      "id": "indicator_row",
+      "label": "IndicatorRow",
+      "kind": "class",
+      "sublabel": "one of 102 measured rows",
+      "row": 2,
+      "col": 1,
+      "sources": [{ "path": "packages/contracts/src/index.ts", "line": 60, "end_line": 75 }],
+      "attributes": [
+        { "name": "id", "type": "string", "visibility": "public" },
+        { "name": "status", "type": "RowStatus", "visibility": "public" },
+        { "name": "score", "type": "RowScore | null", "visibility": "public" },
+        { "name": "reason", "type": "string | null", "visibility": "public" },
+        { "name": "unknown_measure_path", "type": "string | null", "visibility": "public" },
+        { "name": "effort", "type": "string", "visibility": "public" }
+      ]
+    },
+    {
+      "id": "detector",
+      "label": "Detector",
+      "kind": "interface",
+      "sublabel": "producer contract",
+      "row": 2,
+      "col": 2,
+      "sources": [{ "path": "apps/scanner/src/scan/detector.ts", "line": 8, "end_line": 17 }],
+      "attributes": [
+        { "name": "id", "type": "IndicatorId", "visibility": "public" },
+        { "name": "tier", "type": "Tier", "visibility": "public" },
+        { "name": "budget", "type": "BudgetClass", "visibility": "public" },
+        { "name": "planes", "type": "DataPlane[]", "visibility": "public" }
+      ],
+      "methods": [
+        { "name": "detect", "parameters": "ctx: ScanContext, abort: AbortSignal", "returns": "Promise<RawFact>", "visibility": "public", "abstract": true }
+      ]
+    },
+    {
+      "id": "sample_provider",
+      "label": "SampleReportProvider",
+      "kind": "class",
+      "sublabel": "sample-only implementation",
+      "row": 3,
+      "col": 0,
+      "sources": [{ "path": "apps/site/lib/provider.ts", "line": 88, "end_line": 139 }],
+      "methods": [
+        { "name": "getReport", "parameters": "query: ReportQuery", "returns": "Promise<Report>", "visibility": "public" }
+      ]
+    },
+    {
+      "id": "raw_fact",
+      "label": "RawFact",
+      "kind": "record",
+      "sublabel": "no score or status fields",
+      "row": 3,
+      "col": 1,
+      "sources": [{ "path": "apps/scanner/src/scan/detector.ts", "line": 37, "end_line": 58 }],
+      "attributes": [
+        { "name": "detectorId", "type": "IndicatorId", "visibility": "public" },
+        { "name": "facts", "type": "Record<string, unknown>", "visibility": "public" },
+        { "name": "evidencePointers", "type": "Evidence[]", "visibility": "public" },
+        { "name": "provenance", "type": "Provenance", "visibility": "public" },
+        { "name": "truncated", "type": "boolean", "visibility": "public" },
+        { "name": "measurement", "type": "Measurement | null", "visibility": "public" }
+      ]
+    },
+    {
+      "id": "scan_context",
+      "label": "ScanContext",
+      "kind": "record",
+      "sublabel": "injected read-only inputs",
+      "row": 3,
+      "col": 2,
+      "sources": [{ "path": "apps/scanner/src/scan/detector.ts", "line": 19, "end_line": 33 }],
+      "attributes": [
+        { "name": "clonePath", "type": "string", "visibility": "public" },
+        { "name": "commitSha", "type": "string", "visibility": "public" },
+        { "name": "manifests", "type": "EcosystemManifest[]", "visibility": "public" },
+        { "name": "budgetLease", "type": "BudgetLease", "visibility": "public" },
+        { "name": "readFile", "type": "(path: string) => Promise<Buffer | null>", "visibility": "public" }
+      ]
+    }
+  ],
+  "relationships": [
+    { "id": "envelope-meta", "from": "report_envelope", "to": "envelope_meta", "kind": "composition", "label": "meta" },
+    { "id": "envelope-report", "from": "report_envelope", "to": "report", "kind": "composition", "label": "report" },
+    { "id": "envelope-trace", "from": "report_envelope", "to": "trace_entry", "kind": "composition", "label": "trace" },
+    { "id": "report-categories", "from": "report", "to": "category_score", "kind": "composition", "label": "categories" },
+    { "id": "report-gates", "from": "report", "to": "gate", "kind": "composition", "label": "gates" },
+    { "id": "report-rows", "from": "report", "to": "indicator_row", "kind": "composition", "label": "full_table" },
+    { "id": "category-rows", "from": "category_score", "to": "indicator_row", "kind": "aggregation", "label": "indicator_rows" },
+    { "id": "sample-realizes", "from": "sample_provider", "to": "report_provider", "kind": "realization" },
+    { "id": "provider-report", "from": "report_provider", "to": "report", "kind": "dependency", "label": "returns" },
+    { "id": "detector-context", "from": "detector", "to": "scan_context", "kind": "dependency", "label": "receives" },
+    { "id": "detector-fact", "from": "detector", "to": "raw_fact", "kind": "dependency", "label": "returns" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Producer Owns the Shape",
+      "items": [
+        "packages/contracts is the single definition; consumers import rather than redeclare",
+        "Render-only fields stay on the site and never enter the wire shape",
+        "Contract version gates ingest: newer envelopes are skipped with a reason"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Detector Isolation",
+      "items": [
+        "Detectors receive a read-only context and an abort signal",
+        "RawFact forbids score, status, confidence, and verdict keys",
+        "Only gh.ts may call fetch; the context carries the injected client"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,220 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "LeapScore system overview",
+    "subtitle": "One producer contract feeds a stateless scanner, a static site, a local CLI/Action, and a separate issue-surfacing app.",
+    "output": "docs/diagrams/architecture-leapscore-system.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/open-legacyleap/leapscore",
+      "provider": "github",
+      "revision": "48779977913e15d11d3563adbe337a5c125fe1a2"
+    }
+  },
+  "components": [
+    {
+      "id": "users",
+      "type": "external",
+      "label": "Developer / CI",
+      "sublabel": "browser or pipeline",
+      "icon": "person",
+      "pos": [40, 300],
+      "size": [120, 70]
+    },
+    {
+      "id": "site",
+      "type": "frontend",
+      "label": "Next.js site",
+      "sublabel": "/live · /reports · /rubric",
+      "icon": "frontend",
+      "pos": [250, 300],
+      "size": [130, 70],
+      "sources": [{ "path": "apps/site/app/live/LiveReportClient.tsx", "line": 93, "end_line": 96 }]
+    },
+    {
+      "id": "scanner",
+      "type": "backend",
+      "label": "Scanner service",
+      "sublabel": "GET /scan · NDJSON",
+      "icon": "backend",
+      "pos": [470, 300],
+      "size": [130, 70],
+      "sources": [{ "path": "apps/scanner/src/server.ts", "line": 250, "end_line": 270 }]
+    },
+    {
+      "id": "detectors",
+      "type": "backend",
+      "label": "Detector fan-out",
+      "sublabel": "31 live indicators",
+      "icon": "backend",
+      "pos": [690, 300],
+      "size": [130, 70],
+      "sources": [{ "path": "apps/scanner/src/scan/orchestrator.ts", "line": 290, "end_line": 300 }]
+    },
+    {
+      "id": "seal",
+      "type": "backend",
+      "label": "sealScan",
+      "sublabel": "score · gates · runId",
+      "icon": "backend",
+      "pos": [910, 300],
+      "size": [130, 70],
+      "sources": [{ "path": "apps/scanner/src/scan/scoring/seal.ts", "line": 201, "end_line": 255 }]
+    },
+    {
+      "id": "gh",
+      "type": "cloud",
+      "label": "GitHub REST API",
+      "sublabel": "repos · contents · pulls",
+      "icon": "cloud",
+      "pos": [470, 100],
+      "size": [130, 70],
+      "sources": [{ "path": "apps/scanner/src/scan/gh.ts", "line": 1, "end_line": 2 }]
+    },
+    {
+      "id": "clone",
+      "type": "database",
+      "label": "Shallow clone",
+      "sublabel": "tmpdir · 4 MiB cap",
+      "icon": "database",
+      "pos": [690, 100],
+      "size": [130, 70],
+      "sources": [{ "path": "apps/scanner/src/scan/clone.ts", "line": 20, "end_line": 27 }]
+    },
+    {
+      "id": "contracts",
+      "type": "backend",
+      "label": "packages/contracts",
+      "sublabel": "envelope · bands · badge",
+      "tag": "no dependencies",
+      "icon": "backend",
+      "pos": [910, 100],
+      "size": [130, 70],
+      "sources": [{ "path": "packages/contracts/src/index.ts", "line": 183, "end_line": 244 }]
+    },
+    {
+      "id": "rubric",
+      "type": "database",
+      "label": "docs/rubric",
+      "sublabel": "102 canonical indicators",
+      "icon": "database",
+      "pos": [1110, 100],
+      "size": [130, 70],
+      "sources": [{ "path": "docs/rubric/README.md", "line": 1, "end_line": 20 }]
+    },
+    {
+      "id": "compiler",
+      "type": "backend",
+      "label": "compile-rubric",
+      "sublabel": "rubric.json · rubric.ts",
+      "icon": "backend",
+      "pos": [1110, 300],
+      "size": [130, 70],
+      "sources": [{ "path": "tooling/scripts/compile-rubric.ts", "line": 1, "end_line": 15 }]
+    },
+    {
+      "id": "cli",
+      "type": "backend",
+      "label": "CLI + Action",
+      "sublabel": "leapscore-scan · local",
+      "icon": "backend",
+      "pos": [250, 500],
+      "size": [130, 70],
+      "sources": [{ "path": "apps/scanner/bin/scan.ts", "line": 697, "end_line": 701 }]
+    },
+    {
+      "id": "reports",
+      "type": "database",
+      "label": "Report artifacts",
+      "sublabel": "report.json/html/md",
+      "icon": "database",
+      "pos": [470, 500],
+      "size": [130, 70],
+      "sources": [{ "path": "apps/scanner/bin/scan.ts", "line": 699, "end_line": 701 }]
+    },
+    {
+      "id": "surface",
+      "type": "backend",
+      "label": "Surface app",
+      "sublabel": "envelope → tracker",
+      "icon": "backend",
+      "pos": [690, 500],
+      "size": [130, 70],
+      "sources": [{ "path": "apps/surface/src/sync.ts", "line": 60, "end_line": 107 }]
+    },
+    {
+      "id": "issues",
+      "type": "external",
+      "label": "GitHub Issues",
+      "sublabel": "warn-only writes",
+      "icon": "external",
+      "pos": [910, 500],
+      "size": [130, 70]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Stateless producer runtime",
+      "wraps": ["scanner", "detectors", "seal"],
+      "pad": 12
+    },
+    {
+      "kind": "region",
+      "label": "Local artifacts and follow-up",
+      "wraps": ["cli", "reports", "surface"],
+      "pad": 12
+    },
+    {
+      "kind": "region",
+      "label": "Canonical rubric → generated views",
+      "wraps": ["rubric", "compiler"],
+      "pad": 12
+    }
+  ],
+  "connections": [
+    { "from": "users", "to": "site", "label": "HTTPS", "variant": "emphasis" },
+    { "from": "site", "to": "scanner", "label": "GET /scan", "variant": "emphasis" },
+    { "from": "scanner", "to": "detectors", "label": "fan-out" },
+    { "from": "detectors", "to": "seal", "label": "facts" },
+    { "from": "scanner", "to": "gh", "label": "REST" },
+    { "from": "clone", "to": "detectors", "label": "read-only" },
+    { "from": "contracts", "to": "seal", "label": "types" },
+    { "from": "rubric", "to": "compiler", "label": "indicators" },
+    { "from": "compiler", "to": "seal", "label": "rubric" },
+    { "from": "scanner", "to": "site", "label": "report frame", "variant": "dashed", "fromSide": "bottom", "toSide": "bottom", "via": [[535, 410], [315, 410]] },
+    { "from": "cli", "to": "reports", "label": "writes" },
+    { "from": "reports", "to": "surface", "label": "envelope" },
+    { "from": "surface", "to": "issues", "label": "issues" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "One producer contract",
+      "items": [
+        "packages/contracts owns the envelope, runId grammar, bands, gates, badges, and funnel copy",
+        "Scanner, site, CLI, Action, and surface all import it; no consumer declares a second report shape",
+        "The scanner is stateless: the terminal report frame is the only scan artefact"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Two execution paths",
+      "items": [
+        "Remote: site streams scanner NDJSON, which fans out to GitHub API and a shallow clone",
+        "Local: CLI and Action scan a checked-out directory and write report.json/html/md",
+        "Both paths converge on sealScan for score, gates, coverage, and runId"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "Generated rubric",
+      "items": [
+        "Canonical indicators live under docs/rubric/indicators",
+        "compile-rubric emits rubric.json for scanners and rubric.ts for the site",
+        "CI rejects drift instead of letting a hand-edited copy survive"
+      ]
+    }
+  ]
+}

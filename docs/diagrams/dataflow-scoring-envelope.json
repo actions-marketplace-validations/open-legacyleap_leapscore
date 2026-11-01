@@ -1,0 +1,209 @@
+{
+  "schema_version": 1,
+  "diagram_type": "dataflow",
+  "meta": {
+    "title": "Facts to sealed envelope",
+    "subtitle": "Detector facts become graded rows, the rollup becomes a sealed envelope, and every consumer reads that one artefact.",
+    "output": "docs/diagrams/dataflow-scoring-envelope.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/open-legacyleap/leapscore",
+      "provider": "github",
+      "revision": "48779977913e15d11d3563adbe337a5c125fe1a2"
+    }
+  },
+  "stages": [
+    { "label": "Inputs" },
+    { "label": "Facts" },
+    { "label": "Grade" },
+    { "label": "Seal" },
+    { "label": "Consumers" }
+  ],
+  "nodes": [
+    {
+      "id": "tree",
+      "type": "database",
+      "label": "Working tree",
+      "sublabel": "clone or local path",
+      "stage": 0,
+      "row": 0,
+      "tag": "source bytes",
+      "sources": [{ "path": "apps/scanner/src/scan/tree.ts", "line": 26, "end_line": 35 }]
+    },
+    {
+      "id": "gh",
+      "type": "cloud",
+      "label": "GitHub data",
+      "sublabel": "contents · pulls",
+      "stage": 0,
+      "row": 1,
+      "tag": "API payloads",
+      "sources": [{ "path": "apps/scanner/src/scan/gh.ts", "line": 15, "end_line": 23 }]
+    },
+    {
+      "id": "snapshots",
+      "type": "database",
+      "label": "Vendored data",
+      "sublabel": "EOL · advisories",
+      "stage": 0,
+      "row": 2,
+      "tag": "offline",
+      "sources": [{ "path": "apps/scanner/src/scan/snapshots.ts", "line": 1, "end_line": 12 }]
+    },
+    {
+      "id": "rubric",
+      "type": "database",
+      "label": "Compiled rubric",
+      "sublabel": "criteria · weights",
+      "stage": 0,
+      "row": 3,
+      "tag": "generated",
+      "sources": [{ "path": "apps/scanner/src/scan/scoring/rubric.json", "line": 1, "end_line": 25 }]
+    },
+    {
+      "id": "detectors",
+      "type": "backend",
+      "label": "31 detectors",
+      "sublabel": "RawFact + evidence",
+      "stage": 1,
+      "row": 1,
+      "tag": "no scores",
+      "sources": [{ "path": "apps/scanner/src/scan/detector.ts", "line": 37, "end_line": 58 }]
+    },
+    {
+      "id": "scorer",
+      "type": "backend",
+      "label": "scoreMvp",
+      "sublabel": "rows · categories · coverage",
+      "stage": 2,
+      "row": 1,
+      "tag": "clamp estimates",
+      "sources": [{ "path": "apps/scanner/src/scan/scoring/scorer/mvp.ts", "line": 569, "end_line": 607 }]
+    },
+    {
+      "id": "gates",
+      "type": "security",
+      "label": "Kill-switch gates",
+      "sublabel": "G1–G8",
+      "stage": 2,
+      "row": 2,
+      "tag": "cap at High",
+      "sources": [{ "path": "apps/scanner/src/scan/scoring/scorer/rollup.ts", "line": 80, "end_line": 92 }]
+    },
+    {
+      "id": "seal",
+      "type": "backend",
+      "label": "Sealed envelope",
+      "sublabel": "score · tier · runId",
+      "stage": 3,
+      "row": 1,
+      "tag": "one artefact",
+      "sources": [{ "path": "apps/scanner/src/scan/scoring/seal.ts", "line": 257, "end_line": 301 }]
+    },
+    {
+      "id": "bandpath",
+      "type": "backend",
+      "label": "Next-band path",
+      "sublabel": "derived, not scored",
+      "stage": 3,
+      "row": 0,
+      "tag": "cost classes",
+      "sources": [{ "path": "apps/scanner/src/scan/scoring/bandpath.ts", "line": 98, "end_line": 120 }]
+    },
+    {
+      "id": "fingerprint",
+      "type": "security",
+      "label": "Score fingerprint",
+      "sublabel": "content + release + flags",
+      "stage": 3,
+      "row": 2,
+      "tag": "deterministic",
+      "sources": [{ "path": "apps/scanner/src/scan/scoring/fingerprint.ts", "line": 1, "end_line": 40 }]
+    },
+    {
+      "id": "site",
+      "type": "frontend",
+      "label": "Site views",
+      "sublabel": "/live · /reports",
+      "stage": 4,
+      "row": 0,
+      "tag": "renders only",
+      "sources": [{ "path": "apps/site/app/live/LiveReportClient.tsx", "line": 93, "end_line": 120 }]
+    },
+    {
+      "id": "files",
+      "type": "database",
+      "label": "Report trio",
+      "sublabel": "json · html · md",
+      "stage": 4,
+      "row": 1,
+      "tag": "CLI output",
+      "sources": [{ "path": "apps/scanner/bin/scan.ts", "line": 697, "end_line": 701 }]
+    },
+    {
+      "id": "surface",
+      "type": "backend",
+      "label": "Surface app",
+      "sublabel": "envelope → issues",
+      "stage": 4,
+      "row": 2,
+      "tag": "warn-only",
+      "sources": [{ "path": "apps/surface/src/sync.ts", "line": 60, "end_line": 107 }]
+    },
+    {
+      "id": "badge",
+      "type": "backend",
+      "label": "Score badge",
+      "sublabel": "SVG + snippet",
+      "stage": 4,
+      "row": 3,
+      "tag": "derived view",
+      "sources": [{ "path": "apps/scanner/bin/scan.ts", "line": 192, "end_line": 210 }]
+    }
+  ],
+  "flows": [
+    { "id": "tree-facts", "from": "tree", "to": "detectors", "label": "source bytes", "classification": "read-only", "variant": "emphasis" },
+    { "id": "gh-facts", "from": "gh", "to": "detectors", "label": "API payloads", "classification": "rate-limited", "variant": "default" },
+    { "id": "snapshot-facts", "from": "snapshots", "to": "detectors", "label": "EOL + vulns", "classification": "vendored", "variant": "default" },
+    { "id": "rubric-grade", "from": "rubric", "to": "scorer", "label": "criteria, weights", "classification": "compiled", "variant": "default" },
+    { "id": "facts-grade", "from": "detectors", "to": "scorer", "label": "FactRecord[]", "classification": "facts only", "variant": "emphasis" },
+    { "id": "rows-gates", "from": "scorer", "to": "gates", "label": "row scores", "classification": "status", "variant": "default" },
+    { "id": "rows-seal", "from": "scorer", "to": "seal", "label": "categories, coverage", "classification": "rollup", "variant": "emphasis" },
+    { "id": "gates-seal", "from": "gates", "to": "seal", "label": "gate verdicts", "classification": "cap evidence", "variant": "security" },
+    { "id": "seal-path", "from": "seal", "to": "bandpath", "label": "sealed rows", "classification": "derived", "variant": "dashed" },
+    { "id": "seal-fingerprint", "from": "seal", "to": "fingerprint", "label": "semantic inputs", "classification": "hash", "variant": "security" },
+    { "id": "seal-live", "from": "seal", "to": "site", "label": "terminal frame", "classification": "NDJSON", "variant": "emphasis" },
+    { "id": "seal-files", "from": "seal", "to": "files", "label": "envelope", "classification": "durable", "variant": "emphasis" },
+    { "id": "files-surface", "from": "files", "to": "surface", "label": "envelope file", "classification": "separate token", "variant": "default" },
+    { "id": "files-badge", "from": "files", "to": "badge", "label": "score + coverage", "classification": "derived", "variant": "dashed" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Facts Are Not Scores",
+      "items": [
+        "Detectors emit raw facts, evidence pointers, provenance, and an optional measurement status",
+        "Forbidden keys (score, status, confidence, verdict) are validated out of raw facts",
+        "The scorer owns row status, clamping, applicability, and category arithmetic"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Seal-Time Decisions",
+      "items": [
+        "Gates can cap the band at High without altering the score",
+        "Fewer than half gradeable rows suppresses the headline as insufficient-signal",
+        "The fingerprint hashes facts, rubric and engine versions, snapshots, and semantic flags"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "One Artefact, Many Views",
+      "items": [
+        "The live site renders the terminal report frame; it never runs a scan",
+        "The CLI writes report.json, report.html, and report.md from the same envelope",
+        "Surface and the badge derive their output from the sealed envelope only"
+      ]
+    }
+  ]
+}

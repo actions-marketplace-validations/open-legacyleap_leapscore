@@ -22,6 +22,7 @@
     "check:rubric-consistency": "tsx tooling/scripts/compile-rubric.ts --check",
     "check:schemas": "tsx tooling/checks/schemas.ts",
     "check:documentation-structure": "tsx tooling/checks/documentation-structure.ts",
+    "check:diagrams": "tsx tooling/checks/diagrams.ts",
     "check:bin-wiring": "tsx tooling/checks/bin-wiring.ts",
     "check:detector-isolation": "tsx tooling/checks/detector-isolation.ts",
     "check:site-boundary": "tsx tooling/checks/site-boundary.ts",

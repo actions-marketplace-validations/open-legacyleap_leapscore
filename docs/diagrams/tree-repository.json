@@ -1,0 +1,302 @@
+{
+  "schema_version": 1,
+  "diagram_type": "tree",
+  "meta": {
+    "title": "LeapScore repository layout",
+    "subtitle": "Producer apps, shared contracts, generated rubric data, and the checks that keep the boundaries enforced.",
+    "output": "docs/diagrams/tree-repository.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/open-legacyleap/leapscore",
+      "provider": "github",
+      "revision": "48779977913e15d11d3563adbe337a5c125fe1a2"
+    }
+  },
+  "layout": {
+    "direction": "right",
+    "gapX": 44,
+    "gapY": 26,
+    "nodeW": 156,
+    "nodeMaxW": 230
+  },
+  "nodes": [
+    {
+      "id": "repo",
+      "label": "leapscore/",
+      "sublabel": "npm workspaces",
+      "sources": [{ "path": "package.json", "line": 1, "end_line": 20 }]
+    },
+    {
+      "id": "apps",
+      "label": "apps/",
+      "parent": "repo",
+      "sublabel": "runtime applications",
+      "sources": [{ "path": "AGENTS.md", "line": 9, "end_line": 22 }]
+    },
+    {
+      "id": "packages",
+      "label": "packages/",
+      "parent": "repo",
+      "sublabel": "shared libraries",
+      "sources": [{ "path": "AGENTS.md", "line": 9, "end_line": 22 }]
+    },
+    {
+      "id": "action",
+      "label": "action/",
+      "parent": "repo",
+      "sublabel": "checkout-first GitHub Action",
+      "sources": [{ "path": "action/action.yml", "line": 1, "end_line": 20 }]
+    },
+    {
+      "id": "tooling",
+      "label": "tooling/",
+      "parent": "repo",
+      "sublabel": "compile + boundary checks",
+      "sources": [{ "path": "tooling/scripts/compile-rubric.ts", "line": 1, "end_line": 15 }]
+    },
+    {
+      "id": "docs",
+      "label": "docs/",
+      "parent": "repo",
+      "sublabel": "rubric product surface",
+      "sources": [{ "path": "docs/rubric/README.md", "line": 1, "end_line": 20 }]
+    },
+    {
+      "id": "openspec",
+      "label": "openspec/",
+      "parent": "repo",
+      "sublabel": "current specs + history",
+      "sources": [{ "path": "openspec/specs/report-envelope/spec.md", "line": 1, "end_line": 15 }]
+    },
+    {
+      "id": "scanner",
+      "label": "scanner/",
+      "parent": "apps",
+      "sublabel": "produce side",
+      "sources": [{ "path": "apps/scanner/package.json", "line": 1, "end_line": 20 }]
+    },
+    {
+      "id": "site",
+      "label": "site/",
+      "parent": "apps",
+      "sublabel": "Next.js present side",
+      "sources": [{ "path": "apps/site/package.json", "line": 1, "end_line": 20 }]
+    },
+    {
+      "id": "surface",
+      "label": "surface/",
+      "parent": "apps",
+      "sublabel": "envelope → issues",
+      "sources": [{ "path": "apps/surface/README.md", "line": 1, "end_line": 20 }]
+    },
+    {
+      "id": "scanner_bin",
+      "label": "bin/scan.ts",
+      "parent": "scanner",
+      "sublabel": "leapscore-scan CLI",
+      "sources": [{ "path": "apps/scanner/bin/scan.ts", "line": 1, "end_line": 12 }]
+    },
+    {
+      "id": "scanner_src",
+      "label": "src/",
+      "parent": "scanner",
+      "sublabel": "service + engine",
+      "sources": [{ "path": "apps/scanner/src/server.ts", "line": 1, "end_line": 20 }]
+    },
+    {
+      "id": "scanner_dist",
+      "label": "dist/",
+      "parent": "scanner",
+      "sublabel": "built locally, not committed",
+      "sources": [{ "path": "apps/scanner/package.json", "line": 1, "end_line": 20 }]
+    },
+    {
+      "id": "scan",
+      "label": "scan/",
+      "parent": "scanner_src",
+      "sublabel": "orchestrators + helpers",
+      "sources": [{ "path": "apps/scanner/src/scan/orchestrator.ts", "line": 1, "end_line": 20 }]
+    },
+    {
+      "id": "detectors_dir",
+      "label": "detectors/",
+      "parent": "scan",
+      "sublabel": "31 engine-native files",
+      "sources": [{ "path": "apps/scanner/src/scan/detectors/common.ts", "line": 1, "end_line": 15 }]
+    },
+    {
+      "id": "scoring",
+      "label": "scoring/",
+      "parent": "scan",
+      "sublabel": "score · gates · seal",
+      "sources": [{ "path": "apps/scanner/src/scan/scoring/seal.ts", "line": 1, "end_line": 33 }]
+    },
+    {
+      "id": "snapshots_dir",
+      "label": "snapshots/",
+      "parent": "scan",
+      "sublabel": "vendored EOL + advisories",
+      "sources": [{ "path": "apps/scanner/src/scan/snapshots/README.md", "line": 1, "end_line": 15 }]
+    },
+    {
+      "id": "scorer",
+      "label": "scorer/",
+      "parent": "scoring",
+      "sublabel": "mvp · rollup · status",
+      "sources": [{ "path": "apps/scanner/src/scan/scoring/scorer/mvp.ts", "line": 569, "end_line": 580 }]
+    },
+    {
+      "id": "seal_file",
+      "label": "seal.ts",
+      "parent": "scoring",
+      "sublabel": "terminal composer",
+      "sources": [{ "path": "apps/scanner/src/scan/scoring/seal.ts", "line": 201, "end_line": 210 }]
+    },
+    {
+      "id": "bandpath",
+      "label": "bandpath.ts",
+      "parent": "scoring",
+      "sublabel": "next-band derivation",
+      "sources": [{ "path": "apps/scanner/src/scan/scoring/bandpath.ts", "line": 98, "end_line": 110 }]
+    },
+    {
+      "id": "rubric_json",
+      "label": "rubric.json",
+      "parent": "scoring",
+      "sublabel": "generated registry",
+      "sources": [{ "path": "apps/scanner/src/scan/scoring/rubric.json", "line": 1, "end_line": 10 }]
+    },
+    {
+      "id": "site_app",
+      "label": "app/",
+      "parent": "site",
+      "sublabel": "live · reports · rubric",
+      "sources": [{ "path": "apps/site/app/live/page.tsx", "line": 1, "end_line": 15 }]
+    },
+    {
+      "id": "site_components",
+      "label": "components/",
+      "parent": "site",
+      "sublabel": "report presentation",
+      "sources": [{ "path": "apps/site/components/report-view.tsx", "line": 1, "end_line": 15 }]
+    },
+    {
+      "id": "site_lib",
+      "label": "lib/",
+      "parent": "site",
+      "sublabel": "provider · reports · scoring",
+      "sources": [{ "path": "apps/site/lib/provider.ts", "line": 1, "end_line": 15 }]
+    },
+    {
+      "id": "surface_src",
+      "label": "src/",
+      "parent": "surface",
+      "sublabel": "sync · lifecycle · rest",
+      "sources": [{ "path": "apps/surface/src/sync.ts", "line": 1, "end_line": 15 }]
+    },
+    {
+      "id": "contracts",
+      "label": "contracts/",
+      "parent": "packages",
+      "sublabel": "single producer source",
+      "sources": [{ "path": "packages/contracts/src/index.ts", "line": 1, "end_line": 8 }]
+    },
+    {
+      "id": "contracts_index",
+      "label": "src/index.ts",
+      "parent": "contracts",
+      "sublabel": "envelope · bands · badge",
+      "sources": [{ "path": "packages/contracts/src/index.ts", "line": 183, "end_line": 200 }]
+    },
+    {
+      "id": "detector_packages",
+      "label": "detectors/",
+      "parent": "packages",
+      "sublabel": "102 indicator manifests",
+      "sources": [{ "path": "packages/detectors/ecos-01/manifest.json", "line": 1, "end_line": 12 }]
+    },
+    {
+      "id": "checks",
+      "label": "checks/",
+      "parent": "tooling",
+      "sublabel": "boundary + honesty gates",
+      "sources": [{ "path": "tooling/checks/schemas.ts", "line": 1, "end_line": 15 }]
+    },
+    {
+      "id": "scripts",
+      "label": "scripts/",
+      "parent": "tooling",
+      "sublabel": "compile + refresh",
+      "sources": [{ "path": "tooling/scripts/compile-rubric.ts", "line": 1, "end_line": 15 }]
+    },
+    {
+      "id": "tooling_lib",
+      "label": "lib/",
+      "parent": "tooling",
+      "sublabel": "catalog derivation",
+      "sources": [{ "path": "tooling/lib/rubric-catalog.ts", "line": 1, "end_line": 15 }]
+    },
+    {
+      "id": "rubric",
+      "label": "rubric/",
+      "parent": "docs",
+      "sublabel": "canonical product",
+      "sources": [{ "path": "docs/rubric/README.md", "line": 1, "end_line": 15 }]
+    },
+    {
+      "id": "indicators",
+      "label": "indicators/",
+      "parent": "rubric",
+      "sublabel": "10 categories · 102 files",
+      "sources": [{ "path": "docs/rubric/README.md", "line": 1, "end_line": 15 }]
+    },
+    {
+      "id": "model",
+      "label": "model/",
+      "parent": "rubric",
+      "sublabel": "scale · config",
+      "sources": [{ "path": "docs/rubric/model/config.md", "line": 1, "end_line": 15 }]
+    },
+    {
+      "id": "sheets",
+      "label": "sheets/",
+      "parent": "rubric",
+      "sublabel": "generated instruments",
+      "sources": [{ "path": "docs/rubric/sheets/score-sheet.md", "line": 1, "end_line": 10 }]
+    },
+    {
+      "id": "specs",
+      "label": "specs/",
+      "parent": "openspec",
+      "sublabel": "current behavior truth",
+      "sources": [{ "path": "openspec/specs/report-envelope/spec.md", "line": 1, "end_line": 15 }]
+    },
+    {
+      "id": "changes",
+      "label": "changes/",
+      "parent": "openspec",
+      "sublabel": "active + archived",
+      "sources": [{ "path": "openspec/changes/archive/2026-11-01-restructure-rubric-catalog/proposal.md", "line": 1, "end_line": 15 }]
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Produce / Present Split",
+      "items": [
+        "apps/scanner produces the envelope and ships one ESM bundle",
+        "apps/site only renders; the site boundary check forbids a scan runtime",
+        "apps/surface writes issues with a separate token in a separate process"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Generated vs Canonical",
+      "items": [
+        "docs/rubric/indicators is hand-authored",
+        "apps/scanner/src/scan/scoring/rubric.json, apps/site/lib/generated/rubric.ts, and docs/rubric/sheets are generated",
+        "tooling/lib/rubric-catalog.ts derives categories from the directory tree"
+      ]
+    }
+  ]
+}

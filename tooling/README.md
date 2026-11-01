@@ -15,6 +15,7 @@ Repo automation: rubric compilation + enforcement checks.
 |-------|---------|------------------|
 | Rubric consistency | `npm run check:rubric-consistency` | Canonical catalog is one-to-one and complete; generated registry matches it; remediation coverage |
 | Documentation structure | `npm run check:documentation-structure` | Unified indicator skeleton, index coverage, local link integrity, cross-document citation resolution, no redirect-only paths, 102-ID coverage |
+| Diagrams | `npm run check:diagrams` | `docs/diagrams/` holds matched, kebab-named `.html`/`.json` pairs; the index links every pair and restates the pin; no receipts; `.archify/` ignored; never site-referenced |
 | Schemas | `npm run check:schemas` | Every detector schema resolves to its unified indicator's §7 fact schema |
 | Detector isolation | `npm run check:detector-isolation` | No raw `fetch`/`fs`/`child_process` in detectors (`checks/detector-isolation.ts`, enforced) |
 | Bin wiring | `npm run check:bin-wiring` | Documented command invocations resolve to shipped shims |

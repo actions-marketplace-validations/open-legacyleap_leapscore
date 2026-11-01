@@ -1,0 +1,128 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "GET /scan request lifecycle",
+    "subtitle": "Admission, budget, two data lanes, terminal seal, and exactly one terminal frame.",
+    "output": "docs/diagrams/sequence-scan-request.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/open-legacyleap/leapscore",
+      "provider": "github",
+      "revision": "48779977913e15d11d3563adbe337a5c125fe1a2"
+    }
+  },
+  "participants": [
+    {
+      "id": "browser",
+      "type": "frontend",
+      "label": "/live client",
+      "sublabel": "streams NDJSON",
+      "sources": [{ "path": "apps/site/app/live/LiveReportClient.tsx", "line": 93, "end_line": 96 }]
+    },
+    {
+      "id": "scanner",
+      "type": "backend",
+      "label": "Scanner service",
+      "sublabel": "stateless :4100",
+      "sources": [{ "path": "apps/scanner/src/server.ts", "line": 56, "end_line": 70 }]
+    },
+    {
+      "id": "admission",
+      "type": "security",
+      "label": "Admission",
+      "sublabel": "per-IP limits",
+      "sources": [{ "path": "apps/scanner/src/admission.ts", "line": 14, "end_line": 31 }]
+    },
+    {
+      "id": "gh",
+      "type": "cloud",
+      "label": "GitHub API",
+      "sublabel": "rate-limited client",
+      "sources": [{ "path": "apps/scanner/src/scan/gh.ts", "line": 1, "end_line": 2 }]
+    },
+    {
+      "id": "clone",
+      "type": "database",
+      "label": "Shallow clone",
+      "sublabel": "tmpdir + readFile cap",
+      "sources": [{ "path": "apps/scanner/src/scan/clone.ts", "line": 20, "end_line": 37 }]
+    },
+    {
+      "id": "detectors",
+      "type": "backend",
+      "label": "Detectors",
+      "sublabel": "6 GH + 25 clone",
+      "sources": [{ "path": "apps/scanner/src/scan/orchestrator.ts", "line": 290, "end_line": 300 }]
+    },
+    {
+      "id": "seal",
+      "type": "backend",
+      "label": "sealScan",
+      "sublabel": "score + gates + runId",
+      "sources": [{ "path": "apps/scanner/src/scan/scoring/seal.ts", "line": 201, "end_line": 255 }]
+    }
+  ],
+  "segments": [
+    { "from": 148, "to": 310, "label": "Admission" },
+    { "from": 310, "to": 520, "label": "Ingest + clone" },
+    { "from": 520, "to": 660, "label": "Detect + seal" },
+    { "from": 660, "to": 730, "label": "Terminal frame" }
+  ],
+  "messages": [
+    { "id": "request", "from": "browser", "to": "scanner", "y": 160, "label": "GET /scan?repo=owner/name", "variant": "emphasis" },
+    { "id": "admit", "from": "scanner", "to": "admission", "y": 190, "label": "tryAdmit(client IP)", "variant": "security" },
+    { "id": "admitted", "from": "admission", "to": "scanner", "y": 220, "label": "allowed", "variant": "return" },
+    { "id": "refused", "from": "scanner", "to": "browser", "y": 250, "label": "refused (over limit)", "variant": "security", "note": "Only when admission fails; no GH or clone work has started." },
+    { "id": "ingest", "from": "scanner", "to": "gh", "y": 320, "label": "GET /repos/{owner}/{repo}", "variant": "emphasis" },
+    { "id": "metadata", "from": "gh", "to": "scanner", "y": 350, "label": "repo metadata", "variant": "return" },
+    { "id": "clone", "from": "scanner", "to": "clone", "y": 380, "label": "git clone --filter=blob:none", "variant": "emphasis" },
+    { "id": "handle", "from": "clone", "to": "scanner", "y": 410, "label": "clonePath + commitSha", "variant": "return" },
+    { "id": "gh-fanout", "from": "scanner", "to": "detectors", "y": 440, "label": "GH-API detectors (6)", "variant": "default" },
+    { "id": "gh-facts", "from": "detectors", "to": "scanner", "y": 470, "label": "GH facts", "variant": "return" },
+    { "id": "clone-fanout", "from": "scanner", "to": "detectors", "y": 500, "label": "clone detectors (25)", "variant": "default" },
+    { "id": "clone-facts", "from": "detectors", "to": "scanner", "y": 530, "label": "facts + trace", "variant": "return" },
+    { "id": "seal", "from": "scanner", "to": "seal", "y": 560, "label": "sealScan(facts, snapshot, trace)", "variant": "emphasis", "note": "Frozen denominator: unknown rows stay disclosed, N/A and not-implemented are excluded." },
+    { "id": "sealed", "from": "seal", "to": "scanner", "y": 648, "label": "report + meta + runId", "variant": "return" },
+    { "id": "progress", "from": "scanner", "to": "browser", "y": 678, "label": "progress 100 · trace", "variant": "dashed" },
+    { "id": "report-frame", "from": "scanner", "to": "browser", "y": 708, "label": "report frame (terminal)", "variant": "emphasis" }
+  ],
+  "activations": [
+    { "participant": "browser", "from": 160, "to": 714, "type": "frontend" },
+    { "participant": "scanner", "from": 160, "to": 710, "type": "backend" },
+    { "participant": "admission", "from": 184, "to": 226, "type": "security" },
+    { "participant": "gh", "from": 314, "to": 356, "type": "cloud" },
+    { "participant": "clone", "from": 374, "to": 416, "type": "database" },
+    { "participant": "detectors", "from": 434, "to": 536, "type": "backend" },
+    { "participant": "seal", "from": 554, "to": 654, "type": "backend" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Thin Transport",
+      "items": [
+        "The client streams the scanner cross-origin; there is no same-origin proxy",
+        "Frames are versioned NDJSON: meta, progress, trace, then one terminal frame",
+        "The site renders the terminal report in place instead of navigating"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Shared Deadline",
+      "items": [
+        "Admission runs before any GitHub or clone work",
+        "GH detectors settle before the clone lane starts",
+        "A 2s heartbeat keeps progress visible while detectors run"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Terminal Guarantees",
+      "items": [
+        "Refusal is a terminal frame, not a thrown HTTP error",
+        "A wall-clock killer emits run-failure and seals no headline",
+        "The scanner keeps no store: closing the stream discards the artefact"
+      ]
+    }
+  ]
+}

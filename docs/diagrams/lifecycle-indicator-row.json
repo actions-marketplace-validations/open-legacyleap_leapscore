@@ -1,0 +1,148 @@
+{
+  "schema_version": 3,
+  "diagram_type": "lifecycle",
+  "meta": {
+    "title": "Indicator row lifecycle",
+    "subtitle": "One row moves from requested to sealed; every non-measured path is disclosed rather than silently graded.",
+    "output": "docs/diagrams/lifecycle-indicator-row.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/open-legacyleap/leapscore",
+      "provider": "github",
+      "revision": "48779977913e15d11d3563adbe337a5c125fe1a2"
+    }
+  },
+  "mainPath": ["requested", "detected", "graded", "scored", "sealed"],
+  "states": [
+    {
+      "id": "requested",
+      "type": "start",
+      "label": "Requested",
+      "sublabel": "in the scan slice",
+      "tag": "entry",
+      "step": "01",
+      "sources": [{ "path": "apps/scanner/src/scan/scoring/seal.ts", "line": 66, "end_line": 68 }]
+    },
+    {
+      "id": "detected",
+      "type": "active",
+      "label": "Fact recorded",
+      "sublabel": "evidence + provenance",
+      "tag": "no scores",
+      "step": "02",
+      "sources": [{ "path": "apps/scanner/src/scan/facts.ts", "line": 13, "end_line": 36 }]
+    },
+    {
+      "id": "graded",
+      "type": "decision",
+      "label": "Grade row",
+      "sublabel": "measured or estimated",
+      "tag": "scorer owns",
+      "step": "03",
+      "sources": [{ "path": "apps/scanner/src/scan/scoring/scorer/mvp.ts", "line": 617, "end_line": 632 }]
+    },
+    {
+      "id": "scored",
+      "type": "active",
+      "label": "Category rollup",
+      "sublabel": "frozen denominator",
+      "tag": "weighted",
+      "step": "04",
+      "sources": [{ "path": "apps/scanner/src/scan/scoring/scorer/mvp.ts", "line": 688, "end_line": 721 }]
+    },
+    {
+      "id": "sealed",
+      "type": "success",
+      "label": "Sealed envelope",
+      "sublabel": "score · tier · runId",
+      "tag": "terminal",
+      "step": "05",
+      "sources": [{ "path": "apps/scanner/src/scan/scoring/seal.ts", "line": 257, "end_line": 301 }]
+    },
+    {
+      "id": "estimated",
+      "type": "active",
+      "label": "Estimated",
+      "sublabel": "clamped [1,2]",
+      "tag": "cannot claim Green/Red",
+      "sources": [{ "path": "apps/scanner/src/scan/scoring/scorer/mvp.ts", "line": 597, "end_line": 603 }]
+    },
+    {
+      "id": "unknown",
+      "type": "waiting",
+      "label": "Unknown",
+      "sublabel": "measure path",
+      "tag": "disclosed unscored",
+      "sources": [{ "path": "apps/scanner/src/scan/scoring/scorer/mvp.ts", "line": 585, "end_line": 591 }]
+    },
+    {
+      "id": "not_applicable",
+      "type": "neutral",
+      "label": "Not applicable",
+      "sublabel": "archetype or plane absent",
+      "tag": "excluded",
+      "sources": [{ "path": "apps/scanner/src/scan/scoring/scorer/applicability.ts", "line": 40, "end_line": 80 }]
+    },
+    {
+      "id": "not_implemented",
+      "type": "neutral",
+      "label": "Not implemented",
+      "sublabel": "no detector in this slice",
+      "tag": "honest stub",
+      "sources": [{ "path": "apps/scanner/src/scan/scoring/scorer/mvp.ts", "line": 633, "end_line": 641 }]
+    },
+    {
+      "id": "detector_fail",
+      "type": "failure",
+      "label": "Detector error",
+      "sublabel": "row becomes unknown",
+      "tag": "cap · crash · rate-limit",
+      "sources": [{ "path": "apps/scanner/src/scan/orchestrator.ts", "line": 313, "end_line": 317 }]
+    }
+  ],
+  "transitions": [
+    { "id": "requested-detected", "from": "requested", "to": "detected", "label": "runs" },
+    { "id": "detected-graded", "from": "detected", "to": "graded", "label": "validate" },
+    { "id": "graded-scored", "from": "graded", "to": "scored", "label": "measured" },
+    { "id": "scored-sealed", "from": "scored", "to": "sealed", "label": "seal" },
+    { "id": "graded-estimated", "from": "graded", "to": "estimated", "label": "heuristic", "variant": "dashed" },
+    { "id": "estimated-scored", "from": "estimated", "to": "scored", "label": "clamped" },
+    { "id": "graded-unknown", "from": "graded", "to": "unknown", "label": "no data", "variant": "dashed" },
+    { "id": "unknown-scored", "from": "unknown", "to": "scored", "label": "unscored", "variant": "dashed" },
+    { "id": "graded-na", "from": "graded", "to": "not_applicable", "label": "irrelevant", "variant": "dashed" },
+    { "id": "na-sealed", "from": "not_applicable", "to": "sealed", "label": "excluded" },
+    { "id": "graded-ni", "from": "graded", "to": "not_implemented", "label": "no detector", "variant": "dashed" },
+    { "id": "ni-sealed", "from": "not_implemented", "to": "sealed", "label": "excluded" },
+    { "id": "detected-fail", "from": "detected", "to": "detector_fail", "label": "error", "variant": "security" },
+    { "id": "fail-unknown", "from": "detector_fail", "to": "unknown", "label": "unknown row", "variant": "security" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Five Row States",
+      "items": [
+        "Status precedence: not_implemented > not_applicable > unknown > estimated > measured",
+        "Unknown rows stay visible with a measure path; they never become a silent zero",
+        "N/A requires structural proof, not a failed lookup"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Kill-Switches Beat Averages",
+      "items": [
+        "A proven gate caps the band at High while keeping the honest score",
+        "A gate with no graded source row is unevaluable, never counted as clear",
+        "Suppression outranks capping: no number means no cap disclosure"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Two Denominators",
+      "items": [
+        "Frozen (default): unknown stays in the denominator as disclosed unscored",
+        "Legacy escape hatch uses the renormalized score for one release",
+        "Both paths seal the same rows, gates, and fingerprint inputs"
+      ]
+    }
+  ]
+}

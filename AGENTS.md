@@ -39,7 +39,7 @@ tooling/lib/           rubric-catalog (the one derivation of the category table 
                        tree; imported by the compiler and the structure check)
 ```
 
-Root `package.json` workspaces: `apps/*`, `packages/*`, `action`. Run `npm run compile:rubric` / `npm run check:rubric-consistency` / `npm run check:schemas` / `npm run check:documentation-structure` / `npm run check:detector-isolation` / `npm run check:site-boundary` / `npm run check:bin-wiring` / `npm run check:dist` from root.
+Root `package.json` workspaces: `apps/*`, `packages/*`, `action`. Run `npm run compile:rubric` / `npm run check:rubric-consistency` / `npm run check:schemas` / `npm run check:documentation-structure` / `npm run check:diagrams` / `npm run check:detector-isolation` / `npm run check:site-boundary` / `npm run check:bin-wiring` / `npm run check:dist` from root.
 
 ## Routine development commands
 
@@ -58,12 +58,13 @@ Root `package.json` workspaces: `apps/*`, `packages/*`, `action`. Run `npm run c
 - **Surfacing is a separate app:** `apps/surface` turns a sealed envelope into labeled issues, warn-only, with its own token (`SURFACE_TOKEN`) so the scanner keeps `contents:read` only.
 - **Decisions live in `openspec/`:** `openspec/changes/*` + `openspec/specs/*` carry everything built after the MVP (unified budget, deterministic scoring, measurement honesty, offline snapshots, legacy stacks, band path, baseline diff, score badge, release packaging). Superseded planning material survives only in git history.
 
-## Two live doc trees
+## Live doc trees
 
 - `docs/rubric/indicators/` — the measured set: one canonical file per indicator combining rubric semantics and the implementation contract, plus one charter per category (`<NN-slug>/README.md`). **This is the product.**
 - `docs/rubric/model/` — how grades compose: `scale.md` (authored 0–3 scale + core-path rule) and `config.md` (weights, formulas, bands, gate roster).
 - `docs/rubric/sheets/` — the generated instrument. Nothing hand-edited lives here, and nothing generated lives elsewhere in the rubric tree.
 - `openspec/` — `openspec/specs/` is the current truth for scan/report behavior; `openspec/changes/archive/*` is history.
+- `docs/diagrams/` — nine architecture diagrams as matched `<type>-<slug>.html`/`.json` pairs, each pinned to a revision. **Illustrative only: a snapshot, not a requirements source, and never site-served.** `.archify/` (the tool's working directory) is ignored; `docs/diagrams/refresh.sh` regenerates the set.
 
 ## The cardinal rule: canonical vs. derived views
 
