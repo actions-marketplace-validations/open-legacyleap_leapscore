@@ -9,21 +9,12 @@
 // sources alone — not on the checkout path, the cwd, or the destination filename.
 import { join } from 'node:path';
 import { REPO_ROOT, buildArtifact } from '../../apps/scanner/scripts/build-lib.mjs';
+import { wrapperBuildOptions } from './wrapper-build.mjs';
 
 const ROOT = REPO_ROOT;
 const ACTION = join(ROOT, 'action');
 
-const wrapper = buildArtifact({
-  entryPoints: [join(ACTION, 'src/main.ts')],
-  outfile: join(ACTION, 'dist/index.js'),
-  bundle: true,
-  platform: 'node',
-  target: 'node20',
-  format: 'cjs',
-  minify: false,
-  keepNames: true,
-  legalComments: 'none',
-});
+const wrapper = buildArtifact(wrapperBuildOptions(join(ACTION, 'dist/index.js')));
 const scanner = buildArtifact({
   entryPoints: [join(ROOT, 'apps/scanner/bin/scan.ts')],
   outfile: join(ACTION, 'dist/leapscore-scan.mjs'),

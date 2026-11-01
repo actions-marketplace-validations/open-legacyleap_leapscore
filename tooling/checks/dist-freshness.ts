@@ -7,6 +7,11 @@
 // a git-diff check can't catch churn that happens to reproduce, and a stale commit is
 // exactly the failure this whole change exists to prevent.
 //
+// Byte-equality alone approves an artifact that is fresh and still cannot run (it did: a
+// CJS wrapper in a `"type": "module"` package). So the gate also asserts the rebuilt
+// wrapper's module shape and boots it, expecting the wrapper's own refusal for a
+// nonexistent path — a loader crash fails here instead of on a runner.
+//
 // The rebuild is offline and token-free: a pure esbuild of committed sources through the
 // same build primitive the real build uses, so the comparison is between like and like.
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
@@ -14,6 +19,7 @@ import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { REPO_ROOT, buildArtifact } from '../../apps/scanner/scripts/build-lib.mjs';
+import { wrapperBuildOptions } from '../../action/scripts/wrapper-build.mjs';
 
 const ROOT = REPO_ROOT;
 const ACTION = join(ROOT, 'action');
@@ -22,18 +28,9 @@ const ARTIFACTS = ['index.js', 'leapscore-scan.mjs'];
 const scratch = mkdtempSync(join(tmpdir(), 'leapscore-dist-check-'));
 const scratch2 = mkdtempSync(join(tmpdir(), 'leapscore-dist-check2-'));
 let failed = 0;
+let wiringFailed = 0;
 function rebuildInto(dir: string): void {
-  buildArtifact({
-    entryPoints: [join(ACTION, 'src/main.ts')],
-    outfile: join(dir, 'action/dist/index.js'),
-    bundle: true,
-    platform: 'node',
-    target: 'node20',
-    format: 'cjs',
-    minify: false,
-    keepNames: true,
-    legalComments: 'none',
-  });
+  buildArtifact(wrapperBuildOptions(join(dir, 'action/dist/index.js')));
   buildArtifact({
     entryPoints: [join(ROOT, 'apps/scanner/bin/scan.ts')],
     outfile: join(dir, 'action/dist/leapscore-scan.mjs'),
@@ -51,6 +48,58 @@ function rebuildInto(dir: string): void {
 try {
   rebuildInto(scratch);
   rebuildInto(scratch2);
+
+  // Module-shape agreement (release-packaging D1/D2): the runner loads `dist/index.js` as
+  // whatever `action/package.json`'s `type` declares — a bundler format that disagrees only
+  // fails at run time, which is how a green tree shipped an action that could not start
+  // (`module is not defined in ES module scope`, because the package is `"type": "module"`
+  // and the wrapper was built CJS). The second half is the same failure one layer down: a
+  // CJS build stubs `import.meta` to `{}`, and the wrapper derives its bundle path from
+  // `import.meta.url`, so it would throw even with the package type fixed. Byte-equality
+  // cannot see either, because a stale-but-equal artifact is exactly what it approves.
+  const actionType = (JSON.parse(readFileSync(join(ACTION, 'package.json'), 'utf-8')) as { type?: string }).type;
+  const wrapperText = readFileSync(join(scratch, 'action/dist/index.js'), 'utf-8');
+  const wrapperSource = readFileSync(join(ACTION, 'src/main.ts'), 'utf-8');
+  if (actionType === 'module' && /^module\.exports\s*=/m.test(wrapperText)) {
+    wiringFailed++;
+    console.error(
+      `action/dist/index.js: built as CommonJS but action/package.json declares "type": "module" — the runner loads it as ESM and it throws "module is not defined".\n` +
+        `  Fix: build the wrapper with format: 'esm' (action/scripts/build.mjs).`,
+    );
+  }
+  if (/\bimport\.meta\b/.test(wrapperSource) && /var import_meta = \{\};/.test(wrapperText)) {
+    wiringFailed++;
+    console.error(
+      `action/dist/index.js: the build stubbed import.meta (a CommonJS output format) but the wrapper resolves its scanner bundle from import.meta.url — it throws at run time.\n` +
+        `  Fix: build the wrapper with format: 'esm' (action/scripts/build.mjs).`,
+    );
+  }
+  // Boot probe: the static checks above only see the two shapes we already shipped wrong.
+  // Actually loading the rebuilt wrapper catches every loader-level regression, without a
+  // scan: an input path that does not exist is rejected by the wrapper itself, so the only
+  // correct outcome is that wrapper's own refusal — a crash stack instead means the
+  // artifact cannot start (module format, dynamic require, missing import.meta).
+  const probe = spawnSync(process.execPath, [join(scratch, 'action/dist/index.js')], {
+    cwd: scratch,
+    encoding: 'utf8',
+    timeout: 30_000,
+    env: {
+      ...process.env,
+      GITHUB_OUTPUT: join(scratch, 'probe-output'),
+      GITHUB_STEP_SUMMARY: join(scratch, 'probe-summary'),
+      INPUT_PATH: join(scratch, 'definitely-not-a-path'),
+      INPUT_OUT_DIR: join(scratch, 'probe-out'),
+    },
+  });
+  const probeText = `${probe.stdout ?? ''}${probe.stderr ?? ''}`;
+  if (probe.status !== 1 || !probeText.includes('Missing file at path')) {
+    wiringFailed++;
+    console.error(
+      `action/dist/index.js: the rebuilt wrapper does not start — expected the action's own "Missing file at path" refusal, got exit ${probe.status} without it.\n` +
+        `  Output: ${probeText.trim().split('\n').slice(0, 6).join('\n    ') || '(empty)'}\n` +
+        `  A loader crash here means the committed action is unusable on a runner.`,
+    );
+  }
 
   // Compare against what a FRESH CHECKOUT would run — the committed blob in the git
   // index, not the working-tree file. Checking the working tree is self-fulfilling:
@@ -106,15 +155,16 @@ try {
     failed++;
     console.error(
       `action/dist/${file}: STALE — the committed blob is ${a.length} bytes, a rebuild from the current sources is ${b.length} bytes.\n` +
-        `  Fix: npm run build:action && git add action/dist/${file}`,
+        `  Fix: npm run build -w leapscore-action && git add action/dist/${file}`,
     );
   }
 } finally {
   rmSync(scratch, { recursive: true, force: true });
   rmSync(scratch2, { recursive: true, force: true });
 }
-if (failed) {
-  console.error(`\ndist-freshness: FAIL (${failed}/${ARTIFACTS.length} artifacts differ from a rebuild)`);
+const problems = failed + wiringFailed;
+if (problems) {
+  console.error(`\ndist-freshness: FAIL (${problems} problem${problems === 1 ? '' : 's'})`);
   process.exit(1);
 }
 console.log(`dist-freshness: PASS — both action artifacts match a rebuild from the current sources`);
