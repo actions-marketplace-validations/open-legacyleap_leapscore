@@ -1,5 +1,7 @@
 # VEL-03 — Deployment Failure Rate (CFR) — Implementation Spec
 
+> **Authority:** This file defines the VEL-03 implementation contract. The [VEL rubric category](../../rubric/07_VELOCITY_OPERATIONAL.md) owns its definition, thresholds, and scoring criteria; [`docs/specs/README.md`](../README.md) defines the normative cross-cutting conventions.
+
 ## 0. Identity
 
 | field | value |

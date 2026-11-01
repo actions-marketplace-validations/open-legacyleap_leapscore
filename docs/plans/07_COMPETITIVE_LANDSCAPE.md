@@ -1,6 +1,6 @@
-# 07 — Competitive Landscape
+# 07 — Competitive Landscape (historical snapshot)
 
-> What already exists, what it covers, and the gap LeapScore fills. Source-grounding note: verify each tool's current pricing/status before quoting in sales materials; this doc records the landscape as of writing.
+> **Status:** Market notes captured when this plan was written. Product names, capabilities, pricing, availability, and comparisons are time-sensitive; do not reuse them in sales or public claims without fresh verification. The recorded strategy and rationale are historical, not current product requirements. For current product scope, see [`PRODUCT.md`](../PRODUCT.md) and the [decision index](00_MASTER_INDEX.md).
 
 ---
 

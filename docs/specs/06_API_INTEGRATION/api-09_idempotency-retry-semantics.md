@@ -1,5 +1,7 @@
 # API-09 — Idempotency & Retry Semantics — Implementation Spec *(deep-dive — folds into API when run)*
 
+> **Authority:** This file defines the API-09 implementation contract. The [API rubric category](../../rubric/06_API_INTEGRATION.md) owns its definition, thresholds, and scoring criteria; [`docs/specs/README.md`](../README.md) defines the normative cross-cutting conventions.
+
 ## 0. Identity
 
 | field | value |

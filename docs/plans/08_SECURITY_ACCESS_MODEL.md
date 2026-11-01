@@ -1,7 +1,6 @@
-# 08 — Security & Access Model
+# 08 — Security & Access Model (historical proposal)
 
-> How the engine stays trustworthy on *untrusted* public repos (freemium) and least-privileged on *sensitive* private repos (M&A). This is the doc reviewers read first before the App ships.
-> Companion: `01` (§3 doors), `05` (§2 access model), `06` (§7 auth).
+> **Status:** Historical security and access design for the proposed public and private-repository product doors. The GitHub App, sandbox, token-vault, fact-store, retention, and incident-response details below are not a description of deployed infrastructure. Current scan boundaries are specified in [OpenSpec](../../openspec/specs/) and the [repository guide](../../AGENTS.md); the scanner is stateless and does not retain scan reports. Original companion plans: `01` (§3 product doors), `05` (§2 access proposal), and `06` (§7 proposed API authentication).
 
 ---
 

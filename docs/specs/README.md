@@ -1,9 +1,15 @@
-# SPECS — Per-Indicator Implementation Specifications
+# Per-indicator implementation specifications
 
-> **Canonical for implementation** (Decision F1, `../plans/00_MASTER_INDEX.md`): inputs, detection recipes, fact schemas, statusing predicates, score-mapping predicates, gate hooks, failure/budget semantics for all 102 indicators of `../rubric/`.
-> **Not canonical for semantics/thresholds:** definitions, Yellow/Red numbers, weights, gate rules stay canonical in the encyclopedia (`01_…`–`10_…`) + `11_WEIGHTS_THRESHOLDS_CONFIG.md`. Specs **reference** thresholds by ID; they never restate numbers.
->
-> One file per indicator: `<NN_CATEGORY>/<ID>_<slug>.md`, all following the skeleton below.
+These specifications define how LeapScore implements each rubric indicator: inputs, detection recipes, fact schemas, status and score predicates, gate hooks, and failure/budget behavior. They are canonical for implementation (Decision F1, [`plans/00_MASTER_INDEX.md`](../plans/00_MASTER_INDEX.md)); the corresponding definitions and score semantics remain canonical in the [rubric](../rubric/README.md).
+
+## Navigation and ownership
+
+- Use §3 (Master list — all 102 indicators) to find a spec by ID or category. Each entry links to one file under `<NN_CATEGORY>/<ID>_<slug>.md`.
+- Each spec follows the mandatory §0–§9 skeleton below. Tier C/D specs use the reduced form specified there; deep-dive specs declare their category fold.
+- The rubric encyclopedia (`../rubric/01_…`–`10_…`) and `../rubric/11_WEIGHTS_THRESHOLDS_CONFIG.md` own definitions, thresholds, weights, and gate rules. A spec cites threshold IDs and does not restate their numbers.
+- Until the logged reconciliation is completed, a spec's own Definition and Detection text arbitrate the drift recorded in [§4](#4-drift-corrections-q5-protocol). See the root [`AGENTS.md`](../../AGENTS.md) for the documentation ownership rules.
+
+The cross-cutting conventions in §2 are normative and apply to every indicator spec.
 
 ---
 

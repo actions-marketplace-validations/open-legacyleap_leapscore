@@ -1,10 +1,6 @@
-# 15 — Project Surface v1 (workflow issues-only tracker)
+# 15 — Project Surface v1 (historical issue-surfacing design)
 
-> Execution-plus-surface slice: extend the `14` workflow so a sealed report also syncs GitHub issues into the **runner repo**. Issues-only — no Projects board, no check runs, no website links in v1 (board linkage deferred to v2: PAT-board-first or direct-to-App TBD).
-> Builds on: `14` (dispatch-only scan, thin CLI, exit-code map, artifact envelope), `12` §5–§6 (tracker lifecycle, body grammar — re-scoped here to runner-hosted issues-only), `05` (orchestrator), `08` (token model).
-> Status: **AGREED (grill S) + explore revision (issues-only v1)** — planning only; implementation as `bin/surface.ts` (or `scan --surface`) + workflow surface job, REST-only.
-> Engine truth today: `apps/scanner/src/scan/orchestrator.ts` (`EXPANDED_IDS`, 31 live), `seal.ts` (`sealScan` composer, envelope `{ report, meta, trace }`, `report_schema: "1"`, trace-truncate >200), `bin/scan.ts` (arg parse, `--sha` non-empty → `exit 2`, refused → `1`/`2` map), `.github/workflows/leapscore-scan.yml` (dispatch-only, `contents: read`, artifact `if: always()`).
-> Explore findings (see grill notes): (a) no repo-owned Projects v2 exists — `createProjectV2` takes a user/org `ownerId` with optional `repositoryId` link; classic repo projects sunset Aug 2024; (b) `GITHUB_TOKEN` cannot access Projects v2 at all (App or PAT required). Hence issues-only v1 on `GITHUB_TOKEN`; board returns with v2 auth.
+> **Status:** Historical issues-only design and S-series decision record. Current issue surfacing is specified in [issue-surfacing](../../openspec/specs/issue-surfacing/spec.md) and [workflow-scan](../../openspec/specs/workflow-scan/spec.md); it runs in the separate `apps/surface` process with its own boundary. The current contract, rather than this plan's implementation sketch, controls token use and issue lifecycle. This path is retained because repository tooling consumes it. The Projects v2 findings below are historical exploration results, not current requirements.
 
 ---
 

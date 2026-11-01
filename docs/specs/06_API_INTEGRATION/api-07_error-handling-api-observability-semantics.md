@@ -1,5 +1,7 @@
 # API-07 — Error Handling & API Observability Semantics — Implementation Spec
 
+> **Authority:** This file defines the API-07 implementation contract. The [API rubric category](../../rubric/06_API_INTEGRATION.md) owns its definition, thresholds, and scoring criteria; [`docs/specs/README.md`](../README.md) defines the normative cross-cutting conventions.
+
 ## 0. Identity
 
 | field | value |

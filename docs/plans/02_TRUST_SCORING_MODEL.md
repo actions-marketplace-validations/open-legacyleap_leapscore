@@ -1,7 +1,6 @@
-# 02 — Trust & Scoring Model
+# 02 — Trust & Scoring Model (historical proposal)
 
-> The definition of what a score *means*, how it is computed, and how the product stays honest. This is the design that keeps "score + every reason" from becoming "score + vibes."
-> Companion: `01_PRODUCT_SPEC.md` (§2, §7), `03_ENGINEERABILITY_MATRIX.md` (per-indicator tiers).
+> **Status:** Historical scoring-model proposal. Its rationale and decision trail are retained, but its headline denominator, band labels, gate model, and open questions may be superseded. Current scoring behavior is specified in [OpenSpec](../../openspec/specs/deterministic-scoring/spec.md), [measurement honesty](../../openspec/specs/measurement-honesty/spec.md), and the [canonical rubric configuration](../rubric/11_WEIGHTS_THRESHOLDS_CONFIG.md). Original companion plans: `01_PRODUCT_SPEC.md` (§2, §7) and `03_ENGINEERABILITY_MATRIX.md` (derived automation view).
 
 ---
 

@@ -1,5 +1,7 @@
 # SEC-05 — Audit Logging Deficits — Implementation Spec
 
+> **Authority:** This file defines the SEC-05 implementation contract. The [SEC rubric category](../../rubric/04_SECURITY_COMPLIANCE.md) owns its definition, thresholds, and scoring criteria; [`docs/specs/README.md`](../README.md) defines the normative cross-cutting conventions.
+
 ## 0. Identity
 
 | field | value |

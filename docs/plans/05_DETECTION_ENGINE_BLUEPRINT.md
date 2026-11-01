@@ -1,8 +1,6 @@
-# 05 — Detection Engine Blueprint (v2 — scalable to 102+N)
+# 05 — Detection Engine Blueprint (historical architecture proposal)
 
-> The engine architecture. Everything downstream of `04_V1_SCOPE.md` (the slice) and `03` (the matrix).
-> **Design principles:** D7 (orchestrate OSS tools, never write bespoke analyzers in v1) + grilling Q1-Q10 (2026-08-26): slot-ready for all 102 indicators on day 1, scalable to N future indicators of any shape (quick/intensive, AI/non-AI, delegated/handwritten).
-> This doc is about *how detection happens*, not the report (that's `06`).
+> **Status:** This blueprint records a proposed engine architecture, including designs that were not shipped. Its interfaces, worker/fact-store topology, tool catalog, budgets, and future-work invariants are not the current implementation contract. The engine now lives under `apps/scanner/src/scan/`; current behavior is specified in [OpenSpec](../../openspec/specs/), while per-indicator detection contracts live in [`docs/specs/`](../specs/README.md). Original dependencies: `04_V1_SCOPE.md` (proposed slice) and `03_ENGINEERABILITY_MATRIX.md` (derived planning view). This plan is about detection design; the contemporaneous report proposal is `06_DATA_MODEL_API.md`.
 
 ---
 

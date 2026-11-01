@@ -1,6 +1,6 @@
-# 01 — Product Specification
+# 01 — Product Specification (historical proposal)
 
-> Companion to `00_MASTER_INDEX.md` (decisions log). Depends on: `02_TRUST_SCORING_MODEL.md` for how scores are trusted; `04_V1_SCOPE.md` for what ships first.
+> **Status:** Pre-MVP product proposal. The product promise, user journeys, catalog count, and delivery assumptions below preserve the original planning rationale; they are not a description of current shipped behavior. See the [current product overview](../PRODUCT.md), [OpenSpec requirements](../../openspec/specs/), and [decision-history index](00_MASTER_INDEX.md). This plan's original dependencies were `02_TRUST_SCORING_MODEL.md` (scoring rationale) and `04_V1_SCOPE.md` (proposed first release).
 
 ---
 

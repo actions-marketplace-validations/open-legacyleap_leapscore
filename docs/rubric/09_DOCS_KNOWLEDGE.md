@@ -1,14 +1,16 @@
 # 09 — Documentation & Knowledge Continuity
 
-> **Weight:** 5% base · 4.5% FE-active · **Standard:** DOCS-01…08 · **Deep-dive:** DOCS-09, 10
+> **Canonical rubric category.** Base weight: 5% · FE-active weight: 4.5% · Standard indicators: DOCS-01–08 · Deep-dive indicators: DOCS-09–10.
 >
 > **One-line thesis:** Documentation is the difference between a codebase that *is* and a codebase that *can be learned*. In an obsolete system, every question is answered by one person, one memory, or one archaeology session.
+>
+> This file owns the category's indicator definitions and scoring semantics. Shared weights, formulas, thresholds, and gates are defined in [`11_WEIGHTS_THRESHOLDS_CONFIG.md`](./11_WEIGHTS_THRESHOLDS_CONFIG.md); implementation recipes are in [`docs/specs/`](../specs/README.md).
 
 **Category summary:** Scores the written knowledge around the codebase — decisions (ADRs), operations (runbooks), onboarding, API surface, changelogs/release communication, and the balance between code comments and self-documenting code. Weighted lowest (5%) because it's amplifyable rather than causal — but it's the category that makes every other debt *discoverable*.
 
 ---
 
-## Standard indicators
+## Standard indicators (DOCS-01–08)
 
 ### DOCS-01 — Missing Architectural Decision Records (ADRs)
 **Engine tier:** A · **Default status:** measured · **Scope/overlaps:** decision-record inventory; oral-only decisions are DOCS-05.
@@ -140,7 +142,7 @@
 
 ---
 
-## Deep-dive indicators
+## Deep-dive indicators (DOCS-09–10)
 
 ### DOCS-09 — Docs-as-Code & Automation
 **Engine tier:** A · **Default status:** estimated · **Scope/overlaps:** docs-as-code automation; staleness it prevents is DOCS-02, API spec source is API-01.

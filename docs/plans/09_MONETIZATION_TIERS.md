@@ -1,7 +1,6 @@
-# 09 — Monetization & Tiering
+# 09 — Monetization & Tiering (historical proposal)
 
-> How freemium turns into paid, and where the M&A revenue lives. Depends on: `01` (buyers), `04` (v1 contents), `07` (competitive pricing context).
-> Pricing figures below are **placeholder hypotheses for the plan — not commitments**; each gets validated at launch.
+> **Status:** Historical pricing and packaging hypotheses. The tiers, customer journeys, cost assumptions, and open items below are not current offers or commitments. Verify current product capabilities in [`PRODUCT.md`](../PRODUCT.md) and [OpenSpec](../../openspec/specs/) before using these ideas externally. Original dependencies: `01` (proposed buyers), `04` (proposed first release), and `07` (time-sensitive market snapshot).
 
 ---
 

@@ -1,5 +1,7 @@
 # ECOS-03 — Abandoned / Unmaintained Libraries — Implementation Spec
 
+> **Authority:** This file defines the ECOS-03 implementation contract. The [ECOS rubric category](../../rubric/01_DEPENDENCY_ECOSYSTEM.md) owns its definition, thresholds, and scoring criteria; [`docs/specs/README.md`](../README.md) defines the normative cross-cutting conventions.
+
 ## 0. Identity
 
 | field | value |

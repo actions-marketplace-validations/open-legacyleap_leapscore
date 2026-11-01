@@ -1,5 +1,7 @@
 # DOCS-06 — Comment Debt & Self-Documenting Code Imbalance — Implementation Spec
 
+> **Authority:** This file defines the DOCS-06 implementation contract. The [DOCS rubric category](../../rubric/09_DOCS_KNOWLEDGE.md) owns its definition, thresholds, and scoring criteria; [`docs/specs/README.md`](../README.md) defines the normative cross-cutting conventions.
+
 ## 0. Identity
 
 | field | value |

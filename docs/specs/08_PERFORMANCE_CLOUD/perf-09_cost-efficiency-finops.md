@@ -1,5 +1,7 @@
 # PERF-09 — Cost Efficiency / FinOps — Implementation Spec *(deep-dive — folds into PERF when run)*
 
+> **Authority:** This file defines the PERF-09 implementation contract. The [PERF rubric category](../../rubric/08_PERFORMANCE_CLOUD.md) owns its definition, thresholds, and scoring criteria; [`docs/specs/README.md`](../README.md) defines the normative cross-cutting conventions.
+
 ## 0. Identity
 
 | field | value |

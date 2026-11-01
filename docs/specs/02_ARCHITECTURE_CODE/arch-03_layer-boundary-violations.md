@@ -1,5 +1,7 @@
 # ARCH-03 — Layer & Boundary Violations — Implementation Spec
 
+> **Authority:** This file defines the ARCH-03 implementation contract. The [ARCH rubric category](../../rubric/02_ARCHITECTURE_CODE.md) owns its definition, thresholds, and scoring criteria; [`docs/specs/README.md`](../README.md) defines the normative cross-cutting conventions.
+
 ## 0. Identity
 
 | field | value |

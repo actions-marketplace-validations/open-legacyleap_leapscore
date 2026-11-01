@@ -1,7 +1,6 @@
-# 04 — V1 Scope (the vertical slice)
+# 04 — V1 Scope (historical proposal)
 
-> Defines exactly what ships first and why; everything else in the matrix is deliberately deferred.
-> Depends on: `03_ENGINEERABILITY_MATRIX.md` for the tier map. Feeds: `05` (engine), `06` (schema), `09` (monetization), `10` (roadmap).
+> **Status:** Historical first-release scope and sequencing. The slice sizes, tier allocations, gates, and deferred-work lists below are planning-era decisions, not a current coverage statement. The current engine implements 31 of 102 indicators; current scan requirements are in [OpenSpec](../../openspec/specs/) and canonical scoring semantics are in the [rubric](../rubric/README.md). Original dependencies: `03_ENGINEERABILITY_MATRIX.md` (derived tier view); downstream plans: `05` (engine), `06` (schema), `09` (monetization), and `10` (roadmap).
 
 ---
 

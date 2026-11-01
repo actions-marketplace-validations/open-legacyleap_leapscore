@@ -1,14 +1,16 @@
 # 04 — Security, Compliance & Vulnerability
 
-> **Weight:** 20% base · 18% FE-active · **Standard:** SEC-01…08 · **Deep-dive:** SEC-09, 10
+> **Canonical rubric category.** Base weight: 20% · FE-active weight: 18% · Standard indicators: SEC-01–08 · Deep-dive indicators: SEC-09–10.
 >
 > **One-line thesis:** Security debt is the only debt that can end the company. A codebase that treats security as an afterthought is obsolete in the most literal sense — it belongs to an era we no longer permit.
+>
+> This file owns the category's indicator definitions, scoring semantics, and gate hooks. Shared weights, formulas, thresholds, and gate rules are defined in [`11_WEIGHTS_THRESHOLDS_CONFIG.md`](./11_WEIGHTS_THRESHOLDS_CONFIG.md); implementation recipes are in [`docs/specs/`](../specs/README.md).
 
 **Category summary:** The highest-weight category (20%). Scores the system's vulnerability posture, credential hygiene, security controls, auth, auditability, supply-chain safety, patch cadence, and compliance standing. Four gating kill-switches (G1, G2, G4) live here — more than any other category — because security Red Flags cap the modernization verdict.
 
 ---
 
-## Standard indicators
+## Standard indicators (SEC-01–08)
 
 ### SEC-01 — Unpatched Vulnerabilities
 **Engine tier:** A · **Default status:** measured · **Scope/overlaps:** open-CVE state and age only; the patch *process* that closes them is SEC-07, deep transitive exposure is SEC-06.
@@ -140,7 +142,7 @@
 
 ---
 
-## Deep-dive indicators
+## Deep-dive indicators (SEC-09–10)
 
 ### SEC-09 — Input Robustness & Fuzzing
 **Engine tier:** B · **Default status:** unknown · **Scope/overlaps:** byte-level parser/memory hardening; HTTP injection (SQLi/XSS) is SEC-03, validation gaps on API boundaries are API-07.

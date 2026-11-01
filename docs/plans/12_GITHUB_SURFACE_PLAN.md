@@ -1,8 +1,6 @@
-# 12 — GitHub Surface Plan (report delivery via GitHub App)
+# 12 — GitHub Surface Plan (historical proposal)
 
-> How a LeapScore report surfaces **in the target repo's GitHub UI** when compute runs on LeapScore's own infrastructure. Resolves the GitHub leg of OQ3 (`00`). Website/API/PDF legs remain open there.
-> Decisions: **H1–H11** (this grill; pending logging in `00_MASTER_INDEX.md`). Builds on: `08` (GitHub App + token model), `06` (sealed report schema), `02` (status taxonomy), `09` (tiers), W6 (`11`, reserved `/r/[owner]/[repo]` route).
-> Status: **AGREED (grill H)** — planning only; no implementation until the catalog is agreed (`00` line 5).
+> **Status:** Historical GitHub App, check-run, project, and report-delivery proposal. The target-repository writes, scheduled scans, canonical report store, and permalink design below were not adopted as written. Current workflow and issue behavior is specified in [workflow-scan](../../openspec/specs/workflow-scan/spec.md) and [issue-surfacing](../../openspec/specs/issue-surfacing/spec.md); the scanner remains stateless and issue surfacing is a separate app. The badge proposal was developed further in [score-badge](../../openspec/specs/score-badge/spec.md). Decision references: H1–H11; original dependencies: `08`, `06`, `02`, `09`, and W6 in `11`.
 
 ---
 
@@ -61,8 +59,8 @@ top blockers (5 worst rows, one line each)
 
 The deliverable `00_MASTER_INDEX.md` line 25 names. A sealed run already produces
 `report.json` + `report.html` + `report.md`; the badge is the one artifact that
-leaves the report. Implementation spec: `openspec/changes/score-badge` (synced to
-`openspec/specs/score-badge`), emitter
+leaves the report. Historical change record: `openspec/changes/archive/2026-10-31-score-badge`; current specification:
+`openspec/specs/score-badge`, emitter
 `apps/scanner/src/scan/badge.ts`, contract surface
 `packages/contracts/src/index.ts` (`badgeViewModel`, `BAND_PALETTE`,
 `badgeCoverage`).

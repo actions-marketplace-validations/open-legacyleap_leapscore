@@ -1,14 +1,16 @@
 # 02 — Architecture & Code Quality
 
-> **Weight:** 15% base · 13.5% FE-active · **Standard:** ARCH-01…10 · **Deep-dive:** ARCH-11, 12
+> **Canonical rubric category.** Base weight: 15% · FE-active weight: 13.5% · Standard indicators: ARCH-01–10 · Deep-dive indicators: ARCH-11–12.
 >
 > **One-line thesis:** Architecture debt is the shape of the code disagreeing with what the code now needs to do. When the shape is wrong, every future feature is a fight.
+>
+> This file owns the category's indicator definitions and scoring semantics. Shared weights, formulas, thresholds, and gates are defined in [`11_WEIGHTS_THRESHOLDS_CONFIG.md`](./11_WEIGHTS_THRESHOLDS_CONFIG.md); implementation recipes are in [`docs/specs/`](../specs/README.md).
 
 **Category summary:** Scores the internal structure of the codebase — complexity, coupling, boundaries, dead code, churn hot spots, architectural era, state hygiene, agentic operability, and config/flag discipline. The highest-weight *engineering* category (15%; 13.5% when the Frontend module is active) because architecture determines whether a system can be modernized incrementally at all — by humans *or* by AI tooling — or must be treated as a rewrite candidate.
 
 ---
 
-## Standard indicators
+## Standard indicators (ARCH-01–10)
 
 ### ARCH-01 — Cognitive Complexity & God Classes
 **Engine tier:** A · **Default status:** measured · **Scope/overlaps:** pure size/complexity of units; duplication that inflates size is scored under ARCH-08, only the shape is counted here.
@@ -172,7 +174,7 @@
 
 ---
 
-## Deep-dive indicators
+## Deep-dive indicators (ARCH-11–12)
 
 ### ARCH-11 — Nullable/Untyped Code & Runtime Error Density
 **Engine tier:** A · **Default status:** estimated · **Scope/overlaps:** server-side type safety; client-side untyped state is FE-05, repeated null-defence boilerplate is ARCH-12.

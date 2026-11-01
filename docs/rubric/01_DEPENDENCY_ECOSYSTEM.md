@@ -1,14 +1,16 @@
 # 01 — Dependency & Ecosystem Health
 
-> **Weight:** 10% base · 9% FE-active · **Standard:** ECOS-01…08 · **Deep-dive:** ECOS-09, 10
+> **Canonical rubric category.** Base weight: 10% · FE-active weight: 9% · Standard indicators: ECOS-01–08 · Deep-dive indicators: ECOS-09–10.
 >
-> **One-line thesis:** A codebase's dependencies are its circulatory system. When the ecosystem around the code moves faster than the code, every fix, audit, and hire gets harder — and eventually impossible.
+> **Thesis:** Dependencies are a codebase's circulatory system. When the surrounding ecosystem moves faster than the code, every fix, audit, and hire gets harder—and eventually impossible.
+>
+> This file owns the indicator definitions and scoring semantics. [`11_WEIGHTS_THRESHOLDS_CONFIG.md`](./11_WEIGHTS_THRESHOLDS_CONFIG.md) owns shared scoring configuration; [`docs/specs/`](../specs/README.md) owns the implementation recipes. The entry-level criteria below are preserved as written; this editorial rewrite does not change them.
 
-**Category summary:** Scores how far the codebase has drifted from its own ecosystem — language/runtime support status, dependency freshness, library maintenance health, license posture, and supply-chain reproducibility. This is usually the *first* category to degrade, because it decays passively: no one writes code that breaks, dependencies just age.
+**Category summary:** Measures runtime support, dependency freshness and maintenance, license posture, and supply-chain reproducibility. These signals can degrade without code changes as runtimes and dependencies age.
 
 ---
 
-## Standard indicators
+## Standard indicators (ECOS-01–08)
 
 ### ECOS-01 — Runtime/Language EOL
 **Engine tier:** A · **Default status:** estimated · **Scope/overlaps:** runtime EOL dates only; framework lifecycle/status is ECOS-08
@@ -140,7 +142,7 @@
 
 ---
 
-## Deep-dive indicators
+## Deep-dive indicators (ECOS-09–10)
 
 ### ECOS-09 — Version Skew Across Services
 **Engine tier:** A · **Default status:** estimated · **Scope/overlaps:** per-service version skew only; single-repo major drift is ECOS-02

@@ -1,5 +1,7 @@
 # FE-08 — Mobile / Responsive Adaptation & Offline Support — Implementation Spec *(deep-dive — folds into FE when run)*
 
+> **Authority:** This file defines the FE-08 implementation contract. The [FE rubric category](../../rubric/10_FRONTEND_CLIENT.md) owns its definition, thresholds, scoring criteria, and conditional applicability; [`docs/specs/README.md`](../README.md) defines the normative cross-cutting conventions.
+
 ## 0. Identity
 
 | field | value |

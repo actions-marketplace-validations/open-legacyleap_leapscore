@@ -1,14 +1,16 @@
 # 08 — Performance & Cloud/Infrastructure Fit
 
-> **Weight:** 10% base · 9% FE-active · **Standard:** PERF-01…08 · **Deep-dive:** PERF-09, 10
+> **Canonical rubric category.** Base weight: 10% · FE-active weight: 9% · Standard indicators: PERF-01–08 · Deep-dive indicators: PERF-09–10.
 >
 > **One-line thesis:** The runtime is a verdict on the architecture. A system that leaks memory, can't observe itself, and refuses to scale isn't "mildly inefficient" — it's telling you its design era on every request.
+>
+> This file owns the category's indicator definitions and scoring semantics. Shared weights, formulas, thresholds, and gates are defined in [`11_WEIGHTS_THRESHOLDS_CONFIG.md`](./11_WEIGHTS_THRESHOLDS_CONFIG.md); implementation recipes are in [`docs/specs/`](../specs/README.md).
 
 **Category summary:** Scores how the system runs under load and how well it fits modern infrastructure expectations — observability, deployment model, resource behavior, scalability, infrastructure-as-code, SLO/perf disciplines, runtime footprint, cost efficiency, and resilience.
 
 ---
 
-## Standard indicators
+## Standard indicators (PERF-01–08)
 
 ### PERF-01 — Observability Gaps
 **Engine tier:** B · **Default status:** measured · **Scope/overlaps:** metrics/logs/traces coverage; SLO/budget discipline is PERF-07, logging duplication is ARCH-12
@@ -140,7 +142,7 @@
 
 ---
 
-## Deep-dive indicators
+## Deep-dive indicators (PERF-09–10)
 
 ### PERF-09 — Cost Efficiency / FinOps
 **Engine tier:** B · **Default status:** unknown · **Scope/overlaps:** spend attribution and rightsizing; resource-waste mechanics are PERF-03, autoscaling waste is PERF-05

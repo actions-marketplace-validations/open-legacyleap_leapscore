@@ -43,21 +43,26 @@ When at least one FE indicator is applicable, FE becomes a 10% category and the 
 
 **Parameter note:** the FE weight (10%) is a parameter, not a law — adjust it here and the derived views regenerate. Proportional ×0.9 scaling keeps the *relative* importance of the nine base categories constant.
 
-### Generalized applicable-category renormalization (new — indicator-applicability)
+### Headline denominator and reference score
 
-When an entire category becomes not applicable for the repo (e.g., DATA + PERF for a `library`, or all API/DATA/PERF for `docs`/`agent-skills`), the headline is renormalized **proportionally over the applicable categories only**: `renormWeight(cat) = canonicalWeight(cat) / Σ canonicalWeight(applicableCats)`, so the sum stays 100% and relative importance is preserved. This generalizes the FE-active `×0.9` pattern. Both the renormalized headline (`headline.score`) and the canonical headline (`headline.canonical_score`, over all 10 categories) are persisted; the renormalized headline is the primary display and the canonical is footnoted. A category with zero applicable rows is omitted or shown dimmed as `N/A` with no percentage and counted in `coverage.not_applicable`. Applicable-category determination uses `archetype + planeInventory` (`has_server/has_data/has_deploy/has_client/has_test`) via exhaustive tree enumeration; see `indicator-applicability` spec.
+The default sealed headline uses a **frozen denominator**. For each category, measured and estimated scores contribute to the numerator; every applicable `unknown` row remains in the denominator as disclosed but unscored. `not_applicable` and `not_implemented` rows are excluded from both numerator and denominator. Category weights use the selected canonical set above (base or FE-active); categories with no scored or unknown applicable rows contribute no category score. Do not renormalize the headline around unknown or absent categories.
+
+The report may also carry `renormalized_score` as a **reference-only** value. That alternate calculation drops unknown rows from the denominator and proportionally renormalizes weights over categories with measured or estimated rows. It does not replace the default headline. The one-release `--score-policy legacy` escape hatch may select that reference calculation when explicitly requested.
+
+Applicability is determined from `archetype + planeInventory` (`has_server/has_data/has_deploy/has_client/has_test`) via exhaustive tree enumeration; see the `indicator-applicability` specification. `not_applicable` and `not_implemented` rows remain distinct in coverage. A category with no implemented-and-applicable rows has no percentage and does not contribute to the headline.
 
 ---
 
 ## 2 — Category scoring formula
 
 ```
-Category% = (sum of applicable row scores ÷ applicable row count × 3) × 100
+Category% = (sum of measured and estimated row scores ÷ ((measured + estimated + applicable unknown row count) × 3)) × 100
 ```
 
-- Every indicator ships an explicit 4-level scoring criteria (score 3 / 2 / 1 / 0) in its encyclopedia entry — see each `XX-NN` entry.
-- A row that does not apply to the audited system is marked **N/A** and excluded from *both* numerator and denominator, with the reason recorded (applicability rules per indicator live in the encyclopedia entry).
-- **Deep-dive rows fold into the category** when a deep audit runs them: applicable row count = standard rows + the deep-dive rows actually executed. A standard audit therefore produces an honest *approximation* of the category; a deep audit a more *trustworthy* number. The two are not expected to be equal.
+- Every indicator has explicit 4-level scoring criteria (score 3 / 2 / 1 / 0) in its encyclopedia entry — see each `XX-NN` entry.
+- Count `measured`, `estimated`, and applicable `unknown` rows in the denominator. Only measured and estimated scores contribute to the numerator; unknown remains disclosed as unscored.
+- A row that is `not_applicable` or `not_implemented` is excluded from *both* numerator and denominator. Record the reason; indicator applicability rules live in the encyclopedia and implementation specs.
+- **Deep-dive rows fold into the category** when a deep audit runs them. Include each applicable measured, estimated, or unknown deep-dive row in the denominator when run; exclude not-applicable and not-implemented rows. A standard audit may have less measured coverage than a deep audit; unknowns remain visible in either.
 - A category may hold a **variable number of standard rows** (e.g., ARCH has 10, ECOS has 8). The formula is row-count agnostic by construction.
 
 ---

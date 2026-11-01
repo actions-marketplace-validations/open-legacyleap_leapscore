@@ -1,14 +1,16 @@
 # 03 — Testing & Quality Engineering
 
-> **Weight:** 10% base · 9% FE-active · **Standard:** TEST-01…08 · **Deep-dive:** TEST-09, 10
+> **Canonical rubric category.** Base weight: 10% · FE-active weight: 9% · Standard indicators: TEST-01–08 · Deep-dive indicators: TEST-09–10.
 >
 > **One-line thesis:** The test suite is the codebase's immune system. When it weakens, every change becomes a gamble — and the codebase stops being safely modifiable at all.
+>
+> This file owns the category's indicator definitions and scoring semantics. Shared weights, formulas, thresholds, and gates are defined in [`11_WEIGHTS_THRESHOLDS_CONFIG.md`](./11_WEIGHTS_THRESHOLDS_CONFIG.md); implementation recipes are in [`docs/specs/`](../specs/README.md).
 
 **Category summary:** Scores the health of the quality engineering function — coverage, reliability, shape (pyramid), speed, and gates. A degraded suite is both a *cause* of modernization difficulty (you can't refactor what you can't verify) and a *symptom* of it (tests decay exactly like production code when unowned).
 
 ---
 
-## Standard indicators
+## Standard indicators (TEST-01–08)
 
 ### TEST-01 — Code Coverage Degradation
 **Engine tier:** A · **Default status:** measured · **Scope/overlaps:** coverage % and trend by module; gate enforcement is TEST-08, core-path gaps are TEST-06.
@@ -140,7 +142,7 @@
 
 ---
 
-## Deep-dive indicators
+## Deep-dive indicators (TEST-09–10)
 
 ### TEST-09 — Mutation Testing Score
 **Engine tier:** B · **Default status:** estimated · **Scope/overlaps:** verification depth via mutants; plain coverage is TEST-01, weak-assertion rot is TEST-10.

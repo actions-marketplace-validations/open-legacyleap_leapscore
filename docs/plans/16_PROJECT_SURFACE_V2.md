@@ -1,8 +1,6 @@
-# 16 — Project Surface v2 (board linkage)
+# 16 — Project Surface v2 (historical board-linkage proposal)
 
-> v2 slice: attach the `15` issues-only tracker to Projects v2 boards. Decision gate open: **Path B (PAT-board) first vs direct-to Path C (App-board)** — this doc frames both, decides neither. Whichever wins, the v1 identity grammar already fits it.
-> Builds on: `15` (issues-only tracker, extended token `target=`, label-scoped discovery), `12` §1–§2/H-series (App model, install-time/manual/Pro-scheduled triggers), `08` (token model), `14` (scan seam, exit map).
-> Status: **PROPOSED (decision gate V1 open)** — planning only; no implementation until B-vs-C lands.
+> **Status:** Unresolved proposal for attaching the issues-only design in `15` to GitHub Projects v2. Neither Path B (PAT-owned board) nor Path C (App-owned board) is a current commitment; current issue-surfacing requirements are in [OpenSpec](../../openspec/specs/issue-surfacing/spec.md). This plan's ownership, permissions, migration, and execution sections preserve the options and rationale for historical reference. Original dependencies: `15`, `12`, `08`, and `14`.
 > Explored truths carried in: no repo-owned Projects v2 (`createProjectV2` needs a user/org `ownerId`, optional `repositoryId` link); `GITHUB_TOKEN` cannot touch Projects v2 (App installation token or PAT required); V2 titles are not unique (find-by-name = list + client-side filter).
 
 ---

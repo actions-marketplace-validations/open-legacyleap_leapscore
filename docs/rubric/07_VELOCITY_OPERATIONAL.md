@@ -1,14 +1,16 @@
 # 07 — Developer Velocity & Operational Drag
 
-> **Weight:** 10% base · 9% FE-active · **Standard:** VEL-01…10 · **Deep-dive:** VEL-11, 12
+> **Canonical rubric category.** Base weight: 10% · FE-active weight: 9% · Standard indicators: VEL-01–10 · Deep-dive indicators: VEL-11–12.
 >
 > **One-line thesis:** Velocity is where modernization debt pays out every single day — in build time, deploy failures, and the gap between "how we work" and "how we say we work." Slow pipelines aren't a pain point; they're a diagnostic.
+>
+> This file owns the category's indicator definitions and scoring semantics. Shared weights, formulas, thresholds, and gates are defined in [`11_WEIGHTS_THRESHOLDS_CONFIG.md`](./11_WEIGHTS_THRESHOLDS_CONFIG.md); implementation recipes are in [`docs/specs/`](../specs/README.md).
 
 **Category summary:** Scores the delivery and operational machinery around the code — CI/CD speed and reliability, deploy frequency and failure rate, local dev reproducibility, onboarding friction, knowledge concentration, review discipline, branch strategy, and how much of the release path is automated vs. heroic. DORA-aligned where measurable.
 
 ---
 
-## Standard indicators
+## Standard indicators (VEL-01–10)
 
 ### VEL-01 — CI/CD Build Duration
 **Engine tier:** B · **Default status:** estimated · **Scope/overlaps:** pipeline *duration/feedback* only; the suite's own length is TEST-04.
@@ -172,7 +174,7 @@
 
 ---
 
-## Deep-dive indicators
+## Deep-dive indicators (VEL-11–12)
 
 ### VEL-11 — Developer Experience Tooling
 **Engine tier:** B · **Default status:** estimated · **Scope/overlaps:** local tooling affordances; first-run *setup* is VEL-02, fresh-clone single-command proof is ARCH-09.

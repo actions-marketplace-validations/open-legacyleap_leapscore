@@ -1,9 +1,6 @@
-# 14 — Workflow Scan v1 (self or target via GitHub Actions)
+# 14 — Workflow Scan v1 (historical design record)
 
-> Execution-only slice: run LeapScore checks from a GitHub workflow against a self repo or a public target repo. No in-repo surfacing (checks/projects/comments) — that stays in `12_GITHUB_SURFACE_PLAN.md`.
-> Builds on: `05` (orchestrator), `08` (token model), `12` §2/§9 (triggers, rejected `workflow_dispatch` plumbing — re-scoped here to runner-side dispatch only).
-> Status: **SHIPPED (openspec `workflow-scan-v1`)** — engine seam live: shared composer `apps/scanner/src/scan/scoring/seal.ts`, thin CLI `apps/scanner/bin/scan.ts`, runner workflow `.github/workflows/leapscore-scan.yml`; the scanner HTTP service rewired to the composer.
-> Engine truth today: `apps/scanner/src/scan/orchestrator.ts` (`runUnifiedScan(repoUrl)`), `apps/scanner/src/scan/scoring/seal.ts` (shared `sealScan` composer used by both the scanner service and the CLI), `clone.ts:25` (`--filter=blob:none --depth 1`, always default-branch HEAD), `ingest.ts:58-61` (private → `private_requires_app` refusal), `gh.ts:118` (auth header only `if token`).
+> **Status:** The workflow-scan design was implemented, but this plan remains a historical record and is not the current command/API contract. Current workflow behavior is specified in [workflow-scan](../../openspec/specs/workflow-scan/spec.md), [CLI packaging](../../openspec/specs/cli-packaging/spec.md), and [report-envelope](../../openspec/specs/report-envelope/spec.md). The shipped scanner service and CLI share `sealScan`; current code lives under `apps/scanner/`. This path is retained because repository tooling consumes it. Original rationale and R-series decisions are preserved below; the earlier no-surfacing boundary was extended by the separate issue-surfacing capability.
 
 ---
 
@@ -34,7 +31,7 @@
 ## 4. Execution (v2-Q3, Q4)
 
 - **No `actions/checkout` of T.** Engine clones internally from URL (v2-Q3 revert; local-path `runLocalScan` dropped).
-- New thin CLI `apps/scanner/bin/scan.ts`: `scan --repo <owner/repo> [--sha <sha>] --out leapscore-report.json`. Reuses `runUnifiedScan` + `scoreMvp` exactly as `/api/scan` does. No Docker, no reusable-workflow in v1.
+- New thin CLI `apps/scanner/bin/scan.ts`: `scan --repo <owner/repo> [--sha <sha>] --out leapscore-report.json`. Reuses `runUnifiedScan` + `scoreMvp` exactly as the then-current `/api/scan` route did (that route has since been removed). No Docker, no reusable-workflow in v1.
 - 3-step workflow: `setup-node` → `npx … scan` → `upload-artifact`. Pinned engine ref (`#<sha>`) in the `npx` line.
 
 ```yaml

@@ -1,7 +1,6 @@
-# 10 — Roadmap & Open Decisions
+# 10 — Roadmap & Open Decisions (historical plan)
 
-> Phased delivery story, the dependencies that gate each phase, and the tracked open questions. Reconciles everything in `00`–`09` into what to do next.
-> This is a **planning** doc: no dates beyond phase ordering (dates belong to the sales/inc program).
+> **Status:** Historical phase plan and planning-era open questions. The P0–P3 sequence, phase contents, and statuses below are not the current roadmap or a delivery commitment. Current scan/report requirements are in [OpenSpec](../../openspec/specs/); see the [decision index](00_MASTER_INDEX.md) for current implementation pointers. The original plan intentionally assigned phase order only, not delivery dates.
 
 ---
 

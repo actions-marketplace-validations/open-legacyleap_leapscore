@@ -1,7 +1,6 @@
-# 03 — Engineerability Matrix *(derived view — all 102 indicators)*
+# 03 — Engineerability Matrix (derived historical view)
 
-> The reference doc that answers *"what can the engine measure, how, and with what tool?"* for every row in the catalog.
-> **Derived view:** the canonical per-indicator `Engine tier` / `Default status` / `Scope/overlaps` fields now live on each row in the encyclopedia (`../rubric/*`); this matrix is a consolidated read-out and the home of the per-tool mapping. Source of truth: `../rubric/*`. Depends on `02_TRUST_SCORING_MODEL.md` (status semantics) and feeds `04_V1_SCOPE.md`.
+> **Authority:** Derived, not canonical. The rubric encyclopedia owns each indicator's `Engine tier`, `Default status`, and `Scope/overlaps`; per-indicator implementation specs own detector inputs and status predicates. This matrix is a historical consolidated view, and its values are not current implementation guarantees. The known drift is recorded in [`docs/specs/README.md`](../specs/README.md) §4; until reconciliation, the specs arbitrate. The tables below are unchanged by this documentation rewrite. Original planning dependencies: `02_TRUST_SCORING_MODEL.md` and `04_V1_SCOPE.md`.
 
 ---
 

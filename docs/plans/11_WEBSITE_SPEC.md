@@ -1,7 +1,6 @@
-# 11 — Website Spec (marketing/demo, B→A)
+# 11 — Website Specification (historical proposal)
 
-> The public "beautiful website" for LeapScore. **B first**: a marketing/demo site with a hand-crafted sample report. Architected so the freemium product front door (the "A" state) grows into it by swapping data providers — not rewriting the UI.
-> Decisions: `00_MASTER_INDEX.md` grill W1–W14. Product context: `01` (front doors), `02` (trust model), `06` (report schema), `09` (tiers).
+> **Status:** Historical website and presentation design. Route plans, copy, sample values, provider assumptions, and the B→A rollout below record the original design, not the current site contract. The site is now implemented; current site and scan boundaries are specified in [site-shell](../../openspec/specs/site-shell/spec.md), [scan-api](../../openspec/specs/scan-api/spec.md), and [report-rendering](../../openspec/specs/report-rendering/spec.md). The scanner is stateless; it does not provide a canonical report store or run permalinks. Original decision references: W1–W14 in `00_MASTER_INDEX.md`; product context: `01`, `02`, `06`, and `09`.
 
 ---
 
@@ -109,7 +108,7 @@ Renders the real `06_DATA_MODEL_API.md` schema with seeded values. All numbers d
 | Data seam | `ReportProvider` interface mirroring `06` schema; mock adapter seeded; later a live adapter. UI never touches the provider contract |
 | Location | this repo `apps/site/` (rubric is `docs/rubric/`, the canonical source the mock references) |
 | Tooling | none exists; `apps/site/` establishes lint/format (W-OPEN-3) |
-| Deployment topology (W15) | Produce/present split: `apps/scanner` (produce — scan execution, GH-token custody, canonical report store, versioned NDJSON scan API + per-runId permalinks) and `apps/site` (present — statically prerendered, no engine import, no token, no request-time reads; `/reports` ingested via explicit sync). Shared boundary: `packages/contracts` (envelope + runId grammar + `CONTRACT_VERSION`). See `openspec/changes/leapscore-scanner` |
+| Deployment topology (W15) | Produce/present split: `apps/scanner` (produce — scan execution, GH-token custody, canonical report store, versioned NDJSON scan API + per-runId permalinks) and `apps/site` (present — statically prerendered, no engine import, no token, no request-time reads; `/reports` ingested via explicit sync). Shared boundary: `packages/contracts` (envelope + runId grammar + `CONTRACT_VERSION`). Historical change record: `openspec/changes/archive/2026-10-16-leapscore-scanner`; the store/permalink design was superseded by stateless scan requirements. |
 
 ---
 

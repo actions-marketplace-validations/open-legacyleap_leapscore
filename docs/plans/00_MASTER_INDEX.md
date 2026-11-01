@@ -1,8 +1,8 @@
-# LeapScore — Master Index & Decisions Log
+# Product and rubric decision history
 
-> **Project:** LeapScore — a scoring engine that takes a repository (minimum: a GitHub URL) and returns a legacy/maintainability score, the reason behind every point of that score, and remediation recommendations to raise it.
-> **Base knowledge base:** `../rubric/` (102 indicators: 76 standard + 18 deep-dive + 8 frontend annex).
-> **Status:** Implementation live. Planning docs below are the parent rationale; current scan/report behavior is specified in `openspec/specs/*` (see "Implementation status").
+> **Status:** Historical index and decision record. The entries below preserve proposals and outcomes from their planning period; an `AGREED` status records that decision then, not a guarantee that the proposal shipped or remains current.
+>
+> **Current authority:** post-MVP scan/report requirements are in [`openspec/specs/`](../../openspec/specs/); rubric semantics and scoring values are canonical in [`docs/rubric/`](../rubric/); detector implementation contracts are canonical in [`docs/specs/`](../specs/). Use the [documentation landing page](../README.md) for the full ownership map. This file is not a current behavior contract.
 
 ---
 
@@ -11,39 +11,40 @@
 | # | File | Purpose |
 |---|------|---------|
 | 00 | [`00_MASTER_INDEX.md`](00_MASTER_INDEX.md) | This index + decisions log |
-| 01 | [`01_PRODUCT_SPEC.md`](01_PRODUCT_SPEC.md) | Product definition, buyers, dual-front-door (public freemium + private M&A) |
-| 02 | [`02_TRUST_SCORING_MODEL.md`](02_TRUST_SCORING_MODEL.md) | Three-tier `measured`/`estimated`/`unknown` taxonomy, headline score, coverage bar, provenance |
-| 03 | [`03_ENGINEERABILITY_MATRIX.md`](03_ENGINEERABILITY_MATRIX.md) | Derived view of every indicator's automation tier (A/B/C/D), default status, and measuring tool — canonical fields live on the encyclopedia rows |
-| 04 | [`04_V1_SCOPE.md`](04_V1_SCOPE.md) | v1 vertical slice: indicator set, ecosystems, execution model, gating rule |
-| 05 | [`05_DETECTION_ENGINE_BLUEPRINT.md`](05_DETECTION_ENGINE_BLUEPRINT.md) | Engine architecture: manifest sniffing, tool orchestrator, adapters, GitHub API, sandbox |
-| 06 | [`06_DATA_MODEL_API.md`](06_DATA_MODEL_API.md) | Score output schema, report model, per-indicator row shape |
-| 07 | [`07_COMPETITIVE_LANDSCAPE.md`](07_COMPETITIVE_LANDSCAPE.md) | Existing OSS/freemium/paid tools and the gap LeapScore fills |
-| 08 | [`08_SECURITY_ACCESS_MODEL.md`](08_SECURITY_ACCESS_MODEL.md) | GitHub App scopes, private-repo M&A flow, sandbox security model |
-| 09 | [`09_MONETIZATION_TIERS.md`](09_MONETIZATION_TIERS.md) | Freemium-to-paid ladder and the M&A offering |
-| 10 | [`10_ROADMAP.md`](10_ROADMAP.md) | Phased delivery plan + open decisions |
-| 11 | [`11_WEBSITE_SPEC.md`](11_WEBSITE_SPEC.md) | Marketing/demo website (B→A): routes, anatomy, copy, demo data governance |
-| 12 | [`12_GITHUB_SURFACE_PLAN.md`](12_GITHUB_SURFACE_PLAN.md) | GitHub check/PR surface for reports (check run, PR comment, badge) |
-| 13 | [`13_MVP_SLICE.md`](13_MVP_SLICE.md) | Lean MVP cut — 19 indicators, dual headline, two-phase scan (was `mvp/README.md`) |
-| 14 | [`14_WORKFLOW_SCAN_V1.md`](14_WORKFLOW_SCAN_V1.md) | Workflow scan v1 — self/target dispatch-only execution via thin CLI + artifact; no in-repo surfacing |
-| 15 | [`15_PROJECT_SURFACE_V1.md`](15_PROJECT_SURFACE_V1.md) | Project surface v1 — workflow issues-only tracker (runner-hosted, label-scoped dedup, warn-only surfacing); board/check/website deferred |
-| 16 | [`16_PROJECT_SURFACE_V2.md`](16_PROJECT_SURFACE_V2.md) | Project surface v2 — board linkage decision gate (PAT-first vs direct-App); ownership, authorship, mode-switch, migration price |
+| 01 | [`01_PRODUCT_SPEC.md`](01_PRODUCT_SPEC.md) | Historical product definition, intended users, and proposed product doors |
+| 02 | [`02_TRUST_SCORING_MODEL.md`](02_TRUST_SCORING_MODEL.md) | Historical scoring/trust model and status vocabulary |
+| 03 | [`03_ENGINEERABILITY_MATRIX.md`](03_ENGINEERABILITY_MATRIX.md) | Derived historical matrix; canonical automation fields now live on rubric entries |
+| 04 | [`04_V1_SCOPE.md`](04_V1_SCOPE.md) | Historical first-release scope and sequencing |
+| 05 | [`05_DETECTION_ENGINE_BLUEPRINT.md`](05_DETECTION_ENGINE_BLUEPRINT.md) | Historical engine architecture proposal |
+| 06 | [`06_DATA_MODEL_API.md`](06_DATA_MODEL_API.md) | Historical report and API schema proposal |
+| 07 | [`07_COMPETITIVE_LANDSCAPE.md`](07_COMPETITIVE_LANDSCAPE.md) | Market research as recorded when written; recheck before external use |
+| 08 | [`08_SECURITY_ACCESS_MODEL.md`](08_SECURITY_ACCESS_MODEL.md) | Historical security and access proposal |
+| 09 | [`09_MONETIZATION_TIERS.md`](09_MONETIZATION_TIERS.md) | Historical monetization proposal |
+| 10 | [`10_ROADMAP.md`](10_ROADMAP.md) | Historical phased delivery plan and open decisions |
+| 11 | [`11_WEBSITE_SPEC.md`](11_WEBSITE_SPEC.md) | Historical website routes, copy, and demo-data proposal |
+| 12 | [`12_GITHUB_SURFACE_PLAN.md`](12_GITHUB_SURFACE_PLAN.md) | Historical GitHub reporting-surface proposal |
+| 13 | [`13_MVP_SLICE.md`](13_MVP_SLICE.md) | Historical 19-indicator MVP proposal; a subset of the 31 detectors currently implemented |
+| 14 | [`14_WORKFLOW_SCAN_V1.md`](14_WORKFLOW_SCAN_V1.md) | Workflow-scan design record; current behavior is specified in OpenSpec |
+| 15 | [`15_PROJECT_SURFACE_V1.md`](15_PROJECT_SURFACE_V1.md) | Issue-surfacing design record; current behavior is specified in OpenSpec |
+| 16 | [`16_PROJECT_SURFACE_V2.md`](16_PROJECT_SURFACE_V2.md) | Board-linkage decision record; proposals here are not current commitments |
 
-**Order of dependency:** you cannot read 04 (v1 scope) without 03 (what's measurable); you cannot read 05 without 04; 06–09 all depend on 04/05. 10 is a summary of the rest.
+**Historical reading order:** the original plan dependencies run 03 → 04 → 05 → 06–09; 10 summarizes those proposals. This is a guide to the historical reasoning, not a required order for understanding the current implementation.
 
 ---
 
-## Implementation status (what actually ships — read alongside the plans)
+## Current implementation (verify behavior in OpenSpec)
 
 | Layer | Location | Truth |
 |-------|----------|-------|
-| Engine | `apps/scanner/src/scan/` (`orchestrator.ts` `runUnifiedScan`, `local.ts` `runLocalScan`, `orchestrator.phase1.ts` `runPhase1Scan`, `budget.ts`, `archetype.ts`, `scoring/rollup.ts`, `scoring/applicability.ts`, `detectors/*` ×31) | 31 indicators live; single indicator-count-driven budget (clamp 10s–240s); GH-API + shallow clone under one deadline; archetype + 5-state applicability; frozen-denominator headline + reference-only renormalized score |
-| Detectors registry | `packages/detectors/` (102 folders, manifest+schema; `detector.ts` in arch-09/sec-02/sec-03) + `apps/scanner/src/scan/scoring/rubric.json` (compiled) | Engine-native detectors under `apps/scanner/src/scan/detectors/` are the live path; `packages/detectors/*/detector.ts` is the future per-indicator home (isolation enforced) |
-| Scanner service | `apps/scanner/` (`src/server.ts` `GET /scan` versioned NDJSON + `GET /health`; `bin/scan.ts` CLI; `src/scan/scoring/seal.ts` terminal composer) | Stateless: the terminal `report` frame is the sole artefact — no disk, no permalinks. Single-flight coalescing in-process |
-| Live specs | `openspec/specs/` (`scan-phase-1`, `scan-phase-2`, `report-rendering`, `reports/persisted-runs`, `reports/run-history-ui`, `scan-trace`, `site-shell`, `indicator-applicability`) | **Current truth** for scan/report behavior — supersedes the "future work" notes in 04/05/11/13 |
-| Change history | `openspec/changes/archive/*` + active `expand-coverage-tranche-a`, `hide-empty-categories`, `improve-report-gates-and-scan-timeline` | Post-MVP build log (unified budget, persisted runs, trace, remedies, tranche-a 19→31, archetype/applicability, gates cockpit) |
-| Checks | `npm run check:rubric-consistency` (= `tooling/scripts/compile-rubric.ts --check`), `npm run check:detector-isolation` | Both enforced; generated files (`rubric.json`, `lib/generated/rubric.ts`) are never hand-edited |
+| Scanner engine and CLI | `apps/scanner/src/scan/`, `apps/scanner/bin/scan.ts` | Remote scans use the unified GitHub API + shallow-clone path; local scans read the target directory. Thirty-one detectors are implemented; remaining indicators are disclosed as not implemented. The shared `sealScan` composer emits the terminal report. |
+| Scanner service | `apps/scanner/src/server.ts` | `GET /scan` streams versioned NDJSON; `GET /health` reports service health. The service is stateless: the terminal report frame is the scan artifact, with no permanent report store or scanner permalink. |
+| Shared contracts | `packages/contracts/` | Producer-owned report envelope, run ID grammar, band vocabulary, badge, and related shared contracts. |
+| Website | `apps/site/` | `/live` streams from the scanner. `/reports` and run pages render site-owned static history; the site does not execute scans or read reports from the scanner at request time. |
+| Issue surfacing | `apps/surface/` | Separate process and token boundary; it turns a sealed envelope into issue updates. |
+| Canonical documentation | `docs/rubric/`, `docs/specs/` | Rubric files own scoring semantics; per-indicator specs own implementation contracts. `docs/plans/03` is derived. |
+| Repository checks | `npm run check:rubric-consistency`, `npm run check:detector-isolation`, `npm run check:site-boundary`, `npm run check:bin-wiring`, `npm run check:dist` | Enforce rubric generation, app boundaries, command wiring, and the shipped CLI artifact. Generated rubric files are not hand-edited. |
 
-`13_MVP_SLICE.md` (19 rows) is a **subset** of what ships (31 rows via tranche-a). `05_DETECTION_ENGINE_BLUEPRINT.md` remains the parent architecture; the unified budget replaces its two-phase budget split.
+These implementation facts are a navigation aid and may age; use the linked current specs and code for a specific behavior. `13_MVP_SLICE.md` records an earlier 19-row proposal, not the present detector count.
 
 ---
 
@@ -55,7 +56,7 @@ Format: `#` · Decision · Source rule / rationale · Status
 |---|----------|-----------|--------|
 | D1 | One engine, two front doors: public freemium SaaS (any public repo URL) + internal private-repo M&A screening via GitHub App | Freemium gives distribution + a data moat; M&A is the revenue path | **AGREED** (grill Q1) |
 | D2 | Every indicator row carries a status: `measured` / `estimated` / `unknown` | ~36 of 102 indicators are provably unmeasurable from a URL; scoring them blindly destroys trust | **AGREED** (grill Q2) |
-| D3 | Headline score is computed over `measured` + `estimated` only; `unknown` rows are surfaced, not hidden | Honesty is the product's credibility; unknown rows double as the M&A deep-dive shopping list | **AGREED** (grill Q2) |
+| D3 | Headline score is computed over `measured` + `estimated` only; `unknown` rows are surfaced, not hidden | Honesty is the product's credibility; unknown rows double as the M&A deep-dive shopping list | **AGREED THEN** (grill Q2; denominator policy later superseded by [deterministic scoring](../../openspec/specs/deterministic-scoring/spec.md) and [measurement honesty](../../openspec/specs/measurement-honesty/spec.md)) |
 | D4 | `estimated` rows are capped/banded (≤ 1 point ceiling, explicit confidence tag) so guesses cannot dominate the headline | Prevents a heap of weak inferences from moving the single number | **AGREED** (grill Q2) |
 | D5 | v1 is static-analysis + GitHub API only. No test-suite execution in a sandbox | Test-execution buys ~4 indicators at the price of a security review + container sandbox + scan-time explosion; belongs in a later paid "deep scan" | **AGREED** (grill Q3) |
 | D6 | Every repo scores on day 1 regardless of ecosystem; language-gated indicators report `unknown` honestly | Manifest sniffing + language-agnostic scans (git, CI, docs, dependabot) run for all repos | **AGREED** (grill Q3) |
@@ -111,7 +112,7 @@ Format: `#` · Decision · Rationale · Status · Source (grill Q)
 | W12 | Demo data governable by rubric: `django/django` ≈58/100 (Moderate, top of band), coverage 65/25/10 measured/estimated/unknown, one heavy near-miss gate, no fired gate | Numbers must survive an engineer recomputing from the rubric; the demo is a render of the real schema, not free-form decoration | **AGREED** (Q7) |
 | W13 | Homepage grows to six blocks (hero fold, report teaser, proof strip, who-it's-for band, credibility band, waitlist CTA) and a new `/product` route carries the full product story; header/footer nav extended with Product + Rubric links; M&A stays off-site | "All of it" product content, hybrid placement: compact bands on the funnel, depth routed — W5 density preserved; the credibility band makes the public rubric checkable from the front door | **AGREED** (grill) |
 | W14 | Product copy uses an artifact-present register: present tense only for renderable artifacts (report, rubric, method); the live engine and Deep Scan stay future-gated ("coming" + waitlist) | W11 applied forward: no claim the live site lacks; the honesty model is the pitch, so present tense is reserved for what is demonstrably rendered | **AGREED** (grill) |
-| W15 | Deployment topology is produce/present: `apps/scanner` owns scan execution, the trust/sandbox boundary, GH-token custody, and the canonical report store (versioned NDJSON scan API + stable per-runId permalinks); `apps/site` is present-only (statically prerendered `/reports`, in-place `/live` reveal from the terminal frame, no engine import/token/request-time reads); `packages/contracts` is the versioned envelope + runId-grammar boundary | Counterpart to W4 (data seam) and W9 (website location), agreed when the site was demo-only: the in-process live scan has been cut over to the scanner, `/live` renders in place with the scanner permalink, and a build-time check (`check:site-boundary`) keeps the present side from re-acquiring an engine runtime | **AGREED** (openspec `leapscore-scanner`) |
+| W15 | Deployment topology is produce/present: `apps/scanner` owns scan execution, the trust/sandbox boundary, GH-token custody, and the canonical report store (versioned NDJSON scan API + stable per-runId permalinks); `apps/site` is present-only (statically prerendered `/reports`, in-place `/live` reveal from the terminal frame, no engine import/token/request-time reads); `packages/contracts` is the versioned envelope + runId-grammar boundary | Counterpart to W4 (data seam) and W9 (website location), agreed when the site was demo-only: the in-process live scan has been cut over to the scanner, `/live` renders in place with the scanner permalink, and a build-time check (`check:site-boundary`) keeps the present side from re-acquiring an engine runtime | **AGREED THEN** (deployment boundary retained; store/permalink decision superseded by the [stateless scan API](../../openspec/specs/scan-api/spec.md)) |
 | W16 | Public band vocabulary is `Low` (≥ 80) / `Moderate` (53–79) / `High` (27–52) / `Critical` (< 27) on every surface — CLI stdout, JSON `headline.tier`, CLI HTML/Markdown reports, site UI, and the canonical rubric band tables; the legacy names (`Healthy`, `High Risk`) survive one release as machine-only `tier_legacy` aliases and are never displayed as band labels | The CLI/JSON already sealed `Low`/`High` while the rubric docs and site UI said `Healthy`/`High Risk` — one public vocabulary removes the contradiction; supersedes W5's band naming in `11_WEBSITE_SPEC.md`; thresholds unchanged (80/53/27), compiled `tiers` keys unchanged, and the 0–3 row taxonomy (`3 — Healthy`) is a row verdict, not a band, so it is not renamed | **AGREED** (openspec `release-funnel`) |
 
 ---
@@ -181,30 +182,24 @@ Spec: `docs/plans/16_PROJECT_SURFACE_V2.md`. Board linkage; v1 (`15`) ships issu
 
 ---
 
-## Post-MVP build decisions (openspec — not re-logged here)
+## Current post-MVP specifications
 
-Product/rubric history stays in the logs above. Everything built after the MVP slice is decided and specified in `openspec/` — read it as the continuation of this log:
+The current requirements live in `openspec/specs/`. Archived OpenSpec changes record how those requirements were developed; neither archive names nor the historical plan tables above replace the current specifications.
 
-| Change | What it decided |
-|--------|-----------------|
-| `unified-scan-progress` | Single indicator-count-driven budget replaces the Phase-1/Phase-2 budget split; one progress bar; no phase leak to UI/API |
-| `phase-2-clone-scan` | Clone path: shallow `--filter=blob:none`, manifest sniff, read-only detector surface, no repo-code execution |
-| `fix-indicator-titles-and-mvp-gates` | Registry single-source for indicator titles; MVP gate proving rules |
-| `persisted-reports` | One JSON envelope per run (report + meta + trace); history UI |
-| `bookmarkable-live-trace` | Exhaustive live trace; bookmarkable `/reports/[runId]` |
-| `fix-evidence-reasoning` | Flattened facts, human reasons with rationale, evidence popups |
-| `remedies-top-levers` | Rubric playbooks harvested to every row; top levers with effort + quick-win |
-| `applicable-indicator-selection` | Repo archetype + 5-state indicator lifecycle (N/A only via structural gate or exhaustive proof) |
-| `expand-coverage-tranche-a` (active) | 19 → 31 detectors; 13_MVP_SLICE is now a subset |
-| `hide-empty-categories` (active) | Categories with zero applicable rows omitted/dimmed as N/A |
-| `improve-report-gates-and-scan-timeline` (active) | Collapsed gates cockpit + scan timeline with reveal |
-| `workflow-scan-v1` | Workflow scan v1 (shipped): shared seal composer, thin `bin/scan` CLI, `workflow_dispatch` runner workflow, exit-code map |
+| Area | Current specifications |
+|---|---|
+| Scanning and workflows | [`scan-api`](../../openspec/specs/scan-api/spec.md) · [`scanner-service`](../../openspec/specs/scanner-service/spec.md) · [`scan-local`](../../openspec/specs/scan-local/spec.md) · [`scan-phase-1`](../../openspec/specs/scan-phase-1/spec.md) · [`scan-phase-2`](../../openspec/specs/scan-phase-2/spec.md) · [`scan-trace`](../../openspec/specs/scan-trace/spec.md) · [`workflow-scan`](../../openspec/specs/workflow-scan/spec.md) |
+| Scoring and applicability | [`deterministic-scoring`](../../openspec/specs/deterministic-scoring/spec.md) · [`measurement-honesty`](../../openspec/specs/measurement-honesty/spec.md) · [`indicator-applicability`](../../openspec/specs/indicator-applicability/spec.md) · [`band-path`](../../openspec/specs/band-path/spec.md) · [`run-diff`](../../openspec/specs/run-diff/spec.md) |
+| Reports and presentation | [`report-envelope`](../../openspec/specs/report-envelope/spec.md) · [`report-rendering`](../../openspec/specs/report-rendering/spec.md) · [`score-badge`](../../openspec/specs/score-badge/spec.md) · [`release-funnel`](../../openspec/specs/release-funnel/spec.md) · [`site-shell`](../../openspec/specs/site-shell/spec.md) |
+| Coverage, data, packaging, and issue surfacing | [`stack-coverage`](../../openspec/specs/stack-coverage/spec.md) · [`offline-data-snapshots`](../../openspec/specs/offline-data-snapshots/spec.md) · [`cli-packaging`](../../openspec/specs/cli-packaging/spec.md) · [`issue-surfacing`](../../openspec/specs/issue-surfacing/spec.md) · [`open-source-release-materials`](../../openspec/specs/open-source-release-materials/spec.md) |
 
-New build work gets an openspec change (proposal → design → tasks → archive); only product/rubric-level reversals come back here as D_/W_ rows.
+New post-MVP behavior is proposed and recorded through OpenSpec. Update this index only for product/rubric decision history; do not duplicate implementation requirements here.
 
 ---
 
-## Principles (the non-negotiables that survive any future change)
+## Original product principles (historical)
+
+These principles record the initial product intent. They are retained as history, not as an override of current OpenSpec, rubric, or implementation-spec requirements.
 
 1. **No silent guesses.** Every number in a report is traceable to evidence (`measured`), an explicitly-labeled inference (`estimated`), or nothing (`unknown`). No exception.
 2. **Every repo gets a score.** Exotic or unsupported ecosystems still produce a partial-but-honest report with `unknown` rows explaining what's missing and how to get it measured.
@@ -214,11 +209,13 @@ New build work gets an openspec change (proposal → design → tasks → archiv
 
 ---
 
-## Open questions (tracked here until resolved)
+## Questions recorded during planning (historical)
+
+These questions preserve the state of discussion when the index was written. Their presence here does not mean they are still open; consult current sources before treating one as unresolved.
 
 - OQ1: Headline number format — single 0–100, banded tier (Healthy/Moderate/High/Critical), or radar? (Tied to D3/D4; unresolved.)
 - OQ2: Whether `estimated` affects the M&A verdict or is excluded entirely from gated B2B reports. (M&A buyers may want `measured`-only tallies.)
-- OQ3: Report delivery form — web app, API, PDF, HTML packet? (Blocked on product spec review.) **Partial:** web app + site-owned JSON envelope history + NDJSON scan stream ship (`/reports/[runId]`, scanner `GET /scan`); PDF/packet still open.
+- OQ3: Report delivery form — web app, API, PDF, HTML packet? (Blocked on product spec review.) **Partial, as recorded in this plan:** web app, site-owned static fixture history, and the scanner NDJSON stream exist; the scanner remains stateless and has no permalink. PDF/packet remain open in this historical question.
 - OQ4: Cost-per-scan budget target for the freemium tier (affects which indicators stay in the free path). (Fee link to 04/09.)
 - OQ5: ~~Where `frontend annex` (FE-01…07) lands~~ **RESOLVED** in rubric redesign (C1): when a client exists, FE-01…07 + FE-08 deep-dive get a separate 10% and the other nine categories scale ×0.9; when no client exists, FE is skipped entirely.
 - OQ6: Coverage-display rounding. W12 fixes the canonical counts 49 measured / 19 estimated / 8 unknown over 76 rows; exact-to-nearest display is 64/25/11, but W12 text says "65/25/10". Counts are canonical and asserted in `apps/site/lib/score.consistency.test.ts`; the site displays the computed rounded values (64/25/11). Decide whether to adopt the computed rounding or legislate a display convention so text and render can't diverge again.

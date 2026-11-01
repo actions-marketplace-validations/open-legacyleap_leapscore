@@ -1,20 +1,21 @@
-# Refresh the illustrative report screenshot
+# Sample report
 
-The sample is produced from the checked-in synthetic Java/Maven fixture at `apps/scanner/src/scan/__tests__/fixtures/legacy-stacks/maven-multi-module`. It is a local path scan; it does not clone a repository or contact GitHub.
+This screenshot shows the CLI report for a checked-in synthetic Java/Maven fixture. It is an illustration of report layout and findings, not a report about a customer repository or a guarantee that the scanner measures every rubric indicator.
 
-## Prerequisites
+![Illustrative LeapScore CLI report for the synthetic Maven fixture](../sample-report.png)
 
-- Node.js 20 or newer, installed repository dependencies, and the built scanner CLI (`npm run build:cli`). Complete dependency installation before going offline.
-- Python 3 with the Playwright package, plus a local Chrome or Chromium executable. Set `CHROME_BIN` if it is not on Playwright's default path.
+The fixture lives at `apps/scanner/src/scan/__tests__/fixtures/legacy-stacks/maven-multi-module`. The [refresh script](./refresh.sh) runs the scanner with `--strict`, writes reports to a temporary directory, and captures the HTML report as [`sample-report.png`](../sample-report.png). The [capture script](./capture.py) hides machine-specific metadata and rejects external browser requests; it does not synthesize or alter report findings. The temporary report directory is removed when the script exits.
 
-## Offline refresh
+## Refresh the screenshot
 
-From the repository root, run:
+From the repository root:
 
 ```bash
+npm install
+npm run build:cli
 docs/sample-report/refresh.sh
 ```
 
-The script scans the fixture with `--strict`, writes the CLI-produced report to a temporary directory, then captures its top-level HTML report view to `docs/sample-report.png`. The capture blocks non-file browser requests and omits the report's metadata line, which contains the absolute scan path, commit, timestamp, run ID, and fingerprint. Score findings and report content are not edited or synthesized; only the metadata is excluded from the image. The generated report is temporary and is not committed.
+Requirements: Node.js 20 or newer; Python 3 with Playwright installed; and Chrome or Chromium. Set `CHROME_BIN` if the browser is not found automatically. Install dependencies and build the CLI before running offline. The refresh uses the strict local scan and the capture script blocks non-file browser requests.
 
-Only update the screenshot when the report content and visible findings have been reviewed. The README labels the image illustrative because it measures the synthetic fixture, not a customer repository.
+Review the image before committing it. Scan metadata is excluded from the screenshot, but the visible score, findings, and report text come from the generated report for this fixture.

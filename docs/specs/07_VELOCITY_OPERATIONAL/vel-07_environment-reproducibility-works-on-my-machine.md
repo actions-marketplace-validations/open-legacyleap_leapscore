@@ -1,5 +1,7 @@
 # VEL-07 — Environment Reproducibility / Works-on-My-Machine — Implementation Spec
 
+> **Authority:** This file defines the VEL-07 implementation contract. The [VEL rubric category](../../rubric/07_VELOCITY_OPERATIONAL.md) owns its definition, thresholds, and scoring criteria; [`docs/specs/README.md`](../README.md) defines the normative cross-cutting conventions.
+
 ## 0. Identity
 
 | field | value |

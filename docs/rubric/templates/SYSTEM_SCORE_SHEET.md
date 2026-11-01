@@ -2,7 +2,7 @@
 
 **System:** ______ · **Auditor:** ______ · **Date:** ______ · **Audit type:** ☐ Screen (1 day) ☐ Standard (2–3 days) ☐ Deep (1–2 weeks)
 
-**Scoring legend:** 3 = Healthy · 2 = Minor debt · 1 = Severe debt · 0 = Critical · N/A = not applicable (excluded, reason in notes). Category % = (Σ applicable scores ÷ applicable count × 3) × 100. Deep-dive rows are recorded on the service sheets and fold into category % when executed. Weights come from `11_WEIGHTS_THRESHOLDS_CONFIG.md` — use the **FE-active** column if the system has a client.
+**Scoring legend:** 3 = Healthy · 2 = Minor debt · 1 = Severe debt · 0 = Critical · N/A = not applicable (excluded, reason in notes) · Unknown = applicable but unmeasurable (unscored, included in the frozen denominator) · Not implemented = no detector in this scanner release (excluded). Category % = (Σ measured and estimated scores ÷ ((measured + estimated + applicable unknown count) × 3)) × 100. Deep-dive rows are recorded on the service sheets and fold into category % when run and applicable. Weights come from `11_WEIGHTS_THRESHOLDS_CONFIG.md` — use the **FE-active** column if the system has a client.
 
 **Instructions:** Fill one `SERVICE_SCORE_SHEET.md` per service. Enter each service's weighted score and criticality below, then compute the system rollup.
 

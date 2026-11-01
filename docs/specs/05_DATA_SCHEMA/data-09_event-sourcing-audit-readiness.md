@@ -1,5 +1,7 @@
 # DATA-09 — Event Sourcing / Audit Readiness — Implementation Spec *(deep-dive — folds into DATA when run)*
 
+> **Authority:** This file defines the DATA-09 implementation contract. The [DATA rubric category](../../rubric/05_DATA_SCHEMA.md) owns its definition, thresholds, and scoring criteria; [`docs/specs/README.md`](../README.md) defines the normative cross-cutting conventions.
+
 ## 0. Identity
 
 | field | value |

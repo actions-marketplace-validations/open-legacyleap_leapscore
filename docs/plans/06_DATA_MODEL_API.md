@@ -1,7 +1,6 @@
-# 06 — Data Model & API (report contract)
+# 06 — Data Model & API (historical report proposal)
 
-> The field-level shape every report must satisfy. Downstream consumers: web report (freemium), internal M&A packet, exports, API.
-> Depends on: `02` (status semantics), `04` (v1 contents), `05` (fact store).
+> **Status:** Historical schema and API proposal. Examples, fields, persistence assumptions, views, endpoints, and export formats below describe the planning design, not the current contract. Current report fields are owned by [`packages/contracts`](../../packages/contracts/) and the [report-envelope](../../openspec/specs/report-envelope/spec.md) specification; the scanner is stateless and has no report-fetch permalink. Original dependencies: `02` (status proposal), `04` (proposed first-release contents), and `05` (proposed fact-store architecture).
 
 ---
 

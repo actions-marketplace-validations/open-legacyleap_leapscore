@@ -1,5 +1,7 @@
 # ARCH-11 — Nullable/Untyped Code & Runtime Error Density — Implementation Spec *(deep-dive — folds into ARCH when run)*
 
+> **Authority:** This file defines the ARCH-11 implementation contract. The [ARCH rubric category](../../rubric/02_ARCHITECTURE_CODE.md) owns its definition, thresholds, and scoring criteria; [`docs/specs/README.md`](../README.md) defines the normative cross-cutting conventions.
+
 ## 0. Identity
 
 | field | value |

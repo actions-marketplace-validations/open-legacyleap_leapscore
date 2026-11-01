@@ -2,11 +2,13 @@
 
 **System:** ______ · **Service:** ______ · **Criticality:** ☐ Critical path (×3) ☐ Supporting (×1) · **Auditor:** ______ · **Date:** ______ · **Audit type:** ☐ Screen ☐ Standard ☐ Deep
 
-**Scoring legend:** 3 = Healthy (no flags) · 2 = Minor debt (yellow in non-core paths) · 1 = Severe debt (yellow in core OR red in isolated paths) · 0 = Critical (red in core OR across multiple paths) · **N/A** = not applicable to this system (score blank, marked N/A with a reason — excluded from the denominator).
+**Scoring legend:** 3 = Healthy (no flags) · 2 = Minor debt (yellow in non-core paths) · 1 = Severe debt (yellow in core OR red in isolated paths) · 0 = Critical (red in core OR across multiple paths) · **N/A** = not applicable (reason recorded; excluded) · **Unknown** = applicable but unmeasurable (unscored; included in the frozen denominator) · **Not implemented** = no detector in this scanner release (excluded).
 
 **Core-path rule:** core = files reachable from public entry points touching money / auth / PII / compliance (global taxonomy — `00` Part 1). Per-indicator criteria live in the encyclopedia entry.
 
-**Category % = (Σ applicable scores ÷ applicable count × 3) × 100.** Mark N/A rows and do not count them in the denominator. Deep-dive rows (last line of each category) are run in deep audits only and fold into the applicable set.
+**Category % = (Σ measured and estimated scores ÷ ((measured + estimated + applicable unknown count) × 3)) × 100.** Unknown rows add denominator without numerator points. Exclude N/A and not-implemented rows. Deep-dive rows (last line of each category) fold into the denominator when run and applicable.
+
+When a row is applicable but cannot be measured, leave its score blank and record `Unknown` in Notes/Evidence; include it in the applicable count. Record `Not implemented` distinctly and exclude it from the count.
 
 ---
 

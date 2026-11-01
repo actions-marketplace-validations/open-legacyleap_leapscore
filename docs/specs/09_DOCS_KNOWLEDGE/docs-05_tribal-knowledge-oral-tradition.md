@@ -1,5 +1,7 @@
 # DOCS-05 — Tribal Knowledge & Oral Tradition — Implementation Spec
 
+> **Authority:** This file defines the DOCS-05 implementation contract. The [DOCS rubric category](../../rubric/09_DOCS_KNOWLEDGE.md) owns its definition, thresholds, and scoring criteria; [`docs/specs/README.md`](../README.md) defines the normative cross-cutting conventions.
+
 ## 0. Identity
 
 | field | value |

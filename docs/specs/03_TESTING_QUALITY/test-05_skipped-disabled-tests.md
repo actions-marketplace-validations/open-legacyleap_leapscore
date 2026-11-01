@@ -1,5 +1,7 @@
 # TEST-05 — Skipped / Disabled Tests — Implementation Spec
 
+> **Authority:** This file defines the TEST-05 implementation contract. The [TEST rubric category](../../rubric/03_TESTING_QUALITY.md) owns its definition, thresholds, and scoring criteria; [`docs/specs/README.md`](../README.md) defines the normative cross-cutting conventions.
+
 ## 0. Identity
 
 | field | value |

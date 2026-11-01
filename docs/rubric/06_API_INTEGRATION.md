@@ -1,14 +1,16 @@
 # 06 — API & Integration Surface
 
-> **Weight:** 10% base · 9% FE-active · **Standard:** API-01…08 · **Deep-dive:** API-09, 10
+> **Canonical rubric category.** Base weight: 10% · FE-active weight: 9% · Standard indicators: API-01–08 · Deep-dive indicators: API-09–10.
 >
 > **One-line thesis:** The API is the contract your system makes with the world. When contracts are undocumented, unversioned, and ungoverned, every consumer — internal or external — is at the mercy of the codebase's mood.
+>
+> This file owns the category's indicator definitions and scoring semantics. Shared weights, formulas, thresholds, and gates are defined in [`11_WEIGHTS_THRESHOLDS_CONFIG.md`](./11_WEIGHTS_THRESHOLDS_CONFIG.md); implementation recipes are in [`docs/specs/`](../specs/README.md).
 
 **Category summary:** Scores the health of the interfaces between the system and its consumers (internal services, partners, frontends, IoT, third-party SaaS) — formal contracts, versioning, integration topology, coupling, external-dependency risk, protocol currency, error semantics, and consumer visibility.
 
 ---
 
-## Standard indicators
+## Standard indicators (API-01–08)
 
 ### API-01 — API Contract Drift
 **Engine tier:** A · **Default status:** estimated · **Scope/overlaps:** spec accuracy/drift today; the schema-evolution *process* is API-10, consumer usage visibility is API-08.
@@ -140,7 +142,7 @@
 
 ---
 
-## Deep-dive indicators
+## Deep-dive indicators (API-09–10)
 
 ### API-09 — Idempotency & Retry Semantics
 **Engine tier:** B · **Default status:** unknown · **Scope/overlaps:** state-changing retry/duplicate guarantee; retriable/permanent error semantics are API-07, consumer breakage tracking is API-08.

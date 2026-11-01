@@ -29,7 +29,7 @@ If **any** of the following is Red Flag, the verdict is **capped at "High"** no 
 
 ## Part 1 — Scoring guide
 
-Score each applicable standard indicator **0–3**; mark N/A (with reason) when a row doesn't apply. Every indicator's exact 4-level criteria live in its encyclopedia entry.
+Score each applicable, measurable standard indicator **0–3**; mark N/A (with reason) when a row does not apply. An applicable but unmeasurable row is `unknown`: disclose it as unscored and keep it in the category denominator. A detector not implemented in this scanner release is `not_implemented` and is excluded from the denominator. Every indicator's exact 4-level criteria live in its encyclopedia entry.
 
 | Score | Meaning |
 |-------|---------|
@@ -38,6 +38,8 @@ Score each applicable standard indicator **0–3**; mark N/A (with reason) when 
 | **1 — Severe Debt** | Yellow Flag in core logic, or Red Flag in isolated paths |
 | **0 — Critical** | Red Flag in core logic, or across multiple paths |
 | **N/A** | Not applicable to this system; excluded from the category denominator (reason recorded) |
+| **Unknown** | Applicable but not measurable; no score, disclosed, and included in the frozen denominator |
+| **Not implemented** | No detector in this scanner release; disclosed and excluded from the denominator |
 
 **Core-path taxonomy (global, computed once):** every 1-vs-0 and 2-vs-1 call uses the *global* core-path definition — core = files reachable from public entry points that touch **money / auth / PII / compliance-sensitive behavior**. Where an entry scopes itself differently, its encyclopedia `Scope/overlaps` field says so. The engine computes membership once; human auditors use the same rule.
 
@@ -47,7 +49,7 @@ Score each applicable standard indicator **0–3**; mark N/A (with reason) when 
 
 ## Part 2 — Scoring sheet (standard rows)
 
-Category % = Σ(applicable row scores) ÷ (applicable count × 3) × 100. Deep-dive rows folded in when run. Row counts vary by category (ARCH 10, VEL 10, others 8). Base weights shown; use the FE-active set (`11` §1) when the repo has a client.
+Category % = Σ(measured + estimated row scores) ÷ ((measured + estimated + applicable unknown count) × 3) × 100. Unknown rows remain in the denominator as unscored; N/A and not-implemented rows are excluded. Deep-dive rows fold in when run. Row counts vary by category (ARCH 10, VEL 10, others 8). Base weights shown; use the FE-active set (`11` §1) when the repo has a client. The frozen-denominator headline is the default; renormalized scoring is reference-only.
 
 ### 1. Dependency & Ecosystem Health — weight 10% (FE-active 9%)
 
@@ -191,10 +193,10 @@ Category % = Σ(applicable row scores) ÷ (applicable count × 3) × 100. Deep-d
 For each service, score the applicable standard rows in each category (mark N/A with reason). Category % for that service:
 
 ```
-Category% = (sum of applicable row scores ÷ applicable count × 3) × 100
+Category% = (sum of measured and estimated row scores ÷ ((measured + estimated + applicable unknown row count) × 3)) × 100
 ```
 
-Deep-dive rows fold into the applicable set only when actually executed (deep audits).
+Applicable unknown rows remain in the denominator as unscored; not-applicable and not-implemented rows are excluded. Deep-dive rows fold into the denominator only when run. The renormalized score is reference-only and does not replace the frozen-denominator headline.
 
 ### 3b. Service → system rollup
 

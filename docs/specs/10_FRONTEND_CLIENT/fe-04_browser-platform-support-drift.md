@@ -1,5 +1,7 @@
 # FE-04 — Browser / Platform Support Drift — Implementation Spec
 
+> **Authority:** This file defines the FE-04 implementation contract. The [FE rubric category](../../rubric/10_FRONTEND_CLIENT.md) owns its definition, thresholds, scoring criteria, and conditional applicability; [`docs/specs/README.md`](../README.md) defines the normative cross-cutting conventions.
+
 ## 0. Identity
 
 | field | value |

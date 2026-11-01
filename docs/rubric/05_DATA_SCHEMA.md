@@ -1,14 +1,16 @@
 # 05 — Data & Schema Evolution
 
-> **Weight:** 10% base · 9% FE-active · **Standard:** DATA-01…08 · **Deep-dive:** DATA-09, 10
+> **Canonical rubric category.** Base weight: 10% · FE-active weight: 9% · Standard indicators: DATA-01–08 · Deep-dive indicators: DATA-09–10.
 >
 > **One-line thesis:** Data is the one thing a legacy codebase can't throw away. When the schema is a museum and the database is a fortress, the code is just the tip of the iceberg — and the data is where modernization gets expensive.
+>
+> This file owns the category's indicator definitions and scoring semantics. Shared weights, formulas, thresholds, and gates are defined in [`11_WEIGHTS_THRESHOLDS_CONFIG.md`](./11_WEIGHTS_THRESHOLDS_CONFIG.md); implementation recipes are in [`docs/specs/`](../specs/README.md).
 
 **Category summary:** Scores the data layer's evolvability — migration discipline, database coupling, integrity, storage technology, locking/scaling behavior, lifecycle management, query performance, and model design. A system can have clean code and a *blighted* data layer; this category catches that.
 
 ---
 
-## Standard indicators
+## Standard indicators (DATA-01–08)
 
 ### DATA-01 — Schema Migration Backlog / "Migration Hell"
 **Engine tier:** A · **Default status:** measured · **Scope/overlaps:** migration backlog and reversibility; environment drift is DATA-10.
@@ -140,7 +142,7 @@
 
 ---
 
-## Deep-dive indicators
+## Deep-dive indicators (DATA-09–10)
 
 ### DATA-09 — Event Sourcing / Audit Readiness
 **Engine tier:** B · **Default status:** unknown · **Scope/overlaps:** event/audit trail for changes; current-state integrity is DATA-03, security audit logs are SEC-05.

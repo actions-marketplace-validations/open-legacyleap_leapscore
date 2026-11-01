@@ -1,5 +1,7 @@
 # DATA-10 — Environment Schema Drift — Implementation Spec
 
+> **Authority:** This file defines the DATA-10 implementation contract. The [DATA rubric category](../../rubric/05_DATA_SCHEMA.md) owns its definition, thresholds, and scoring criteria; [`docs/specs/README.md`](../README.md) defines the normative cross-cutting conventions.
+
 ## 0. Identity
 
 | field | value |

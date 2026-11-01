@@ -1,7 +1,7 @@
 # MVP — LeapScore Lean Slice
 
 > **Parent:** `docs/plans/00_MASTER_INDEX.md` + `docs/rubric/` (102 indicators, 10 categories)
-> **Status:** Derived view — does not mutate canonical rubric. Canonical stays `01_…`–`10_…` + `11_WEIGHTS_THRESHOLDS_CONFIG.md`. This doc is the implementation spec for the first buildable cut.
+> **Status:** Historical 19-indicator MVP proposal and derived slice; it does not mutate the canonical rubric. The MVP is not the current coverage target: 31 indicators are now implemented, and this 19-row slice is a subset. Current scoring and scan requirements are in [OpenSpec](../../openspec/specs/); rubric semantics remain canonical in `01_…`–`10_…` and `11_WEIGHTS_THRESHOLDS_CONFIG.md`.
 > **Grill source:** 11-branch grilling session (Option A virality, ultra-lean 1-week, 5 categories, 19 indicators)
 
 ---
@@ -122,10 +122,10 @@ Per `11` §4: pre-v1 spot-check deferred (Option A). Ship on encyclopedia-assert
 
 ## 9. Build order (backlog — status: built, then superseded)
 
-> **Status note:** this backlog is complete — Phase 1, Phase 2, and the report shipped (`packages/engine/orchestrator.phase1.ts`, `packages/engine/orchestrator.ts`, `apps/site/app/api/scan/route.ts`). The unified budget (`budgetForIndicators`, clamp 10s–240s) replaced the "Phase 1 <10s + Phase 2 4-min" split (see `openspec/changes/archive/2026-08-29-unified-scan-progress`), and tranche-a expanded coverage 19 → 31 detectors (`openspec/changes/expand-coverage-tranche-a`). This slice is now a **subset** of what ships, not the build plan.
+> **Status note:** this backlog is complete and superseded. The engine now lives in `apps/scanner/src/scan/`; there is no `packages/engine` or site `/api/scan` route. The unified budget (10–240 seconds) replaced the proposed Phase 1/Phase 2 split, and coverage expanded from 19 to 31 detectors. See [current scan specifications](../../openspec/specs/) and the [decision index](00_MASTER_INDEX.md). This slice is a historical subset, not the current build plan.
 
 1. **Spec freeze** — this doc + D9 entry.
-2. **Scaffold** — `packages/engine/` (orchestrator, manifest sniff, GH API client, tool adapters), `packages/engine/report` schema from `docs/plans/06_DATA_MODEL_API.md`, `apps/site/` provider seam (was `mvp/engine`, `mvp/report`, `mvp/site`).
+2. **Scaffold (historical proposed paths; not shipped)** — `packages/engine/` (orchestrator, manifest sniff, GH API client, tool adapters), `packages/engine/report` schema from `docs/plans/06_DATA_MODEL_API.md`, `apps/site/` provider seam (was `mvp/engine`, `mvp/report`, `mvp/site`). The shipped engine instead lives under `apps/scanner/src/scan/`.
 3. **Phase 1** — VEL + SEC-07 + TEST-08 (GH API only, <10 sec, no clone).
 4. **Phase 2 — manifest path** — ECOS + SEC-01/06 + TEST-03/05 + SEC-02 (shallow clone, `trivy`/`osv`/`gitleaks`).
 5. **Phase 2 — heavy static** — ARCH-01/08/05 (`lizard`/`jscpd`/`git` mining).

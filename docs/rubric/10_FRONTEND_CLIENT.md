@@ -1,14 +1,16 @@
-# 10 — Frontend & Client Health *(conditional module)*
+# 10 — Frontend & Client Health (conditional rubric module)
 
-> **Weight:** annex only · **FE-active weight:** 10% of a separate FE total · **Standard:** FE-01…07 · **Deep-dive:** FE-08
+> **Canonical conditional category.** Base weight: annex only · FE-active weight: 10% · Standard indicators: FE-01–07 · Deep-dive indicator: FE-08.
 >
 > **One-line thesis:** The frontend is the product's face — and a client that predates its era shows the same decay class as the backend, plus its own: bundles the size of satellites, accessibility scored in single digits, and a framework the ecosystem left behind.
+>
+> This file owns frontend indicator definitions and scoring semantics. Conditional applicability and shared weights are governed by [`11_WEIGHTS_THRESHOLDS_CONFIG.md`](./11_WEIGHTS_THRESHOLDS_CONFIG.md); implementation recipes are in [`docs/specs/`](../specs/README.md).
 
 **Category summary:** This module is scored **only if the system has a user-facing client** (web app, mobile, desktop, or embedded UI). If none exists, skip entirely — it is an annex score recorded separately. When a client exists, its ten-indicator score (FE-01…07 × FE-08 deep-dive) carries a separate 10% in the FE-active system rollup while the other nine categories scale ×0.9 (see `11_WEIGHTS_THRESHOLDS_CONFIG.md`). Covers the UI's framework health, performance, accessibility, platform currency, client architecture, design consistency, run-time adaptation, and internationalization.
 
 ---
 
-## Standard indicators
+## Standard indicators (FE-01–07)
 
 ### FE-01 — UI Framework / Stack EOL & Deprecation
 **Engine tier:** A · **Default status:** estimated · **Scope/overlaps:** client framework lifecycle; backend library lifecycle is ECOS-01, server-side coverage is ECOS-08.
@@ -124,7 +126,7 @@
 
 ---
 
-## Deep-dive indicator
+## Deep-dive indicator (FE-08)
 
 ### FE-08 — Mobile / Responsive Adaptation & Offline Support
 **Engine tier:** C · **Default status:** unknown · **Scope/overlaps:** mobile/offline *context* fit; the context analytics feeding it are FE-04, mobile perf budget is FE-02.
