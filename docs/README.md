@@ -28,6 +28,8 @@ Use this page to find the right source. Documentation is split by authority: Ope
 - [`sample-report/`](./sample-report/): guide and scripts for illustrative report assets.
 - [`diagrams/`](./diagrams/README.md): nine architecture diagrams as matched `.html`/`.json` pairs — illustrative only; revision-pinned snapshots, not a requirements source.
 - [`roadmap/`](./roadmap/): planning material — status, baseline, and ordered backlog; not a requirements source.
+  - [`structural-legacy-coverage.md`](./roadmap/structural-legacy-coverage.md): structural signal coverage across the legacy stacks.
+  - [`distribution-packaging.md`](./roadmap/distribution-packaging.md): the packaging test (single artifact, container image, npm/`npx`) and its gap list.
 - [`PRODUCT.md`](./PRODUCT.md): explanatory product overview; not a requirements source.
 
 Repository tooling consumes `docs/rubric/indicators/` and `docs/rubric/model/config.md`. The `model/scale.md` guide is authored; the `sheets/` documents are generated and must not be edited by hand. Root [`AGENTS.md`](../AGENTS.md) contains repository-wide editing constraints.
