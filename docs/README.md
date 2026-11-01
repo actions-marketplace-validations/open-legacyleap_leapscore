@@ -26,6 +26,7 @@ Use this page to find the right source. Documentation is split by authority: Ope
 
 - [`rubric/`](./rubric/): the rubric in three layers — the measured set under `indicators/`, the composing rules under `model/`, and the generated instrument under `sheets/`.
 - [`sample-report/`](./sample-report/): guide and scripts for illustrative report assets.
+- [`roadmap/`](./roadmap/): planning material — status, baseline, and ordered backlog; not a requirements source.
 - [`PRODUCT.md`](./PRODUCT.md): explanatory product overview; not a requirements source.
 
 Repository tooling consumes `docs/rubric/indicators/` and `docs/rubric/model/config.md`. The `model/scale.md` guide is authored; the `sheets/` documents are generated and must not be edited by hand. Root [`AGENTS.md`](../AGENTS.md) contains repository-wide editing constraints.
