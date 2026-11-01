@@ -36,16 +36,16 @@ for the audience the brief names · `BLOCKED` = the surface cannot be used at al
 | surface | today | status | evidence |
 |---|---|---|---|
 | single-file bundle | `node leapscore-scan.mjs scan . --out out` | DONE | 510 KB readable ESM, `#!/usr/bin/env node` shebang + exec bit, zero runtime deps, `rubric.json`/`eol.json`/`advisories.json` inlined, `git` the only binary spawned |
-| workspace shim | `leapscore-scan scan . --out out` after `npm install` | DONE | root `prepare` builds the bundle; `node_modules/.bin/leapscore-scan` resolves and runs; `check:bin-wiring` enforces it |
+| workspace shim | `leapscore-scan scan . --out out` after `npm install` | DONE | root `prepare` builds the bundle; `node_modules/.bin/leapscore-scan` → committed launcher `apps/scanner/bin/leapscore-scan.mjs`, which execs it; `check:bin-wiring` enforces it |
 | container definition | `docker run --rm … leapscore-scan scan /work/repo …` | PARTIAL | root `Dockerfile`: distroless node-20 + `git`, copies the bundle, no build inside; container-vs-direct parity verified (10.11 · Critical, fv3, engine 0.1.0). No registry push; `latest` is a local convenience tag |
 | git-install (`npx -p "github:…#<ref>"`) | `npx -p "github:open-legacyleap/leapscore#<sha>" leapscore-scan …` | PARTIAL | resolves and runs, but the repository is private (`api.github.com/repos/…` → 404), so it is an access-holder path; it installs the monorepo and runs `prepare` |
 | npm registry | `npx @leapscore/scanner scan . --out out` | BLOCKED | `registry.npmjs.org/@leapscore%2Fscanner` → 404; `apps/scanner/package.json` still carries `"private": true` |
 | GitHub Action | `uses: leapscore/action@v1` | PARTIAL | committed `action/dist` + `LEAPSCORE_CLI` override; dogfood `uses: ./action` green-on-push (`release-packaging` 4.5) still pending; no Marketplace publish |
 
 **The bundle is already the hard part, and it is done.** `npm pack --dry-run` in
-`apps/scanner` produces three files — `README.md`, `dist/leapscore-scan.mjs`,
-`package.json` — at 124.5 kB packed / 517.6 kB unpacked. Publishing is the only
-missing step on that surface.
+`apps/scanner` produces four files — `README.md`, `bin/leapscore-scan.mjs`,
+`dist/leapscore-scan.mjs`, `package.json` — at 125.4 kB packed / 520.1 kB unpacked.
+Publishing is the only missing step on that surface.
 
 ## The npm gap, precisely
 
@@ -54,9 +54,9 @@ missing step on that surface.
 2. No `publishConfig`. A scoped name (`@leapscore/…`) defaults to restricted
    access, so even after (1) a bare `npm publish` would not be publicly
    installable.
-3. `files` lists only `dist/leapscore-scan.mjs` and `README.md`. The Apache-2.0
-   `LICENSE` exists at the repo root but not in the package directory, so the
-   tarball ships without it.
+3. `files` lists `bin/leapscore-scan.mjs`, `dist/leapscore-scan.mjs`, and `README.md`.
+   The Apache-2.0 `LICENSE` exists at the repo root but not in the package
+   directory, so the tarball ships without it.
 4. No release workflow. `release-packaging` explicitly deferred the mechanism's
    trigger: *"Publishing to the npm registry / Marketplace / a container
    registry: the mechanism lands here; the names are tagged on the release-shape

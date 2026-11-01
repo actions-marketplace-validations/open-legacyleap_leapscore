@@ -6,12 +6,12 @@ Defines how a LeapScore command becomes an executable entry point: which package
 
 ### Requirement: Command entry point resolves after a workspace install
 
-A fresh `npm install` at the repo root SHALL produce a resolving `node_modules/.bin/<command>` shim for every command the repo documents, each shim's target SHALL be an existing file, and the shim SHALL **execute** — invoking the command's `--help` after a clean install SHALL print its usage without an interpreter or toolchain error. A documented command whose shim is absent, dangling, non-executable, or fails to run SHALL be treated as a defect, not as a fallback to a longer invocation form.
+A fresh `npm install` at the repo root SHALL produce a resolving `node_modules/.bin/<command>` shim for every command the repo documents, each shim's target SHALL be a file committed to the checkout rather than a file the install builds, and the shim SHALL **execute** — invoking the command's `--help` after a clean install SHALL print its usage without an interpreter or toolchain error. A documented command whose shim is absent, dangling, non-executable, or fails to run SHALL be treated as a defect, not as a fallback to a longer invocation form.
 
 #### Scenario: Scanner command resolves from a clean checkout
 
 - **WHEN** a clean checkout runs `npm install` at the repo root and then `leapscore-scan --help`
-- **THEN** the shim resolves to the scanner's built artifact and prints the CLI usage without an error
+- **THEN** the shim resolves to the scanner's committed command launcher, which runs the built bundle (built by the root `prepare` script) and prints the CLI usage without an error
 
 #### Scenario: A stale shim is a failure, not a fallback
 
@@ -30,12 +30,12 @@ A fresh `npm install` at the repo root SHALL produce a resolving `node_modules/.
 
 ### Requirement: Each install topology exposes the same command set
 
-The repo SHALL expose its commands in both supported topologies — a workspace install (shim under `node_modules/.bin`) and an install of the repo package itself (the `npx -p <repo>#<ref> <command>` form the release workflow and docs use) — and both SHALL map the same command name to the same runnable target: the built artifact for compiled commands, never a source file that depends on a just-in-time toolchain. Neither topology SHALL expose a command the other cannot run.
+The repo SHALL expose its commands in both supported topologies — a workspace install (shim under `node_modules/.bin`) and an install of the repo package itself (the `npx -p <repo>#<ref> <command>` form the release workflow and docs use) — and both SHALL map the same command name to the same runnable target: for compiled commands either the built artifact or a committed Node launcher that execs it, never a source file that depends on a just-in-time toolchain. Neither topology SHALL expose a command the other cannot run.
 
 #### Scenario: Both topologies agree on the target
 
 - **WHEN** the command name `leapscore-scan` is mapped in both the workspace package and the repo package
-- **THEN** both mappings resolve to the scanner's built artifact
+- **THEN** both mappings point at the same committed launcher, which runs the scanner's built artifact
 
 #### Scenario: Divergent targets are reported
 

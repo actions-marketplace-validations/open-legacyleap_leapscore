@@ -14,8 +14,8 @@
 
 ## 3. Installable package and workspace topology
 
-- [x] 3.1 Make `apps/scanner` publishable-shaped: drop `private: true`, confirm zero runtime dependencies, add `engines: { node: ">=20" }`, `files`/`bin` fields with `bin` → `./dist/leapscore-scan.mjs`, and verify `npm pack --dry-run` lists the bundle and no sources from other workspaces
-- [x] 3.2 Add a root `prepare` script running the scanner build so a clean `npm install` produces an executable, *runnable* `node_modules/.bin/leapscore-scan`, and verify `leapscore-scan --help` succeeds on a clean checkout with no extra toolchain
+- [x] 3.1 Make `apps/scanner` publishable-shaped: drop `private: true`, confirm zero runtime dependencies, add `engines: { node: ">=20" }`, `files`/`bin` fields with `bin` → `./bin/leapscore-scan.mjs` (the committed launcher that execs the built bundle — npm links shims before `prepare` builds the bundle, so the mapping target must exist in the checkout), and verify `npm pack --dry-run` lists the launcher, the bundle, and no sources from other workspaces
+- [x] 3.2 Add a root `prepare` script running the scanner build so a clean `npm install` produces an executable, *runnable* `node_modules/.bin/leapscore-scan`, and verify `leapscore-scan --help` succeeds on a fresh clone with no prebuilt `dist/` and no extra toolchain
 - [x] 3.3 Extend `tooling/checks/bin-wiring.ts` with the "target that exists but cannot run is reported" case and the compiled-target agreement rule (both topologies map to the built artifact), and verify the check fails on a deliberately broken fixture and passes on the healthy tree
 
 ## 4. Self-contained Action

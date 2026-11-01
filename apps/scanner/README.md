@@ -22,22 +22,31 @@ aborts) and conflicts with `--repo` (exit 2, before any work).
 
 ## Entry point
 
-`leapscore-scan` is the built release artifact — `apps/scanner/dist/leapscore-scan.mjs`, a
+`leapscore-scan` runs the built release artifact — `apps/scanner/dist/leapscore-scan.mjs`, a
 single readable ESM bundle with zero runtime dependencies (JSON assets inlined; `git` is
 the only binary it spawns). It runs on stock Node ≥ 20; nothing else. The build is
 `npm run build:cli` at the repo root, and the root `prepare` script runs it on every
-`npm install`. Both install topologies point at the built file, and both must stay wired:
+`npm install`. Both install topologies point at the committed launcher
+`apps/scanner/bin/leapscore-scan.mjs`, which execs that artifact, and both must stay wired:
 
 - **Workspace install (local authority):** `apps/scanner/package.json` declares
-  `"bin": { "leapscore-scan": "./dist/leapscore-scan.mjs" }`. A `npm install` at the repo root
-  builds the bundle (root `prepare`) and links `node_modules/.bin/leapscore-scan`, so the
-  command runs from any npm context — `npm run`, `npm exec`, Action scripts. Invoke it as
-  `leapscore-scan …`; do not fall back to `npx tsx apps/scanner/bin/scan.ts` (that form
-  bypasses the wiring and hides a broken shim).
+  `"bin": { "leapscore-scan": "./bin/leapscore-scan.mjs" }`. A `npm install` at the repo root
+  links `node_modules/.bin/leapscore-scan` to the launcher, so the command runs from any npm
+  context — `npm run`, `npm exec`, Action scripts. Invoke it as `leapscore-scan …`; do not
+  fall back to `npx tsx apps/scanner/bin/scan.ts` (that form bypasses the wiring and hides a
+  broken shim).
 - **Git install (`npx -p "<repo>#<ref>" leapscore-scan`):** a git install of this repo
   installs only the root package, so the root `package.json` `bin` block must keep the
-  same `leapscore-scan` → `apps/scanner/dist/leapscore-scan.mjs` mapping. This is the form
+  same `leapscore-scan` → `apps/scanner/bin/leapscore-scan.mjs` mapping. This is the form
   `.github/workflows` and the [workflow-scan specification](../../openspec/specs/workflow-scan/spec.md) use.
+
+**Why the launcher, not the bundle:** npm links `node_modules/.bin/*` during reify, before
+the root `prepare` script runs, and it skips a `bin` target that does not exist yet — so a
+mapping straight at the gitignored `dist/leapscore-scan.mjs` yields *no shim at all* on a
+clean checkout, and the command is unreachable even though the bundle is built a moment
+later. The launcher is committed, so the shim is always linked; it execs the bundle as
+`node <bundle>` (preserving the artifact's `argv[1]` and exit codes) and fails loudly,
+naming `npm run build:cli`, when the bundle is missing.
 
 The workspace `bin` is the local authority: the shim is generated from it, and any
 rename must move it there. `npm run check:bin-wiring` at the repo root enforces both

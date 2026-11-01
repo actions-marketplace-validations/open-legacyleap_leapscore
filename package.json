@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "license": "Apache-2.0",
   "bin": {
-    "leapscore-scan": "./apps/scanner/dist/leapscore-scan.mjs",
+    "leapscore-scan": "./apps/scanner/bin/leapscore-scan.mjs",
     "surface": "./apps/surface/bin/surface.ts"
   },
   "workspaces": [

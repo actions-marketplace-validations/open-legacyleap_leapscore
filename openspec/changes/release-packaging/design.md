@@ -36,7 +36,7 @@ Motivation is in `proposal.md — Why`. Current state that shapes the approach:
 
 **D5 — Committed dist + freshness check as a repo gate.** `.gitignore` un-ignores `action/dist/index.js` and `action/dist/leapscore-scan.mjs`; `tooling/checks/dist-freshness.ts` rebuilds both deterministically and byte-compares against committed files, wired into the existing checks family (offline, token-free, like `check:bin-wiring`). Determinism note: esbuild output is stable for identical inputs; the scanner bundle embeds no timestamps (wall-clock is runtime, not build-time). Rejected: build-on-CI-and-upload (the Action must run from the *user's* checkout of the tag, not a build artifact).
 
-**D6 — Workspace bin points at the built bundle; the build runs at `prepare`.** `apps/scanner/package.json` `bin` → `./dist/leapscore-scan.mjs`; a root `prepare` script builds it so the post-`npm install` shim executes (the `cli-packaging` delta's "A target that cannot run is reported" scenario). The bundle is gitignored — it is a build output, unlike the Action's committed dist, which exists *because* Actions have no build step. Root `package.json` `bin` keeps the same relative target for the `npx -p` topology.
+**D6 — Workspace bin points at a committed launcher that execs the built bundle; the build runs at `prepare`.** `apps/scanner/package.json` `bin` → `./bin/leapscore-scan.mjs`, a committed Node launcher that spawns `node dist/leapscore-scan.mjs` with the caller's argv; a root `prepare` script builds the bundle so the launcher has something to run (the `cli-packaging` delta's "A target that cannot run is reported" scenario). The launcher, not the bundle, is the mapping target because npm links `node_modules/.bin/*` during reify — *before* `prepare` runs — and skips a `bin` target that does not exist yet, so mapping straight at the gitignored bundle produces **no shim at all** on a clean checkout (found on CI: `npm ci` on a fresh runner, `check:bin-wiring` reporting "no shim"). The bundle stays a build output, unlike the Action's committed dist, which exists *because* Actions have no build step. Root `package.json` `bin` keeps the same relative target for the `npx -p` topology.
 
 **D7 — Container = distroless node image + the bundle.** `node:20-distroless`-class base (no shell, small audit surface), entrypoint the bundle, the scanned repo mounted, `git` present for history detectors (node images carry it). Single-stage, no build inside the image — the bundle comes from the workspace build.
 
@@ -53,7 +53,7 @@ Motivation is in `proposal.md — Why`. Current state that shapes the approach:
 ## Migration Plan
 
 1. Land build + stamp + era v3 + identity sites + `sample` verification; source path unchanged in behavior, tests updated for v3.
-2. Switch `apps/scanner` bin + root bin to the built target; add `prepare`; extend the bin-wiring check's "runs" expectation.
+2. Switch `apps/scanner` bin + root bin to the committed launcher (`bin/leapscore-scan.mjs`, execs the built bundle); add `prepare`; extend the bin-wiring check's "runs" expectation.
 3. Rewire Action (`LEAPSCORE_CLI`, dist composition, gitignore, freshness check); rewire the dogfood workflow to the built dist — the first point where `uses: ./action` actually works on a fresh checkout.
 4. Container + generic-CI docs last (pure additions).
 

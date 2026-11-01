@@ -5,9 +5,10 @@
   "private": true,
   "type": "module",
   "bin": {
-    "leapscore-scan": "./dist/leapscore-scan.mjs"
+    "leapscore-scan": "./bin/leapscore-scan.mjs"
   },
   "files": [
+    "bin/leapscore-scan.mjs",
     "dist/leapscore-scan.mjs",
     "README.md"
   ],
