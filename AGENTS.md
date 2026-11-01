@@ -38,6 +38,13 @@ tooling/scripts/       compile-rubric (canonical → rubric.json + generated rub
 
 Root `package.json` workspaces: `apps/*`, `packages/*`, `action`. Run `npm run compile:rubric` / `npm run check:rubric-consistency` / `npm run check:detector-isolation` / `npm run check:site-boundary` / `npm run check:bin-wiring` / `npm run check:dist` from root.
 
+## Routine development commands
+
+- `npm install` — install workspaces and build the CLI bundle through the root `prepare` script.
+- `npm run build` — build all workspaces; `npm run build:cli` — rebuild the scanner bundle.
+- `npm test` — run workspace Vitest suites; `npm run lint` — run workspace lint/type checks.
+- Run repository boundary checks from the root; every documented command must resolve after a clean install.
+
 ## Implementation status (read this before "planning only" notes elsewhere)
 
 - **Scanner is a standalone service, colocated engine + entries** (`apps/scanner`). The former `packages/engine` is gone; the engine lives under `apps/scanner/src/scan/` and its scoring under `src/scan/scoring/`. The scanner is **stateless**: no permanent disk, no served reports, no permalinks — the terminal `report` frame is the sole scan artefact.
