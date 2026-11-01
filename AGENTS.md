@@ -27,11 +27,14 @@ apps/site/             PRESENT side — Next.js static site: marketing, `/live` 
 action/                checkout-first GitHub Action over the committed dist
 docs/rubric/           unified indicator catalog (canonical): one file per ID under
                        indicators/<NN_CATEGORY>/ combining semantics + implementation;
-                       category indexes 01–10 + 11_WEIGHTS…CONFIG (shared config)
+                       category indexes 01–10 + 11_WEIGHTS…CONFIG (shared config);
+                       00_EXECUTIVE_RUBRIC (authored) + 00_SCORE_SHEET,
+                       templates/* (generated)
 openspec/              live change specs — specs/ is current truth, changes/archive/* is history
 tooling/checks/        detector-isolation · site-boundary · surface-boundary · bin-wiring ·
                        dist-freshness · schemas · documentation-structure
-tooling/scripts/       compile-rubric (canonical → rubric.json + generated rubric.ts;
+tooling/scripts/       compile-rubric (canonical → rubric.json + generated rubric.ts
+                       + generated 00_SCORE_SHEET.md and score-sheet templates;
                        --check is the CI gate) · refresh-snapshots · snapshot-data
 ```
 
@@ -64,10 +67,12 @@ Root `package.json` workspaces: `apps/*`, `packages/*`, `action`. Run `npm run c
 
 The catalog is single-sourced (decisions D1/D3/F1):
 - **Canonical — indicator semantics and implementation** (edit here): `docs/rubric/indicators/<NN_CATEGORY>/<ID>_<slug>.md` — identity, definition, impact, 0–3 criteria, remediation, applicability/inputs, detection recipe, fact schema, statusing/score predicates, gate hooks, failure/budget semantics, evidence, and scope. Shared numeric thresholds live in `11_WEIGHTS_THRESHOLDS_CONFIG.md`; indicator files reference them and never restate numbers.
-- **Canonical — shared configuration** (edit here): `11_WEIGHTS_THRESHOLDS_CONFIG.md` — weights, scoring formula, tier thresholds, applicability vocabulary, gates.
-- **Derived** (never hand-edit; match to canonical instead): `00_EXECUTIVE_RUBRIC.md`, `templates/*` score sheets, and the category index tables (`01`–`10`).
+- **Canonical — shared configuration** (edit here): `11_WEIGHTS_THRESHOLDS_CONFIG.md` — weights, scoring formulas, tier thresholds, bands, gate roster (G1–G8 triggers and source indicators), applicability vocabulary.
+- **Generated** (never hand-edit; `tooling/scripts/compile-rubric.ts` is the only writer): `apps/scanner/src/scan/scoring/rubric.json`, `apps/site/lib/generated/rubric.ts`, `docs/rubric/00_SCORE_SHEET.md`, `docs/rubric/templates/SERVICE_SCORE_SHEET.md`, `docs/rubric/templates/SYSTEM_SCORE_SHEET.md`.
+- **Authored** (edit here, but only with non-derivable material): `docs/rubric/00_EXECUTIVE_RUBRIC.md` — the 0–3 scale, core-path taxonomy, rollup mechanics, and audit planning; it links `11` and the generated sheet for every weight, band, gate, and criteria value.
+- **Hand-aligned derived**: the category index tables (`01`–`10`) — match them to the canonical catalog.
 
-Consequences: changing an indicator's thresholds/status → edit its unified file *and* the matching derived row in `00_EXECUTIVE_RUBRIC.md` Part 2. Changing weights/FE-active logic → edit only `11` §1 and propagate. The consistency check is `npm run check:rubric-consistency` (= `compile-rubric.ts --check`: validates one-to-one IDs, category membership, unified identity metadata, shared configuration, and that `apps/scanner/src/scan/scoring/rubric.json` + `apps/site/lib/generated/rubric.ts` match the canonical files — IDs, names, effort tags, remediation coverage). Run `npm run compile:rubric` to regenerate; never hand-edit the generated files.
+Consequences: changing an indicator's thresholds/status → edit its unified file and run `npm run compile:rubric`; the generated sheet, templates, `rubric.json`, and `rubric.ts` all follow. Changing weights/FE-active logic → edit only `11` §1 and regenerate. The consistency check is `npm run check:rubric-consistency` (= `compile-rubric.ts --check`: validates one-to-one IDs, category membership, unified identity metadata, shared configuration including the `11` §3 gate roster against each indicator's `Gates fed` row, byte-equality of `rubric.json`, `rubric.ts`, `00_SCORE_SHEET.md`, and both templates against a fresh compile, and that the authored guide restates no generated value). Run `npm run compile:rubric` to regenerate; never hand-edit the generated files.
 
 ## Conventions for editing the unified catalog
 
@@ -75,7 +80,7 @@ Consequences: changing an indicator's thresholds/status → edit its unified fil
 - **Every unified indicator file** carries the ten-section skeleton defined in `docs/rubric/README.md`, including: definition, why it matters, manifestations, detection method, objective metric, Yellow/Red flags with rationale, example symptom, blast radius, remediation, gold standard, **explicit 4-level `Scoring criteria (0–3, per global core-path taxonomy)`**, and `Verify effort:`.
 - **Tags:** engine tier `A/B/C/D`, `Default status: measured/estimated/unknown`, `Scope/overlaps:` — every new/organized entry gets all three so applicability stays derivable. `Scope/overlaps` is how sibling indicators avoid double-counting; define it explicitly against the closest neighbors.
 - **Verify effort symbols:** ⚡ ≤30 min · 🔶 ~2–4 h · 🔷 ~1–2 days. The same tag drives the next-band path's cost classes (`⚡` sprint · `🔶` quarter · `🔷` structural).
-- **Gates:** G1–G8 are the absolute kill-switches. A `proven` gate **caps the sealed band at High** (a score already in `Critical` stays there — the cap is a ceiling, never a floor) and the cap is disclosed on the sealed headline (`gate_capped`, `uncapped_tier`, `capped_by_gates`). A gate whose source rows are all unknown/`not_implemented` is `unevaluable` and is stated, never silently counted as clear. Read `00_EXECUTIVE_RUBRIC.md` Part 0 before touching anything score-model related.
+- **Gates:** G1–G8 are the absolute kill-switches. A `proven` gate **caps the sealed band at High** (a score already in `Critical` stays there — the cap is a ceiling, never a floor) and the cap is disclosed on the sealed headline (`gate_capped`, `uncapped_tier`, `capped_by_gates`). A gate whose source rows are all unknown/`not_implemented` is `unevaluable` and is stated, never silently counted as clear. Read `11_WEIGHTS_THRESHOLDS_CONFIG.md` §3 (gate roster and escalation) before touching anything score-model related.
 - **Skeleton/normative conventions:** the ten-section skeleton, full/reduced-form rules, statuses/clamp/confidence, strict N/A rule, budget classes, tool pinning, fact naming, and evidence grammar are defined once in `docs/rubric/README.md`.
 - **Historical arbitration:** superseded per-indicator rulings are preserved in OpenSpec history, never as a second source of truth. The unified identity tables carry the values the compiled registry has always shipped; reconciling recorded divergences is a separate future change.
 

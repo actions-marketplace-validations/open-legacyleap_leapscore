@@ -16,7 +16,7 @@ Use this page to find the right source. Documentation is split by authority: Ope
 | Subject | Canonical source | Related material |
 |---|---|---|
 | Current scan and report requirements | [`openspec/specs/`](../openspec/specs/) | [`openspec/changes/archive/`](../openspec/changes/archive/) records how they got there. |
-| Indicator definitions, scoring semantics, and implementation contracts | [`rubric/indicators/`](./rubric/indicators/) and [`11_WEIGHTS_THRESHOLDS_CONFIG.md`](./rubric/11_WEIGHTS_THRESHOLDS_CONFIG.md) | [`00_EXECUTIVE_RUBRIC.md`](./rubric/00_EXECUTIVE_RUBRIC.md) and score-sheet templates are derived views; category pages `01`–`10` are indexes. |
+| Indicator definitions, scoring semantics, and implementation contracts | [`rubric/indicators/`](./rubric/indicators/) and [`11_WEIGHTS_THRESHOLDS_CONFIG.md`](./rubric/11_WEIGHTS_THRESHOLDS_CONFIG.md) | [`rubric/00_SCORE_SHEET.md`](./rubric/00_SCORE_SHEET.md) and the score-sheet templates are generated views; [`rubric/00_EXECUTIVE_RUBRIC.md`](./rubric/00_EXECUTIVE_RUBRIC.md) is the authored guide; category pages `01`–`10` are indexes. |
 | Detector inputs, recipes, facts, status and score predicates, gates, and failure/budget behavior | The matching unified indicator file (§5–§9) | `packages/detectors/*/schema.json` carries the fact envelope. |
 | Product explanation | [`PRODUCT.md`](./PRODUCT.md) | Non-normative summary; current behavior claims must agree with OpenSpec and implementation. |
 | Decision history | Git history and [`openspec/changes/archive/`](../openspec/changes/archive/) | Superseded material is reachable through history, not retained as paths. |

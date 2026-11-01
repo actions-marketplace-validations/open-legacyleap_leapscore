@@ -198,7 +198,7 @@ The system SHALL surface gates G1/G2/G3/G8 as `needs-verification` when a scan h
 
 #### Scenario: Unified scan promotes gates when clone facts present
 - **WHEN** a unified scan requests the 19 MVP indicators and clone detectors emit SEC-02/ECOS-01/ECOS-05/SEC-01 facts before `budgetMs` expiry
-- **THEN** G1/G3/G8/G2 are evaluated via their Phase-2 predicates in that same scan (see `scan-phase-2` gate predicates) and may become `proven` or `not-proven`, and a `proven` gate caps the verdict per `00_EXECUTIVE_RUBRIC.md Part 0`
+- **THEN** G1/G3/G8/G2 are evaluated via their Phase-2 predicates in that same scan (see `scan-phase-2` gate predicates) and may become `proven` or `not-proven`, and a `proven` gate caps the verdict per `docs/rubric/11_WEIGHTS_THRESHOLDS_CONFIG.md` §3
 
 #### Scenario: No intermediate Phase-1 seal in unified scan
 - **WHEN** GH-API detectors finish early in a 19-indicator unified scan

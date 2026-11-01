@@ -1,6 +1,6 @@
 # 11 — Weights & Thresholds Config (canonical)
 
-> **Status:** canonical configuration. Every weight, tier threshold, and gate rule in the rubric is defined *here* and referenced from the derived views (`00_EXECUTIVE_RUBRIC.md`, `templates/*`). Change the numbers here, never in the derived views.
+> **Status:** canonical configuration. Every weight, tier threshold, and gate rule in the rubric is defined *here* and referenced from the generated views (`00_SCORE_SHEET.md`, `templates/*`) and the authored rubric guide. Change the numbers here, never in the derived views.
 >
 > **Governance:** any change to this file updates the single source of truth; a consistency check (see README §Consistency) verifies the derived views still match. Weights and thresholds are **v1 asserted defaults** — calibrated on the schedule defined in §4 below.
 
@@ -53,7 +53,9 @@ Applicability is determined from `archetype + planeInventory` (`has_server/has_d
 
 ---
 
-## 2 — Category scoring formula
+## 2 — Scoring formulas
+
+**2a — Service category %:**
 
 ```
 Category% = (sum of measured and estimated row scores ÷ ((measured + estimated + applicable unknown row count) × 3)) × 100
@@ -64,6 +66,18 @@ Category% = (sum of measured and estimated row scores ÷ ((measured + estimated 
 - A row that is `not_applicable` or `not_implemented` is excluded from *both* numerator and denominator. Record the reason; indicator applicability rules live in the unified indicator files.
 - **Deep-dive rows fold into the category** when a deep audit runs them. Include each applicable measured, estimated, or unknown deep-dive row in the denominator when run; exclude not-applicable and not-implemented rows. A standard audit may have less measured coverage than a deep audit; unknowns remain visible in either.
 - A category may hold a **variable number of standard rows** (e.g., ARCH has 10, ECOS has 8). The formula is row-count agnostic by construction.
+
+**2b — Service → system category %.** Weight each service by business criticality (not LOC):
+
+```
+System category% = Σ (service category% × service criticality weight) / Σ weights
+```
+
+**2c — System total.** Weights come from §1 — the **base set** when the repo has no client, the **FE-active set** when it does:
+
+```
+System score = Σ (system category% × category weight)
+```
 
 ---
 
@@ -78,7 +92,24 @@ Category% = (sum of measured and estimated row scores ÷ ((measured + estimated 
 
 > **Band naming (one release only):** the Low band shipped previously as "Healthy" and the High band as "High Risk / Obsolete"; thresholds are unchanged (80/53/27). The legacy names survive **only** as machine aliases carried in the sealed envelope (`headline.tier_legacy`: Low→Healthy, High→High Risk) and are never displayed as band labels.
 
-**Gate override:** if any gating kill-switch (see `00_EXECUTIVE_RUBRIC.md` Part 0; G1–G8) is Red Flag, the verdict is capped at **High** — the numeric score is informational only, unless it is already < 27%, in which case **Critical** wins.
+### Gate roster (G1–G8)
+
+If **any** of the following is Red Flag, the verdict is **capped at "High"** no matter the numeric total. These are debts that make the system *unsafe or impossible to modernize incrementally*.
+
+| # | Gate | Red Flag trigger | Source indicator |
+|---|------|------------------|--------------------|
+| G1 | Credential exposure | Active plaintext secrets/credentials in source, history, or config | SEC-02 |
+| G2 | Critical vuln exposure | Any Critical CVE > 14 days unpatched on an internet-exposed path | SEC-01 |
+| G3 | Runtime EOL, no path out | Core domain logic on EOL runtime/language with no upgrade path | ECOS-01 |
+| G4 | OWASP Top-10 reachable | SQLi / RCE / broken auth reachable in core flows | SEC-03, SEC-04 |
+| G5 | Untested core | Zero test coverage in the highest-criticality service | TEST-06 |
+| G6 | Delivery is on fire | CFR > 30% AND deployments require manual intervention | VEL-03, VEL-08 |
+| G7 | Data-rescue risk | No backups, or restore never successfully performed / untestable, in a system holding critical data | DATA-06 |
+| G8 | Copyleft in closed-source distribution | GPL/AGPL (or equivalent copyleft) detected in a proprietary, closed-source distribution | ECOS-05 |
+
+> **Escalation semantics:** a gate in Red Flag means the numeric score is *informational only* — the reported verdict is "High" (or "Critical" if the score is also < 27% — the stricter verdict wins).
+
+**Gate override:** if any gating kill-switch above (G1–G8) is Red Flag, the verdict is capped at **High** — the numeric score is informational only, unless it is already < 27%, in which case **Critical** wins.
 
 ---
 

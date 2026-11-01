@@ -59,7 +59,7 @@ Every next-step link the system emits — CLI reports, CLI stdout, site next-ste
 
 ### Requirement: Public band vocabulary
 
-Public band labels SHALL be `Low` (≥80), `Moderate` (53–79), `High` (27–52), and `Critical` (<27) on every surface and document that states bands: CLI stdout, JSON `headline.tier`, HTML/Markdown reports, site UI, and the canonical rubric band tables (`docs/rubric/11_WEIGHTS_THRESHOLDS_CONFIG.md` §3, `docs/rubric/README.md`, `docs/rubric/00_EXECUTIVE_RUBRIC.md`, and the score-sheet templates that follow canonical). The legacy aliases (`Healthy`, `High Risk`) SHALL be carried only in the `tier_legacy` field for one release and SHALL NOT be displayed as primary labels. The 0–3 row scoring taxonomy labels (for example `3 — Healthy`) are row verdicts, not bands, and SHALL NOT be renamed. Threshold values and the compiled rubric artifacts SHALL NOT change.
+Public band labels SHALL be `Low` (≥80), `Moderate` (53–79), `High` (27–52), and `Critical` (<27) on every surface and document that states bands: CLI stdout, JSON `headline.tier`, HTML/Markdown reports, site UI, and the canonical rubric band tables (`docs/rubric/11_WEIGHTS_THRESHOLDS_CONFIG.md` §3 and its generated restatements `docs/rubric/00_SCORE_SHEET.md` and the score-sheet templates). The legacy aliases (`Healthy`, `High Risk`) SHALL be carried only in the `tier_legacy` field for one release and SHALL NOT be displayed as primary labels. The 0–3 row scoring taxonomy labels (for example `3 — Healthy`) are row verdicts, not bands, and SHALL NOT be renamed. Threshold values and the compiled rubric artifacts SHALL NOT change.
 
 #### Scenario: Site renders the public set
 

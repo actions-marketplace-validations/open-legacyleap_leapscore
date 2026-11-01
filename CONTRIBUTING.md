@@ -16,9 +16,11 @@ Include the affected command or scan mode, expected and observed behavior, envir
 
 ## Rubric and generated files
 
-The rubric is single-sourced. Each indicator has one canonical file under `docs/rubric/indicators/<NN_CATEGORY>/` that combines its semantics (definition, impact, scoring criteria, remediation) with its implementation contract (applicability, detection, facts, status/score predicates, gates, budget, evidence). Edit that file; edit shared weights/thresholds in `docs/rubric/11_WEIGHTS_THRESHOLDS_CONFIG.md`. Do not hand-edit derived views such as `docs/rubric/00_EXECUTIVE_RUBRIC.md`, the category index tables, `apps/scanner/src/scan/scoring/rubric.json`, or `apps/site/lib/generated/rubric.ts`.
+The rubric is single-sourced. Each indicator has one canonical file under `docs/rubric/indicators/<NN_CATEGORY>/` that combines its semantics (definition, impact, scoring criteria, remediation) with its implementation contract (applicability, detection, facts, status/score predicates, gates, budget, evidence). Edit that file; edit shared weights, formulas, bands, and the gate roster in `docs/rubric/11_WEIGHTS_THRESHOLDS_CONFIG.md`. `docs/rubric/00_EXECUTIVE_RUBRIC.md` is authored, but only for material that cannot be derived (the 0–3 scale, core-path taxonomy, rollup mechanics, audit planning).
 
-Regenerate rubric outputs with `npm run compile:rubric` and verify them with `npm run check:rubric-consistency`. The committed Action bundle is also generated: rebuild it through the documented build path and run `npm run check:dist`; do not patch `action/dist/` by hand.
+Do not hand-edit generated artifacts: `docs/rubric/00_SCORE_SHEET.md`, `docs/rubric/templates/SERVICE_SCORE_SHEET.md`, `docs/rubric/templates/SYSTEM_SCORE_SHEET.md`, `apps/scanner/src/scan/scoring/rubric.json`, `apps/site/lib/generated/rubric.ts`. The category index tables (`01`–`10`) are hand-aligned derived views — match them to the catalog.
+
+Regenerate rubric outputs with `npm run compile:rubric` and verify them with `npm run check:rubric-consistency`, which compares all five generated artifacts byte-for-byte with a fresh compile and fails if the authored guide restates a generated weight, band, gate, formula, or per-indicator row. The committed Action bundle is also generated: rebuild it through the documented build path and run `npm run check:dist`; do not patch `action/dist/` by hand.
 
 ## Checks
 

@@ -8,11 +8,13 @@ The rubric is the reviewable contract for LeapScore's 102 maintainability indica
 |---|---|---|
 | [`indicators/`](./indicators/) | **Canonical indicator catalog** | One editable file per ID: identity, definition, impact, scoring, remediation, applicability, detection, facts, status/predicates, gates, failure/budget behavior, evidence, and scope. |
 | [`01`–`10` category indexes](./) | Canonical navigation | Category purpose, weights/applicability summary, and links to the unified indicator files. They contain no competing indicator bodies. |
-| [`11_WEIGHTS_THRESHOLDS_CONFIG.md`](./11_WEIGHTS_THRESHOLDS_CONFIG.md) | Canonical shared configuration | Weights, formulas, thresholds, bands, applicability vocabulary, gates, and calibration record. |
-| [`00_EXECUTIVE_RUBRIC.md`](./00_EXECUTIVE_RUBRIC.md) | Derived presentation | Compact view of catalog values; do not independently change indicator values. |
-| [`templates/`](./templates/) | Derived score sheets | Printable views; keep values aligned with the canonical catalog/configuration. |
+| [`11_WEIGHTS_THRESHOLDS_CONFIG.md`](./11_WEIGHTS_THRESHOLDS_CONFIG.md) | Canonical shared configuration | Weights, formulas, thresholds, bands, the G1–G8 gate roster, applicability vocabulary, and calibration record. |
+| [`00_EXECUTIVE_RUBRIC.md`](./00_EXECUTIVE_RUBRIC.md) | **Authored guide** | The 0–3 scale, core-path taxonomy, rollup mechanics, and audit planning — material with no derivable home. It links the canonical configuration and the generated sheet for every restated value. |
+| [`00_SCORE_SHEET.md`](./00_SCORE_SHEET.md) | **Generated** — `tooling/scripts/compile-rubric.ts` is the only writer | Printable sheet: the gate roster, the per-indicator Yellow/Red table (echoed verbatim from each canonical §2, rationale asides removed), and the band table. |
+| [`templates/SERVICE_SCORE_SHEET.md`](./templates/SERVICE_SCORE_SHEET.md) | **Generated** — `tooling/scripts/compile-rubric.ts` is the only writer | Blank per-service sheet; row lists, names, weights, and deep-dive splits derived from the registry. |
+| [`templates/SYSTEM_SCORE_SHEET.md`](./templates/SYSTEM_SCORE_SHEET.md) | **Generated** — `tooling/scripts/compile-rubric.ts` is the only writer | Blank system sheet; category rows, band verdict, and the gate checklist derived from the registry and the gate roster. |
 
-Change indicator meaning, implementation, or remediation only in its unified file. Change shared scoring configuration only in `11_WEIGHTS_THRESHOLDS_CONFIG.md`. Regenerate derived artifacts with `npm run compile:rubric`; never hand-edit generated files.
+Change indicator meaning, implementation, or remediation only in its unified file. Change shared scoring configuration only in `11_WEIGHTS_THRESHOLDS_CONFIG.md`. Change the authored guide only in `00_EXECUTIVE_RUBRIC.md`, and only for material that cannot be derived. Regenerate the generated artifacts with `npm run compile:rubric`; never hand-edit them.
 
 ## Browse by category
 
@@ -88,8 +90,10 @@ These rules apply to every unified file and replace the former split-spec preamb
 |---|---|
 | `docs/rubric/indicators/<NN_CATEGORY>/<ID>_<slug>.md` | Canonical editable indicator — the unified ten-section contract |
 | `docs/rubric/<NN_CATEGORY>.md` | Canonical category index — links to every unified file in that category |
-| `docs/rubric/11_WEIGHTS_THRESHOLDS_CONFIG.md` | Canonical shared configuration — weights, thresholds, bands, gates, applicability |
-| `docs/rubric/00_EXECUTIVE_RUBRIC.md`, `templates/` | Derived views — regenerate/align from the canonical sources |
+| `docs/rubric/11_WEIGHTS_THRESHOLDS_CONFIG.md` | Canonical shared configuration — weights, formulas, thresholds, bands, gates, applicability |
+| `docs/rubric/00_EXECUTIVE_RUBRIC.md` | Authored guide — 0–3 scale, core-path taxonomy, rollup mechanics, audit planning; links every restated value |
+| `docs/rubric/00_SCORE_SHEET.md` | Generated score sheet — gate roster, per-indicator Yellow/Red flags, bands |
+| `docs/rubric/templates/SERVICE_SCORE_SHEET.md`, `docs/rubric/templates/SYSTEM_SCORE_SHEET.md` | Generated blank score sheets — derived rows, weights, deep-dive splits, gate checklist |
 | `openspec/specs/` | Current product behavior — authoritative for scan/report behavior |
 
 The only editable indicator source is `docs/rubric/indicators/`. A category index, generated registry, or OpenSpec reference must not become a second source.

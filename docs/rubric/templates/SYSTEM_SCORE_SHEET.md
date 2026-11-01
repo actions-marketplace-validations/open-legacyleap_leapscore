@@ -1,10 +1,14 @@
 # System Score Sheet — <System Name>
 
+> **GENERATED FILE — do not hand-edit.** Written by `tooling/scripts/compile-rubric.ts`
+> (`npm run compile:rubric`) from `docs/rubric/indicators/**` and
+> `docs/rubric/11_WEIGHTS_THRESHOLDS_CONFIG.md`. `npm run check:rubric-consistency` fails on any hand edit.
+
 **System:** ______ · **Auditor:** ______ · **Date:** ______ · **Audit type:** ☐ Screen (1 day) ☐ Standard (2–3 days) ☐ Deep (1–2 weeks)
 
-**Scoring legend:** 3 = Healthy · 2 = Minor debt · 1 = Severe debt · 0 = Critical · N/A = not applicable (excluded, reason in notes) · Unknown = applicable but unmeasurable (unscored, included in the frozen denominator) · Not implemented = no detector in this scanner release (excluded). Category % = (Σ measured and estimated scores ÷ ((measured + estimated + applicable unknown count) × 3)) × 100. Deep-dive rows are recorded on the service sheets and fold into category % when run and applicable. Weights come from `11_WEIGHTS_THRESHOLDS_CONFIG.md` — use the **FE-active** column if the system has a client.
+**Scoring legend:** 3 = Healthy · 2 = Minor debt · 1 = Severe debt · 0 = Critical · N/A = not applicable (excluded, reason in notes) · Unknown = applicable but unmeasurable (unscored, included in the frozen denominator) · Not implemented = no detector in this scanner release (excluded). Category % is the frozen-denominator formula in [`11_WEIGHTS_THRESHOLDS_CONFIG.md`](../11_WEIGHTS_THRESHOLDS_CONFIG.md) §2a. Deep-dive rows are recorded on the service sheets and fold into category % when run and applicable. Weights come from [`11`](../11_WEIGHTS_THRESHOLDS_CONFIG.md) §1 — use the **FE-active** column if the system has a client.
 
-**Instructions:** Fill one `SERVICE_SCORE_SHEET.md` per service. Enter each service's weighted score and criticality below, then compute the system rollup.
+**Instructions:** Fill one [`SERVICE_SCORE_SHEET.md`](./SERVICE_SCORE_SHEET.md) per service. Enter each service's weighted score and criticality below, then compute the system rollup.
 
 ---
 
@@ -13,15 +17,15 @@
 | # | Gate | Red Flag? | Evidence |
 |---|------|:---------:|----------|
 | G1 | Credential exposure (SEC-02) | ☐ Y ☐ N | |
-| G2 | Critical CVE > 14 days exposed (SEC-01) | ☐ Y ☐ N | |
+| G2 | Critical vuln exposure (SEC-01) | ☐ Y ☐ N | |
 | G3 | Runtime EOL, no path out (ECOS-01) | ☐ Y ☐ N | |
-| G4 | OWASP Top-10 reachable (SEC-03/04) | ☐ Y ☐ N | |
-| G5 | Core domain untested (TEST-06) | ☐ Y ☐ N | |
-| G6 | CFR > 30% + manual deploys (VEL-03/08) | ☐ Y ☐ N | |
-| G7 | Data-rescue risk, restore never proven (DATA-06) | ☐ Y ☐ N | |
+| G4 | OWASP Top-10 reachable (SEC-03, SEC-04) | ☐ Y ☐ N | |
+| G5 | Untested core (TEST-06) | ☐ Y ☐ N | |
+| G6 | Delivery is on fire (VEL-03, VEL-08) | ☐ Y ☐ N | |
+| G7 | Data-rescue risk (DATA-06) | ☐ Y ☐ N | |
 | G8 | Copyleft in closed-source distribution (ECOS-05) | ☐ Y ☐ N | |
 
-> Any ☐ Y → verdict capped at **High** (unless the numeric score is already below 27%, then Critical).
+> Any ☐ Y → see the escalation semantics in [`11_WEIGHTS_THRESHOLDS_CONFIG.md`](../11_WEIGHTS_THRESHOLDS_CONFIG.md) §3.
 
 ---
 
@@ -39,26 +43,26 @@
 | 8. ______ | ☐ 3 ☐ 1 | __% | __ |
 | **Totals** | Σ weights = ____ | | **Σ weighted = ____** |
 
-> **Note:** If you scored categories per-service, roll up **per category** instead (use the category % columns from each service sheet): System category% = Σ(service category% × service criticality) ÷ Σ weights. Then apply Part C weights.
+> **Note:** If you scored categories per-service, roll up **per category** instead (use the category % columns from each service sheet), then apply Part C weights.
 
 ---
 
 ## Part C — System rollup
 
-**Weights:** from `11_WEIGHTS_THRESHOLDS_CONFIG.md`. Mark which set applies: ☐ Base (no client) ☐ FE-active (client present → FE 10%, others ×0.9).
+**Weights:** from [`11_WEIGHTS_THRESHOLDS_CONFIG.md`](../11_WEIGHTS_THRESHOLDS_CONFIG.md) §1. Mark which set applies: ☐ Base (no client) ☐ FE-active (client present).
 
 | Category | System category % | Weight | Weighted |
 |----------|:-----------------:|:------:|:--------:|
-| Dependency & Ecosystem | __% | __% | __% |
-| Architecture & Code Quality | __% | __% | __% |
-| Testing & Quality | __% | __% | __% |
-| Security, Compliance & Vulnerability | __% | __% | __% |
-| Data & Schema | __% | __% | __% |
-| API & Integration | __% | __% | __% |
-| Developer Velocity & Operational | __% | __% | __% |
-| Performance & Cloud/Infrastructure | __% | __% | __% |
-| Documentation & Knowledge | __% | __% | __% |
-| Frontend & Client *(FE-active only)* | __% | __% | __% |
+| Dependency & Ecosystem Health | __% | 10% / 9% | __% |
+| Architecture & Code Quality | __% | 15% / 13.5% | __% |
+| Testing & Quality Engineering | __% | 10% / 9% | __% |
+| Security, Compliance & Vulnerability | __% | 20% / 18% | __% |
+| Data & Schema Evolution | __% | 10% / 9% | __% |
+| API & Integration Surface | __% | 10% / 9% | __% |
+| Developer Velocity & Operational Drag | __% | 10% / 9% | __% |
+| Performance & Cloud/Infrastructure Fit | __% | 10% / 9% | __% |
+| Documentation & Knowledge Continuity | __% | 5% / 4.5% | __% |
+| Frontend & Client Health *(FE-active only)* | __% | — / 10% | __% |
 | **SYSTEM SCORE** | | | **____%** |
 
 **Option 2 — service-level rollup (quick):** System score = Σ weighted ÷ Σ criticality weights (from Part B) = **____%** *(approximation; ignores FE renormalization)*.
@@ -67,7 +71,7 @@
 
 ## Part D — Verdict
 
-Band labels follow the canonical `11` §3 (Low / Moderate / High / Critical).
+Band labels follow the canonical [`11_WEIGHTS_THRESHOLDS_CONFIG.md`](../11_WEIGHTS_THRESHOLDS_CONFIG.md) §3.
 
 | Tier | Threshold | Result |
 |------|-----------|:------:|
@@ -75,7 +79,7 @@ Band labels follow the canonical `11` §3 (Low / Moderate / High / Critical).
 | Moderate | 53–79% | ☐ |
 | High | 27–52% | ☐ |
 | Critical | < 27% | ☐ |
-| **Gate override** (any G1–G8 Red Flag → cap at High) | | ☐ Applied ☐ Not applicable |
+| **Gate override** (any G1–G8 Red Flag → see [`11`](../11_WEIGHTS_THRESHOLDS_CONFIG.md) §3) | | ☐ Applied ☐ Not applicable |
 
 **FINAL VERDICT:** ______
 
@@ -95,4 +99,4 @@ Band labels follow the canonical `11` §3 (Low / Moderate / High / Critical).
 
 **Required before next audit (verification):** ______
 
-**Calibration feedback:** ☐ Any threshold here misclassified reality? If so, record it in `11_WEIGHTS_THRESHOLDS_CONFIG.md` §5.
+**Calibration feedback:** ☐ Any threshold here misclassified reality? If so, record it in [`11_WEIGHTS_THRESHOLDS_CONFIG.md`](../11_WEIGHTS_THRESHOLDS_CONFIG.md) §5.

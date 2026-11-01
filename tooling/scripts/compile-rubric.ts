@@ -8,6 +8,9 @@ const RUBRIC_DIR = join(ROOT, 'docs/rubric');
 const INDICATORS_DIR = join(RUBRIC_DIR, 'indicators');
 const OUT_JSON = join(ROOT, 'apps/scanner/src/scan/scoring/rubric.json');
 const OUT_TS = join(ROOT, 'apps/site/lib/generated/rubric.ts');
+const OUT_SCORE_SHEET = join(RUBRIC_DIR, '00_SCORE_SHEET.md');
+const OUT_SERVICE_TEMPLATE = join(RUBRIC_DIR, 'templates/SERVICE_SCORE_SHEET.md');
+const OUT_SYSTEM_TEMPLATE = join(RUBRIC_DIR, 'templates/SYSTEM_SCORE_SHEET.md');
 
 type Remediation = {
   quick_win: string;
@@ -26,6 +29,23 @@ type Indicator = {
   raw_effort: string;
   remediation: Remediation;
 };
+
+/**
+ * Documentation-only facts parsed from the canonical files. Kept out of `Indicator`
+ * on purpose: nothing here is read at runtime, and adding it to the payload would grow
+ * the registry — and therefore the inlined `dist/leapscore-scan.mjs` — for no consumer (design D3).
+ */
+type DocFacts = {
+  rollup: 'standard' | 'deep-dive';
+  gates: string[];
+  yellow_flag: string;
+  red_flag: string;
+};
+
+/** A row of `11_WEIGHTS_THRESHOLDS_CONFIG.md` §3's canonical gate roster. */
+type GateRow = { id: string; name: string; trigger: string; sources: string[] };
+/** A row of `11_WEIGHTS_THRESHOLDS_CONFIG.md` §3's canonical band table. */
+type TierRow = { tier: string; score: string; verdict: string };
 
 const CATEGORY_FILES: Array<{ file: string; dir: string; cat: string; label: string }> = [
   { file: '01_DEPENDENCY_ECOSYSTEM.md', dir: '01_DEPENDENCY_ECOSYSTEM', cat: 'ECOS', label: 'Dependency & Ecosystem Health' },
@@ -141,6 +161,139 @@ function parseIndicators(): Indicator[] {
   return indicators;
 }
 
+const FLAG_LABELS = { yellow: 'Yellow flag (warning)', red: 'Red flag (critical)' } as const;
+const UNKNOWN_ONLY_CELL = '— *(unknown-only: reduced form carries no §2 criteria)*';
+
+function stripRationale(value: string): string {
+  // The only transformation the echo is allowed to make (design D2): drop the trailing
+  // italicised "*(Rationale: …)*" aside. Nothing else — no truncation, no paraphrase.
+  return value.replace(/\s*\*\(Rationale:[\s\S]*\)\*\s*$/, '').trim();
+}
+
+function flagBullet(text: string, label: string, path: string): string {
+  const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const matches = [...text.matchAll(new RegExp(`^- \\*\\*${escaped}:\\*\\*\\s*(.+)$`, 'gm'))];
+  if (matches.length !== 1) {
+    throw new Error(`${path}: expected exactly one "- **${label}:**" bullet, found ${matches.length}`);
+  }
+  const value = stripRationale(matches[0][1]);
+  if (!value) throw new Error(`${path}: "- **${label}:**" bullet is empty after removing the rationale aside`);
+  return value;
+}
+
+/**
+ * A gate's source indicators are the rows whose §1 "Gates fed" cell opens with a bold gate
+ * ID. Conditional mentions ("co-drives **G3** with ECOS-01 when …") are deliberately not
+ * sources — they describe a co-drive, not a feed.
+ */
+function gateTokens(gatesFed: string): string[] {
+  const match = gatesFed.match(/^\*\*(G[1-8])\*\*/);
+  return match ? [match[1]] : [];
+}
+
+function isReducedForm(text: string): boolean {
+  // The approved reduced form (README "Full and reduced forms") is Identity + report-facing
+  // emission text + Scope/overlaps only; it has no scoring-semantics section. §8 statusing is
+  // not a reliable signal — many full rows legitimately emit `unknown` for the current release.
+  return !/^## 3\. Scoring semantics/m.test(text);
+}
+
+/** Escape a value for a Markdown table cell. */
+function cell(value: string): string {
+  return value.replace(/\|/g, '\\|');
+}
+
+/**
+ * Parse the documentation-only facts: §1 rollup classification and "Gates fed", plus the
+ * two §2 flag bullets. The whole catalog carries exactly one of each today, so parsing is
+ * total; a full-form file that loses a bullet fails the compile rather than emitting a
+ * silently empty cell.
+ */
+function parseDocFacts(): Map<string, DocFacts> {
+  const facts = new Map<string, DocFacts>();
+  for (const { dir } of CATEGORY_FILES) {
+    const categoryDir = join(INDICATORS_DIR, dir);
+    const files = readdirSync(categoryDir)
+      .filter((file) => file.endsWith('.md'))
+      .sort((a, b) => numericId(a) - numericId(b));
+    for (const file of files) {
+      const path = `${dir}/${file}`;
+      const text = readFileSync(join(categoryDir, file), 'utf-8');
+      const heading = text.match(/^#\s+([A-Z]+-\d+)\s+[—-]\s+([^\n]+)$/m);
+      if (!heading) throw new Error(`${path}: missing "# <ID> — <Name>" heading`);
+      const id = heading[1].trim();
+      const rollupValue = identityField(text, 'Rollup / deep-dive');
+      if (!/^(standard|deep-dive)\b/.test(rollupValue)) {
+        throw new Error(`${path}: "Rollup / deep-dive" must start with "standard" or "deep-dive", got "${rollupValue}"`);
+      }
+      const reduced = isReducedForm(text);
+      const entry: DocFacts = {
+        rollup: rollupValue.startsWith('deep-dive') ? 'deep-dive' : 'standard',
+        gates: gateTokens(identityField(text, 'Gates fed')),
+        // The reduced form declares an unknown-only contract and carries no §2 criteria:
+        // the sheet says so explicitly instead of inventing or leaving a blank cell.
+        yellow_flag: reduced ? UNKNOWN_ONLY_CELL : flagBullet(text, FLAG_LABELS.yellow, path),
+        red_flag: reduced ? UNKNOWN_ONLY_CELL : flagBullet(text, FLAG_LABELS.red, path),
+      };
+      const previous = facts.get(id);
+      if (previous) throw new Error(`duplicate ID ${id} while reading §2 criteria (${path})`);
+      facts.set(id, entry);
+    }
+  }
+  return facts;
+}
+
+/** Read the canonical G1–G8 roster from `11_WEIGHTS_THRESHOLDS_CONFIG.md` §3. */
+function readGateRoster(configText: string): GateRow[] {
+  const heading = '### Gate roster (G1–G8)';
+  const start = configText.indexOf(heading);
+  if (start === -1) {
+    throw new Error(`11_WEIGHTS_THRESHOLDS_CONFIG.md: missing "${heading}" — gate rules have no canonical home`);
+  }
+  const rest = configText.slice(start + heading.length);
+  const next = rest.search(/\n#{2,3} /);
+  const block = next === -1 ? rest : rest.slice(0, next);
+  const rows: GateRow[] = [];
+  for (const line of block.split('\n')) {
+    const match = line.match(/^\|\s*(G[1-8])\s*\|([^|]*)\|([^|]*)\|([^|]*)\|\s*$/);
+    if (!match) continue;
+    rows.push({
+      id: match[1],
+      name: match[2].trim(),
+      trigger: match[3].trim(),
+      sources: match[4].split(',').map((source) => source.trim()).filter(Boolean),
+    });
+  }
+  return rows;
+}
+
+/** Read the canonical band table from `11_WEIGHTS_THRESHOLDS_CONFIG.md` §3. */
+function readTierRows(configText: string): TierRow[] {
+  const rows: TierRow[] = [];
+  for (const line of configText.split('\n')) {
+    const match = line.match(/^\|\s*(Low|Moderate|High|Critical)\s*\|\s*([^|]*?)\s*\|\s*([^|]*?)\s*\|\s*$/);
+    if (match) rows.push({ tier: match[1], score: match[2].trim(), verdict: match[3].trim() });
+  }
+  return rows;
+}
+
+function readConfig(): string {
+  return readFileSync(join(RUBRIC_DIR, '11_WEIGHTS_THRESHOLDS_CONFIG.md'), 'utf-8');
+}
+
+/** Category weights, read from the compiled payload so the headings cannot drift from §1. */
+function weightLabel(cat: string, weights: ReturnType<typeof buildWeights>): string {
+  const base = (weights.base as Record<string, number>)[cat];
+  const fe = (weights.feActive as Record<string, number>)[cat];
+  return base == null ? `conditional · FE-active weight ${fe}% (no base weight)` : `weight ${base}% (FE-active ${fe}%)`;
+}
+
+function weightPair(cat: string, weights: ReturnType<typeof buildWeights>): string {
+  const base = (weights.base as Record<string, number>)[cat];
+  const fe = (weights.feActive as Record<string, number>)[cat];
+  return `${base == null ? '—' : `${base}%`} / ${fe == null ? '—' : `${fe}%`}`;
+}
+
 function buildWeights() {
   // keep canonical from 11_WEIGHTS_THRESHOLDS_CONFIG.md — hardcoded but validated by consistency check
   return {
@@ -218,7 +371,12 @@ function buildPayload(indicators: Indicator[]) {
 }
 
 /** Read the canonical category indexes and shared configuration, and fail on drift. */
-function validateSources(indicators: Indicator[]): string[] {
+function validateSources(
+  indicators: Indicator[],
+  facts: Map<string, DocFacts>,
+  gateRoster: GateRow[],
+  tierRows: TierRow[],
+): string[] {
   const problems: string[] = [];
   const idPattern = /^([A-Z]+)-(\d{2})$/;
   const byCategory = new Map<string, string[]>();
@@ -299,7 +457,7 @@ function validateSources(indicators: Indicator[]): string[] {
     }
   }
 
-  // 4. Shared configuration: weights, tiers, and gates in 11/00 match the compiled payload.
+  // 4. Shared configuration: weights and tiers in 11 match the compiled payload.
   const expected = buildPayload(indicators);
   const configText = readFileSync(join(RUBRIC_DIR, '11_WEIGHTS_THRESHOLDS_CONFIG.md'), 'utf-8');
   const weightTable = (heading: string): Record<string, number> => {
@@ -335,10 +493,40 @@ function validateSources(indicators: Indicator[]): string[] {
   if (!moderate || [Number(moderate[1]), Number(moderate[2])].join(',') !== expected.tiers.moderate.join(',')) problems.push(`11 tier threshold Moderate does not match compiled ${expected.tiers.moderate.join('–')}`);
   if (!high || [Number(high[1]), Number(high[2])].join(',') !== expected.tiers.highRisk.join(',')) problems.push(`11 tier threshold High does not match compiled ${expected.tiers.highRisk.join('–')}`);
   if (Number(critical) !== expected.tiers.critical) problems.push(`11 tier threshold Critical: ${critical} vs compiled ${expected.tiers.critical}`);
-  const executive = readFileSync(join(RUBRIC_DIR, '00_EXECUTIVE_RUBRIC.md'), 'utf-8');
-  const gateRows = [...executive.matchAll(/^\|\s*(G\d+)\s*\|/gm)].map((m) => m[1]);
-  if (gateRows.length !== expected.gates.length || gateRows.some((gate, index) => gate !== expected.gates[index])) {
-    problems.push(`00 gate roster [${gateRows.join(',')}] does not match compiled [${expected.gates.join(',')}]`);
+  // 5. Gate rules: the roster lives canonically in 11 §3, and its source column must agree
+  //    with the indicators' own §1 "Gates fed" rows. Neither derived document is consulted.
+  if (expected.indicators.length !== facts.size) {
+    problems.push(`§2 criteria parsed for ${facts.size} indicators, expected ${expected.indicators.length}`);
+  }
+  const rosterIds = gateRoster.map((row) => row.id);
+  if (rosterIds.length !== expected.gates.length || rosterIds.some((gate, index) => gate !== expected.gates[index])) {
+    problems.push(`11 §3 gate roster [${rosterIds.join(',')}] does not match compiled [${expected.gates.join(',')}]`);
+  }
+  const derivedSources = new Map<string, string[]>(expected.gates.map((gate) => [gate, []]));
+  for (const [id, fact] of facts) {
+    for (const gate of fact.gates) derivedSources.get(gate)?.push(id);
+  }
+  for (const row of gateRoster) {
+    const wanted = [...(derivedSources.get(row.id) ?? [])].sort();
+    const stated = [...row.sources].sort();
+    if (stated.join(',') !== wanted.join(',')) {
+      problems.push(`11 §3 ${row.id} source indicators [${stated.join(', ')}] do not match the "Gates fed" rows [${wanted.join(', ')}]`);
+    }
+  }
+
+  // 6. Band table: exactly the four canonical bands, in order.
+  const bandNames = tierRows.map((row) => row.tier);
+  if (bandNames.join(',') !== 'Low,Moderate,High,Critical') {
+    problems.push(`11 §3 band table [${bandNames.join(',')}] must list Low, Moderate, High, Critical`);
+  }
+
+  // 7. The canonical configuration must not defer a weight, threshold, band, or gate rule to a
+  //    derived document — that is the circularity this check exists to prevent.
+  for (const derivedDoc of ['00_SCORE_SHEET', '00_EXECUTIVE_RUBRIC', 'templates/SERVICE_SCORE_SHEET', 'templates/SYSTEM_SCORE_SHEET']) {
+    const deferral = configText.match(new RegExp(`\\b(?:see|per|refer to|defined in|documented in)\\b[^\\n]{0,60}${derivedDoc}`, 'i'));
+    if (deferral) {
+      problems.push(`11_WEIGHTS_THRESHOLDS_CONFIG.md defers to the derived document ${derivedDoc} — "${deferral[0].trim()}" — weights, thresholds, bands, and gate rules are defined here`);
+    }
   }
 
   return problems;
@@ -382,35 +570,282 @@ function writeGeneratedTs(indicators: Indicator[]) {
   console.log(`wrote ${OUT_TS} (${indicators.length} entries)`);
 }
 
+const GENERATED_BANNER = [
+  '> **GENERATED FILE — do not hand-edit.** Written by `tooling/scripts/compile-rubric.ts`',
+  '> (`npm run compile:rubric`) from `docs/rubric/indicators/**` and',
+  '> `docs/rubric/11_WEIGHTS_THRESHOLDS_CONFIG.md`. `npm run check:rubric-consistency` fails on any hand edit.',
+].join('\n');
+
+type DerivedDoc = { path: string; content: string };
+
+/**
+ * Emit the rubric's derived documents. One writer per file: these three carry nothing that
+ * is not parsed out of the canonical catalog or the shared configuration.
+ */
+function buildDerivedDocs(
+  indicators: Indicator[],
+  facts: Map<string, DocFacts>,
+  gates: GateRow[],
+  tiers: TierRow[],
+  weights: ReturnType<typeof buildWeights>,
+): DerivedDoc[] {
+  return [
+    { path: OUT_SCORE_SHEET, content: scoreSheet(indicators, facts, gates, tiers, weights) },
+    { path: OUT_SERVICE_TEMPLATE, content: serviceTemplate(indicators, facts, gates, weights) },
+    { path: OUT_SYSTEM_TEMPLATE, content: systemTemplate(gates, tiers, weights) },
+  ];
+}
+
+function scoreSheet(
+  indicators: Indicator[],
+  facts: Map<string, DocFacts>,
+  gates: GateRow[],
+  tiers: TierRow[],
+  weights: ReturnType<typeof buildWeights>,
+): string {
+  const standard = indicators.filter((indicator) => facts.get(indicator.id)?.rollup === 'standard').length;
+  const deepDive = indicators.length - standard;
+  const lines: string[] = [
+    '# 00 — Score Sheet *(generated)*',
+    '',
+    GENERATED_BANNER,
+    '',
+    'Print this sheet and write on it. Each row echoes its canonical file\'s §2 Yellow and Red flag',
+    'verbatim, with only the parenthetical rationale removed — no paraphrase, no truncation. The 0–3',
+    'scale and the core-path taxonomy live in [`00_EXECUTIVE_RUBRIC.md`](./00_EXECUTIVE_RUBRIC.md);',
+    'weights, formulas, bands, and the gate roster are canonical in',
+    '[`11_WEIGHTS_THRESHOLDS_CONFIG.md`](./11_WEIGHTS_THRESHOLDS_CONFIG.md).',
+    '',
+    `**Rows:** ${indicators.length} indicators (${standard} standard · ${deepDive} deep-dive) · **Gates:** ${gates.length} · **Bands:** ${tiers.length}`,
+    '',
+    '---',
+    '',
+    '## Part A — Gate roster (G1–G8)',
+    '',
+    'Restated from [`11_WEIGHTS_THRESHOLDS_CONFIG.md`](./11_WEIGHTS_THRESHOLDS_CONFIG.md) §3, which also',
+    'carries the trigger text and the escalation semantics.',
+    '',
+    '| # | Gate | Red Flag trigger | Source indicator |',
+    '|---|------|------------------|--------------------|',
+    ...gates.map((gate) => `| ${gate.id} | ${cell(gate.name)} | ${cell(gate.trigger)} | ${gate.sources.join(', ')} |`),
+    '',
+    '---',
+    '',
+    '## Part B — Bands',
+    '',
+    'Thresholds and verdict guidance are canonical in',
+    '[`11_WEIGHTS_THRESHOLDS_CONFIG.md`](./11_WEIGHTS_THRESHOLDS_CONFIG.md) §3.',
+    '',
+    '| Tier | Score | Verdict |',
+    '|------|-------|---------|',
+    ...tiers.map((tier) => `| ${tier.tier} | ${tier.score} | ${cell(tier.verdict)} |`),
+    '',
+    '---',
+    '',
+    '## Part C — Indicator criteria (all rows, grouped by category)',
+    '',
+    'Headings show the base and FE-active weights; use the FE-active column when the repo has a client.',
+    '',
+  ];
+  let position = 0;
+  for (const { cat, label } of CATEGORY_FILES) {
+    const rows = indicators.filter((indicator) => indicator.category === cat);
+    if (!rows.length) continue;
+    position++;
+    lines.push(`### ${position}. ${label} — ${weightLabel(cat, weights)}`, '');
+    lines.push('| ID | Indicator | Rollup | Yellow flag (1–2 pts) | Red flag (0 pts) |');
+    lines.push('|----|-----------|--------|----------------------|------------------|');
+    for (const indicator of rows) {
+      const fact = facts.get(indicator.id);
+      if (!fact) throw new Error(`${indicator.id}: no §2 criteria parsed for the score sheet`);
+      const glyph = indicator.effort.split(' ')[0] ?? '';
+      lines.push(`| ${indicator.id} | ${cell(indicator.name)} ${glyph} | ${fact.rollup} | ${cell(fact.yellow_flag)} | ${cell(fact.red_flag)} |`);
+    }
+    lines.push('');
+  }
+  return lines.join('\n');
+}
+
+function serviceTemplate(
+  indicators: Indicator[],
+  facts: Map<string, DocFacts>,
+  gates: GateRow[],
+  weights: ReturnType<typeof buildWeights>,
+): string {
+  const lines: string[] = [
+    '# Service Score Sheet — <Service Name>',
+    '',
+    GENERATED_BANNER,
+    '',
+    '**System:** ______ · **Service:** ______ · **Criticality:** ☐ Critical path (×3) ☐ Supporting (×1) · **Auditor:** ______ · **Date:** ______ · **Audit type:** ☐ Screen ☐ Standard ☐ Deep',
+    '',
+    '**Scoring legend:** 3 = Healthy (no flags) · 2 = Minor debt (yellow in non-core paths) · 1 = Severe debt (yellow in core OR red in isolated paths) · 0 = Critical (red in core OR across multiple paths) · **N/A** = not applicable (reason recorded; excluded) · **Unknown** = applicable but unmeasurable (unscored; included in the frozen denominator) · **Not implemented** = no detector in this scanner release (excluded).',
+    '',
+    '**Core-path rule:** core = files reachable from public entry points touching money / auth / PII / compliance (global taxonomy — [`00_EXECUTIVE_RUBRIC.md`](../00_EXECUTIVE_RUBRIC.md) Part 1). Per-indicator criteria live in its unified file under [`indicators/`](../indicators/).',
+    '',
+    '**Category %** is the frozen-denominator formula in [`11_WEIGHTS_THRESHOLDS_CONFIG.md`](../11_WEIGHTS_THRESHOLDS_CONFIG.md) §2a: unknown rows add denominator without numerator points; N/A and not-implemented rows are excluded; deep-dive rows fold in only when run and applicable.',
+    '',
+    'When a row is applicable but cannot be measured, leave its score blank and record `Unknown` in Notes/Evidence; include it in the applicable count. Record `Not implemented` distinctly and exclude it from the count.',
+    '',
+    '---',
+    '',
+  ];
+  let position = 0;
+  for (const { cat, label } of CATEGORY_FILES) {
+    const rows = indicators.filter((indicator) => indicator.category === cat);
+    if (!rows.length) continue;
+    position++;
+    const baseWeight = (weights.base as Record<string, number>)[cat];
+    const heading = baseWeight == null
+      ? `*(annex — FE-active only · weight ${(weights.feActive as Record<string, number>)[cat]}%)*`
+      : `(weight ${baseWeight}% / ${(weights.feActive as Record<string, number>)[cat]}% FE-active)`;
+    const standardRows = rows.filter((indicator) => facts.get(indicator.id)?.rollup === 'standard');
+    const deepRows = rows.filter((indicator) => facts.get(indicator.id)?.rollup === 'deep-dive');
+    lines.push(`## ${position}. ${label} ${heading}`, '');
+    lines.push('| ID | Indicator | Score (0–3 / N/A) | Notes / Evidence |');
+    lines.push('|----|-----------|:-----------------:|------------------|');
+    for (const indicator of standardRows) {
+      lines.push(`| ${indicator.id} | ${cell(indicator.name)} | | |`);
+    }
+    lines.push('| | **Subtotal** | **___ / ___ applicable** | **Category % = ___%** |', '');
+    if (deepRows.length) {
+      lines.push(`Deep-dive: ${deepRows.map((indicator) => `${indicator.id} ☐ score __`).join(' · ')} *— folded in when run*`, '');
+    } else {
+      lines.push('Deep-dive: none — this category has no deep-dive rows.', '');
+    }
+    lines.push('---', '');
+  }
+  lines.push('## Service rollup', '');
+  lines.push('| Category | Category % | Weight (base / FE-active) | Weighted |');
+  lines.push('|----------|-----------:|:-------------------------:|---------:|');
+  for (const { cat, label } of CATEGORY_FILES) {
+    const name = cat === 'FE' ? `${label} *(FE-active only)*` : label;
+    lines.push(`| ${cell(name)} | __% | ${weightPair(cat, weights)} | __% |`);
+  }
+  lines.push('| **Service weighted score** | | | **__%** |', '');
+  lines.push('> ✓ pick the weight column matching whether this system has a client.', '');
+  lines.push(`**Gates triggered by this service:** ☐ none${gates.map((gate) => ` ☐ ${gate.id} ${gate.name}`).join('')}`, '');
+  lines.push('**Top 3 modernization blockers found in this service:**', '1. ______', '2. ______', '3. ______', '');
+  return lines.join('\n');
+}
+
+function systemTemplate(
+  gates: GateRow[],
+  tiers: TierRow[],
+  weights: ReturnType<typeof buildWeights>,
+): string {
+  const lines: string[] = [
+    '# System Score Sheet — <System Name>',
+    '',
+    GENERATED_BANNER,
+    '',
+    '**System:** ______ · **Auditor:** ______ · **Date:** ______ · **Audit type:** ☐ Screen (1 day) ☐ Standard (2–3 days) ☐ Deep (1–2 weeks)',
+    '',
+    '**Scoring legend:** 3 = Healthy · 2 = Minor debt · 1 = Severe debt · 0 = Critical · N/A = not applicable (excluded, reason in notes) · Unknown = applicable but unmeasurable (unscored, included in the frozen denominator) · Not implemented = no detector in this scanner release (excluded). Category % is the frozen-denominator formula in [`11_WEIGHTS_THRESHOLDS_CONFIG.md`](../11_WEIGHTS_THRESHOLDS_CONFIG.md) §2a. Deep-dive rows are recorded on the service sheets and fold into category % when run and applicable. Weights come from [`11`](../11_WEIGHTS_THRESHOLDS_CONFIG.md) §1 — use the **FE-active** column if the system has a client.',
+    '',
+    '**Instructions:** Fill one [`SERVICE_SCORE_SHEET.md`](./SERVICE_SCORE_SHEET.md) per service. Enter each service\'s weighted score and criticality below, then compute the system rollup.',
+    '',
+    '---',
+    '',
+    '## Part A — Gate check (read first, decide first)',
+    '',
+    '| # | Gate | Red Flag? | Evidence |',
+    '|---|------|:---------:|----------|',
+    ...gates.map((gate) => `| ${gate.id} | ${cell(gate.name)} (${gate.sources.join(', ')}) | ☐ Y ☐ N | |`),
+    '',
+    '> Any ☐ Y → see the escalation semantics in [`11_WEIGHTS_THRESHOLDS_CONFIG.md`](../11_WEIGHTS_THRESHOLDS_CONFIG.md) §3.',
+    '',
+    '---',
+    '',
+    '## Part B — Per-service scores',
+    '',
+    '| Service | Criticality (×3 / ×1) | Weighted score % | Weighted score × criticality |',
+    '|---------|:---------------------:|:----------------:|:---------------------------:|',
+  ];
+  for (let index = 1; index <= 8; index++) {
+    lines.push(`| ${index}. ______ | ☐ 3 ☐ 1 | __% | __ |`);
+  }
+  lines.push('| **Totals** | Σ weights = ____ | | **Σ weighted = ____** |', '');
+  lines.push('> **Note:** If you scored categories per-service, roll up **per category** instead (use the category % columns from each service sheet), then apply Part C weights.', '');
+  lines.push('---', '');
+  lines.push('## Part C — System rollup', '');
+  lines.push('**Weights:** from [`11_WEIGHTS_THRESHOLDS_CONFIG.md`](../11_WEIGHTS_THRESHOLDS_CONFIG.md) §1. Mark which set applies: ☐ Base (no client) ☐ FE-active (client present).', '');
+  lines.push('| Category | System category % | Weight | Weighted |');
+  lines.push('|----------|:-----------------:|:------:|:--------:|');
+  for (const { cat, label } of CATEGORY_FILES) {
+    const name = cat === 'FE' ? `${label} *(FE-active only)*` : label;
+    lines.push(`| ${cell(name)} | __% | ${weightPair(cat, weights)} | __% |`);
+  }
+  lines.push('| **SYSTEM SCORE** | | | **____%** |', '');
+  lines.push('**Option 2 — service-level rollup (quick):** System score = Σ weighted ÷ Σ criticality weights (from Part B) = **____%** *(approximation; ignores FE renormalization)*.', '');
+  lines.push('---', '');
+  lines.push('## Part D — Verdict', '');
+  lines.push('Band labels follow the canonical [`11_WEIGHTS_THRESHOLDS_CONFIG.md`](../11_WEIGHTS_THRESHOLDS_CONFIG.md) §3.', '');
+  lines.push('| Tier | Threshold | Result |');
+  lines.push('|------|-----------|:------:|');
+  for (const tier of tiers) lines.push(`| ${tier.tier} | ${tier.score} | ☐ |`);
+  lines.push(`| **Gate override** (any G1–G8 Red Flag → see [\`11\`](../11_WEIGHTS_THRESHOLDS_CONFIG.md) §3) | | ☐ Applied ☐ Not applicable |`, '');
+  lines.push('**FINAL VERDICT:** ______', '');
+  lines.push('---', '');
+  lines.push('## Part E — Modernization decision', '');
+  lines.push('- ☐ **Maintain:** continuous refactoring + incremental dependency updates.');
+  lines.push('- ☐ **Refactor:** dedicated sprints; priority = security + EOL dependencies + highest-risk gates.');
+  lines.push('- ☐ **Modernize (isolate + rebuild):** facade around core domain; migrate module-by-module; treat as initiative.');
+  lines.push('- ☐ **Rewrite / Rescue:** critical risk; scope a rescue or containment strategy; freeze new debt.', '');
+  lines.push('**Recommended first 90 days (top blockers, one line each):**', '1. ______', '2. ______', '3. ______', '');
+  lines.push('**Required before next audit (verification):** ______', '');
+  lines.push('**Calibration feedback:** ☐ Any threshold here misclassified reality? If so, record it in [`11_WEIGHTS_THRESHOLDS_CONFIG.md`](../11_WEIGHTS_THRESHOLDS_CONFIG.md) §5.', '');
+  return lines.join('\n');
+}
+
+function writeDerivedDocs(docs: DerivedDoc[]) {
+  for (const doc of docs) {
+    mkdirSync(dirname(doc.path), { recursive: true });
+    writeFileSync(doc.path, doc.content, 'utf-8');
+    console.log(`wrote ${doc.path}`);
+  }
+}
+
+function loadCanonical() {
+  const indicators = parseIndicators();
+  const facts = parseDocFacts();
+  const configText = readConfig();
+  const gates = readGateRoster(configText);
+  const tiers = readTierRows(configText);
+  return { indicators, facts, gates, tiers, configText };
+}
+
 function doCompile() {
-  let indicators: Indicator[];
+  let sources: ReturnType<typeof loadCanonical>;
   try {
-    indicators = parseIndicators();
+    sources = loadCanonical();
   } catch (error) {
     console.error(`compile:rubric failed — cannot read canonical indicator files: ${(error as Error).message}`);
     process.exit(1);
   }
-  const sourceProblems = validateSources(indicators);
+  const sourceProblems = validateSources(sources.indicators, sources.facts, sources.gates, sources.tiers);
   if (sourceProblems.length) {
     console.error('compile:rubric failed — canonical source validation:');
     for (const problem of sourceProblems.slice(0, 40)) console.error('  - ' + problem);
     if (sourceProblems.length > 40) console.error(`  ... and ${sourceProblems.length - 40} more`);
     process.exit(1);
   }
-  const payload = buildPayload(indicators);
+  const payload = buildPayload(sources.indicators);
   writeJson(payload);
-  writeGeneratedTs(indicators);
+  writeGeneratedTs(sources.indicators);
+  writeDerivedDocs(buildDerivedDocs(sources.indicators, sources.facts, sources.gates, sources.tiers, payload.weights));
 }
 
 function doCheck() {
-  let indicators: Indicator[];
+  let sources: ReturnType<typeof loadCanonical>;
   try {
-    indicators = parseIndicators();
+    sources = loadCanonical();
   } catch (error) {
     console.error(`check:rubric-consistency failed — cannot read canonical indicator files: ${(error as Error).message}`);
     process.exit(1);
   }
-  const sourceProblems = validateSources(indicators);
+  const indicators = sources.indicators;
+  const sourceProblems = validateSources(indicators, sources.facts, sources.gates, sources.tiers);
   if (sourceProblems.length) {
     console.error('check:rubric-consistency failed — canonical source validation:');
     for (const problem of sourceProblems.slice(0, 40)) console.error('  - ' + problem);
@@ -458,6 +893,52 @@ function doCheck() {
       process.exit(1);
     }
   }
+  // Derived documents are generated, not authored: byte-equality against a fresh compile.
+  // A hand edit fails here, naming the file and the first differing line (design D5).
+  const derivedProblems: string[] = [];
+  for (const doc of buildDerivedDocs(indicators, sources.facts, sources.gates, sources.tiers, expected.weights)) {
+    const relative = doc.path.slice(ROOT.length + 1);
+    if (!existsSync(doc.path)) {
+      derivedProblems.push(`${relative}: missing generated document — run npm run compile:rubric`);
+      continue;
+    }
+    const actualDoc = readFileSync(doc.path, 'utf-8');
+    if (actualDoc === doc.content) continue;
+    const wanted = doc.content.split('\n');
+    const found = actualDoc.split('\n');
+    let line = 0;
+    while (line < wanted.length && line < found.length && wanted[line] === found[line]) line++;
+    derivedProblems.push(`${relative}:${line + 1}: hand-edited or stale — run npm run compile:rubric`);
+    derivedProblems.push(`    expected: ${(wanted[line] ?? '<end of file>').slice(0, 160)}`);
+    derivedProblems.push(`    actual:   ${(found[line] ?? '<end of file>').slice(0, 160)}`);
+  }
+
+  // The authored guide must not restate a value that has a canonical or generated home
+  // (design D6). Each rule targets one thing that is defined elsewhere; the message says where.
+  const guidePath = join(RUBRIC_DIR, '00_EXECUTIVE_RUBRIC.md');
+  const GUIDE_RULES: Array<{ rule: string; pattern: RegExp; home: string }> = [
+    { rule: 'per-indicator table row', pattern: /^\|\s*[A-Z]+-\d+\s*\|/m, home: '00_SCORE_SHEET.md Part C or the indicator file' },
+    { rule: 'category weight percentage', pattern: /\bweight\s+\d+(?:\.\d+)?\s*%/i, home: '11_WEIGHTS_THRESHOLDS_CONFIG.md §1' },
+    { rule: 'category weight percentage', pattern: /^\|[^|\n]*\|\s*\d+(?:\.\d+)?\s*%\s*\|/m, home: '11_WEIGHTS_THRESHOLDS_CONFIG.md §1' },
+    { rule: 'band threshold literal', pattern: /\b(?:80|53|27)\s*%|\d+(?:\.\d+)?\s*–\s*\d+(?:\.\d+)?\s*%/, home: '11_WEIGHTS_THRESHOLDS_CONFIG.md §3' },
+    { rule: 'gate roster row', pattern: /^\|\s*G[1-8]\b/m, home: '11_WEIGHTS_THRESHOLDS_CONFIG.md §3' },
+    { rule: 'rollup formula block', pattern: /```[^`]*?(?:Category%|System score|System category%)[^`]*?```/s, home: '11_WEIGHTS_THRESHOLDS_CONFIG.md §2' },
+  ];
+  if (!existsSync(guidePath)) {
+    derivedProblems.push('00_EXECUTIVE_RUBRIC.md: missing authored guide');
+  } else {
+    const guide = readFileSync(guidePath, 'utf-8');
+    for (const { rule, pattern, home } of GUIDE_RULES) {
+      const match = guide.match(pattern);
+      if (match) derivedProblems.push(`00_EXECUTIVE_RUBRIC.md: duplicated ${rule} — "${match[0].trim().replace(/\s+/g, ' ').slice(0, 80)}" (canonical home: ${home})`);
+    }
+  }
+  if (derivedProblems.length) {
+    console.error('check:rubric-consistency failed — derived rubric documents:');
+    for (const problem of derivedProblems) console.error('  - ' + problem);
+    process.exit(1);
+  }
+
   // remediation presence warning (allow ≤5% fallback/missing)
   const emptyRemediation = expected.indicators.filter(i => !i.remediation.quick_win);
   if (emptyRemediation.length) {
