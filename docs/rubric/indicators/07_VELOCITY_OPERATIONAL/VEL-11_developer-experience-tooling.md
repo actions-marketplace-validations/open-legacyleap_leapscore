@@ -1,8 +1,6 @@
 # VEL-11 — Developer Experience Tooling
 
-> **Canonical unified indicator contract.** This file combines the rubric semantics and implementation contract for VEL-11. Edit this file; the legacy path [vel-11_developer-experience-tooling.md](../../../specs/07_VELOCITY_OPERATIONAL/vel-11_developer-experience-tooling.md) is a compatibility alias.
 > **Category:** [Developer Velocity & Operational Drag](../../07_VELOCITY_OPERATIONAL.md) · **Shared configuration:** [11_WEIGHTS_THRESHOLDS_CONFIG.md](../../11_WEIGHTS_THRESHOLDS_CONFIG.md) · **Catalog guide:** [README.md](../../README.md)
-> **Canonical path:** `docs/rubric/indicators/07_VELOCITY_OPERATIONAL/VEL-11_developer-experience-tooling.md`
 
 ## 1. Identity
 

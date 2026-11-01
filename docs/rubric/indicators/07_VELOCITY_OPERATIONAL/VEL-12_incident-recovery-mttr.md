@@ -1,8 +1,6 @@
 # VEL-12 — Incident Recovery / MTTR
 
-> **Canonical unified indicator contract.** This file combines the rubric semantics and implementation contract for VEL-12. Edit this file; the legacy path [vel-12_incident-recovery-mttr.md](../../../specs/07_VELOCITY_OPERATIONAL/vel-12_incident-recovery-mttr.md) is a compatibility alias.
 > **Category:** [Developer Velocity & Operational Drag](../../07_VELOCITY_OPERATIONAL.md) · **Shared configuration:** [11_WEIGHTS_THRESHOLDS_CONFIG.md](../../11_WEIGHTS_THRESHOLDS_CONFIG.md) · **Catalog guide:** [README.md](../../README.md)
-> **Canonical path:** `docs/rubric/indicators/07_VELOCITY_OPERATIONAL/VEL-12_incident-recovery-mttr.md`
 
 ## 1. Identity
 

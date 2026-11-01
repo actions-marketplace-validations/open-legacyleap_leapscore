@@ -1,8 +1,6 @@
 # FE-03 — Accessibility Deficits
 
-> **Canonical unified indicator contract.** This file combines the rubric semantics and implementation contract for FE-03. Edit this file; the legacy path [fe-03_accessibility-deficits.md](../../../specs/10_FRONTEND_CLIENT/fe-03_accessibility-deficits.md) is a compatibility alias.
 > **Category:** [Frontend & Client Health](../../10_FRONTEND_CLIENT.md) · **Shared configuration:** [11_WEIGHTS_THRESHOLDS_CONFIG.md](../../11_WEIGHTS_THRESHOLDS_CONFIG.md) · **Catalog guide:** [README.md](../../README.md)
-> **Canonical path:** `docs/rubric/indicators/10_FRONTEND_CLIENT/FE-03_accessibility-deficits.md`
 
 ## 1. Identity
 

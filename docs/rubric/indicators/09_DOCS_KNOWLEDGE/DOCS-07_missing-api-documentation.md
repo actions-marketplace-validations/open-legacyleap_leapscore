@@ -1,8 +1,6 @@
 # DOCS-07 — Missing API Documentation
 
-> **Canonical unified indicator contract.** This file combines the rubric semantics and implementation contract for DOCS-07. Edit this file; the legacy path [docs-07_missing-api-documentation.md](../../../specs/09_DOCS_KNOWLEDGE/docs-07_missing-api-documentation.md) is a compatibility alias.
 > **Category:** [Documentation & Knowledge Continuity](../../09_DOCS_KNOWLEDGE.md) · **Shared configuration:** [11_WEIGHTS_THRESHOLDS_CONFIG.md](../../11_WEIGHTS_THRESHOLDS_CONFIG.md) · **Catalog guide:** [README.md](../../README.md)
-> **Canonical path:** `docs/rubric/indicators/09_DOCS_KNOWLEDGE/DOCS-07_missing-api-documentation.md`
 
 ## 1. Identity
 

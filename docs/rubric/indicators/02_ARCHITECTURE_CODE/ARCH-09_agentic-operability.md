@@ -1,8 +1,6 @@
 # ARCH-09 — Agentic Operability (AI/LLM Codebase-Readiness)
 
-> **Canonical unified indicator contract.** This file combines the rubric semantics and implementation contract for ARCH-09. Edit this file; the legacy path [arch-09_agentic-operability.md](../../../specs/02_ARCHITECTURE_CODE/arch-09_agentic-operability.md) is a compatibility alias.
 > **Category:** [Architecture & Code Quality](../../02_ARCHITECTURE_CODE.md) · **Shared configuration:** [11_WEIGHTS_THRESHOLDS_CONFIG.md](../../11_WEIGHTS_THRESHOLDS_CONFIG.md) · **Catalog guide:** [README.md](../../README.md)
-> **Canonical path:** `docs/rubric/indicators/02_ARCHITECTURE_CODE/ARCH-09_agentic-operability.md`
 
 ## 1. Identity
 

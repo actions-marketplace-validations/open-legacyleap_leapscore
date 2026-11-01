@@ -1,8 +1,6 @@
 # PERF-01 — Observability Gaps
 
-> **Canonical unified indicator contract.** This file combines the rubric semantics and implementation contract for PERF-01. Edit this file; the legacy path [perf-01_observability-gaps.md](../../../specs/08_PERFORMANCE_CLOUD/perf-01_observability-gaps.md) is a compatibility alias.
 > **Category:** [Performance & Cloud/Infrastructure Fit](../../08_PERFORMANCE_CLOUD.md) · **Shared configuration:** [11_WEIGHTS_THRESHOLDS_CONFIG.md](../../11_WEIGHTS_THRESHOLDS_CONFIG.md) · **Catalog guide:** [README.md](../../README.md)
-> **Canonical path:** `docs/rubric/indicators/08_PERFORMANCE_CLOUD/PERF-01_observability-gaps.md`
 
 ## 1. Identity
 

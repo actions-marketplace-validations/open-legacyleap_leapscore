@@ -1,8 +1,6 @@
 # ECOS-07 — Build Reproducibility & Lockfile Integrity
 
-> **Canonical unified indicator contract.** This file combines the rubric semantics and implementation contract for ECOS-07. Edit this file; the legacy path [ecos-07_build-reproducibility-lockfile-integrity.md](../../../specs/01_DEPENDENCY_ECOSYSTEM/ecos-07_build-reproducibility-lockfile-integrity.md) is a compatibility alias.
 > **Category:** [Dependency & Ecosystem Health](../../01_DEPENDENCY_ECOSYSTEM.md) · **Shared configuration:** [11_WEIGHTS_THRESHOLDS_CONFIG.md](../../11_WEIGHTS_THRESHOLDS_CONFIG.md) · **Catalog guide:** [README.md](../../README.md)
-> **Canonical path:** `docs/rubric/indicators/01_DEPENDENCY_ECOSYSTEM/ECOS-07_build-reproducibility-lockfile-integrity.md`
 
 ## 1. Identity
 

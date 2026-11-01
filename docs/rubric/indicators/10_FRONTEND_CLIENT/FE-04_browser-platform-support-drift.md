@@ -1,8 +1,6 @@
 # FE-04 — Browser / Platform Support Drift
 
-> **Canonical unified indicator contract.** This file combines the rubric semantics and implementation contract for FE-04. Edit this file; the legacy path [fe-04_browser-platform-support-drift.md](../../../specs/10_FRONTEND_CLIENT/fe-04_browser-platform-support-drift.md) is a compatibility alias.
 > **Category:** [Frontend & Client Health](../../10_FRONTEND_CLIENT.md) · **Shared configuration:** [11_WEIGHTS_THRESHOLDS_CONFIG.md](../../11_WEIGHTS_THRESHOLDS_CONFIG.md) · **Catalog guide:** [README.md](../../README.md)
-> **Canonical path:** `docs/rubric/indicators/10_FRONTEND_CLIENT/FE-04_browser-platform-support-drift.md`
 
 ## 1. Identity
 

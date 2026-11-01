@@ -1,8 +1,6 @@
 # DATA-05 — Lock Contention & Scaling Bottleneck
 
-> **Canonical unified indicator contract.** This file combines the rubric semantics and implementation contract for DATA-05. Edit this file; the legacy path [data-05_lock-contention-scaling-bottleneck.md](../../../specs/05_DATA_SCHEMA/data-05_lock-contention-scaling-bottleneck.md) is a compatibility alias.
 > **Category:** [Data & Schema Evolution](../../05_DATA_SCHEMA.md) · **Shared configuration:** [11_WEIGHTS_THRESHOLDS_CONFIG.md](../../11_WEIGHTS_THRESHOLDS_CONFIG.md) · **Catalog guide:** [README.md](../../README.md)
-> **Canonical path:** `docs/rubric/indicators/05_DATA_SCHEMA/DATA-05_lock-contention-scaling-bottleneck.md`
 
 ## 1. Identity
 

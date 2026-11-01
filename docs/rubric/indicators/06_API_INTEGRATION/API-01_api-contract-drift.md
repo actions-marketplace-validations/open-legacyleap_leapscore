@@ -1,8 +1,6 @@
 # API-01 — API Contract Drift
 
-> **Canonical unified indicator contract.** This file combines the rubric semantics and implementation contract for API-01. Edit this file; the legacy path [api-01_api-contract-drift.md](../../../specs/06_API_INTEGRATION/api-01_api-contract-drift.md) is a compatibility alias.
 > **Category:** [API & Integration Surface](../../06_API_INTEGRATION.md) · **Shared configuration:** [11_WEIGHTS_THRESHOLDS_CONFIG.md](../../11_WEIGHTS_THRESHOLDS_CONFIG.md) · **Catalog guide:** [README.md](../../README.md)
-> **Canonical path:** `docs/rubric/indicators/06_API_INTEGRATION/API-01_api-contract-drift.md`
 
 ## 1. Identity
 

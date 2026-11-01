@@ -1,8 +1,6 @@
 # SEC-09 — Input Robustness & Fuzzing
 
-> **Canonical unified indicator contract.** This file combines the rubric semantics and implementation contract for SEC-09. Edit this file; the legacy path [sec-09_input-robustness-fuzzing.md](../../../specs/04_SECURITY_COMPLIANCE/sec-09_input-robustness-fuzzing.md) is a compatibility alias.
 > **Category:** [Security, Compliance & Vulnerability](../../04_SECURITY_COMPLIANCE.md) · **Shared configuration:** [11_WEIGHTS_THRESHOLDS_CONFIG.md](../../11_WEIGHTS_THRESHOLDS_CONFIG.md) · **Catalog guide:** [README.md](../../README.md)
-> **Canonical path:** `docs/rubric/indicators/04_SECURITY_COMPLIANCE/SEC-09_input-robustness-fuzzing.md`
 
 ## 1. Identity
 

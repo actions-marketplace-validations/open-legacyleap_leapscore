@@ -28,9 +28,6 @@ action/                checkout-first GitHub Action over the committed dist
 docs/rubric/           unified indicator catalog (canonical): one file per ID under
                        indicators/<NN_CATEGORY>/ combining semantics + implementation;
                        category indexes 01–10 + 11_WEIGHTS…CONFIG (shared config)
-docs/specs/            compatibility aliases only (legacy paths → canonical indicator files)
-docs/plans/            retired path stubs (current behavior belongs to openspec/)
-docs/notes/            open-source release readiness + gap analysis (dated working notes)
 openspec/              live change specs — specs/ is current truth, changes/archive/* is history
 tooling/checks/        detector-isolation · site-boundary · surface-boundary · bin-wiring ·
                        dist-freshness · schemas · documentation-structure
@@ -51,19 +48,17 @@ Root `package.json` workspaces: `apps/*`, `packages/*`, `action`. Run `npm run c
 
 - **Scanner is a standalone service, colocated engine + entries** (`apps/scanner`). The former `packages/engine` is gone; the engine lives under `apps/scanner/src/scan/` and its scoring under `src/scan/scoring/`. The scanner is **stateless**: no permanent disk, no served reports, no permalinks — the terminal `report` frame is the sole scan artefact.
 - **Scan paths live:** `runUnifiedScan` (`src/scan/orchestrator.ts`) for remote targets — GH-API lane + shallow clone (`--filter=blob:none`) under one indicator-count-driven deadline (`budgetForIndicators`, clamp 10s–240s, plus a 240s wall-clock killer that fails the run without sealing). `runLocalScan` (`src/scan/local.ts`) scans a directory with the 25 clone-capable detectors — no clone, no GH-API. `orchestrator.phase1.ts` (`runPhase1Scan`) is the GH-API-only path, kept for back-compat.
-- **Coverage live:** 31 detectors (6 GH-API + 25 clone/local) of 102 indicators; the other 71 seal as `not_implemented` and render as honest stubs. The 19-row MVP slice is a **subset** of what ships (its rationale is historical, in the retired planning corpus).
+- **Coverage live:** 31 detectors (6 GH-API + 25 clone/local) of 102 indicators; the other 71 seal as `not_implemented` and render as honest stubs. The 19-row MVP slice is a **subset** of what ships (its rationale is historical).
 - **Terminal scoring is shared:** `src/scan/scoring/seal.ts` (`sealScan`) is the single composer for both the HTTP service and the CLI — score (frozen denominator by default), gates incl. the kill-switch cap, coverage, top blockers, derived next-band path, provenance manifest, `score_fingerprint`, `runId`.
 - **Presentation:** the site never executes a scan. `/live` streams the scanner's NDJSON cross-origin; `/reports` + `/reports/[runId]` render **site-owned** history (v1 = one committed static fixture, no request-time filesystem reads). There is **no `/api/scan` and no site-side live provider** — `lib/provider.ts` is the sample seam only, and `lib/provider.live.ts` / `LiveReportProvider` no longer exist.
 - **Surfacing is a separate app:** `apps/surface` turns a sealed envelope into labeled issues, warn-only, with its own token (`SURFACE_TOKEN`) so the scanner keeps `contents:read` only.
-- **Decisions live in `openspec/`:** `openspec/changes/*` + `openspec/specs/*` carry everything built after the MVP (unified budget, deterministic scoring, measurement honesty, offline snapshots, legacy stacks, band path, baseline diff, score badge, release packaging). The retired planning corpus remains only as path stubs plus git history.
+- **Decisions live in `openspec/`:** `openspec/changes/*` + `openspec/specs/*` carry everything built after the MVP (unified budget, deterministic scoring, measurement honesty, offline snapshots, legacy stacks, band path, baseline diff, score badge, release packaging). Superseded planning material survives only in git history.
 
-## Two live doc trees, plus compatibility paths
+## Two live doc trees
 
 - `docs/rubric/indicators/` — the unified catalog: one canonical file per indicator combining rubric semantics and the implementation contract. **This is the product.**
 - `docs/rubric/01`–`10` — category indexes (navigation only); `11_WEIGHTS_THRESHOLDS_CONFIG.md` — shared scoring configuration.
 - `openspec/` — `openspec/specs/` is the current truth for scan/report behavior; `openspec/changes/archive/*` is history.
-- `docs/specs/` — compatibility aliases (legacy spec paths → canonical indicator files). Never edit an alias.
-- `docs/plans/` — retired path stubs. The authored planning corpus is not a maintained source; replacements are OpenSpec, the unified catalog, `docs/PRODUCT.md`, and the app READMEs.
 
 ## The cardinal rule: canonical vs. derived views
 
@@ -81,13 +76,8 @@ Consequences: changing an indicator's thresholds/status → edit its unified fil
 - **Tags:** engine tier `A/B/C/D`, `Default status: measured/estimated/unknown`, `Scope/overlaps:` — every new/organized entry gets all three so applicability stays derivable. `Scope/overlaps` is how sibling indicators avoid double-counting; define it explicitly against the closest neighbors.
 - **Verify effort symbols:** ⚡ ≤30 min · 🔶 ~2–4 h · 🔷 ~1–2 days. The same tag drives the next-band path's cost classes (`⚡` sprint · `🔶` quarter · `🔷` structural).
 - **Gates:** G1–G8 are the absolute kill-switches. A `proven` gate **caps the sealed band at High** (a score already in `Critical` stays there — the cap is a ceiling, never a floor) and the cap is disclosed on the sealed headline (`gate_capped`, `uncapped_tier`, `capped_by_gates`). A gate whose source rows are all unknown/`not_implemented` is `unevaluable` and is stated, never silently counted as clear. Read `00_EXECUTIVE_RUBRIC.md` Part 0 before touching anything score-model related.
-
-## Compatibility paths (docs/specs, docs/plans)
-
-- **Aliases are not sources.** Each `docs/specs/<NN_CATEGORY>/<id>_*.md` file is a short, deprecated alias carrying the ID, canonical target, and a link to the unified file. It contains no contract body and fails `npm run check:documentation-structure` if contract sections appear.
-- **Plans are retired.** `docs/plans/` holds a retirement notice plus path-level stubs. Keep a stub when an established link or `check:bin-wiring` requires the path; point it at the current replacement. Do not restore plan prose.
 - **Skeleton/normative conventions:** the ten-section skeleton, full/reduced-form rules, statuses/clamp/confidence, strict N/A rule, budget classes, tool pinning, fact naming, and evidence grammar are defined once in `docs/rubric/README.md`.
-- **Historical arbitration record:** the former per-indicator specs arbitrated drift against the retired matrix; those rulings are preserved in `docs/specs/README.md` as history. The unified identity tables carry the values the compiled registry has always shipped. Reconciling the recorded rulings is a separate future change, not a second source of truth.
+- **Historical arbitration:** superseded per-indicator rulings are preserved in OpenSpec history, never as a second source of truth. The unified identity tables carry the values the compiled registry has always shipped; reconciling recorded divergences is a separate future change.
 
 ## Weights & scoring model (quick recap)
 
@@ -104,7 +94,7 @@ Consequences: changing an indicator's thresholds/status → edit its unified fil
 - **Only `apps/scanner/src/scan/gh.ts` may call `fetch`** (`check:detector-isolation`); detectors get data through the read-only, byte-capped `readFile` and the injected GH client.
 - **The surface app is separate from the scanner** (`check:surface-boundary`): scan and issue-write never share a process or token.
 - **Every documented command must resolve after a clean install** (`check:bin-wiring`) and the committed Action dist must be byte-identical to its sources (`check:dist`).
-- **One canonical file per indicator** (`check:rubric-consistency`, `check:schemas`, `check:documentation-structure`): exactly 102 unified files under `docs/rubric/indicators/`, category indexes link all of them, detector schemas resolve to their indicator's §7 fact schema, `docs/specs/` paths are alias-only, and `docs/plans/` paths are retirement stubs.
+- **One canonical file per indicator** (`check:rubric-consistency`, `check:schemas`, `check:documentation-structure`): exactly 102 unified files under `docs/rubric/indicators/`, category indexes link all of them, detector schemas resolve to their indicator's §7 fact schema, current specs cite only paths that exist, and no redirect-only path is reintroduced.
 
 ## Style
 

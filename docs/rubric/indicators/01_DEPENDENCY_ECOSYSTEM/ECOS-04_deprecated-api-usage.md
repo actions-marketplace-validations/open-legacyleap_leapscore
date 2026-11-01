@@ -1,8 +1,6 @@
 # ECOS-04 — Deprecated API Usage
 
-> **Canonical unified indicator contract.** This file combines the rubric semantics and implementation contract for ECOS-04. Edit this file; the legacy path [ecos-04_deprecated-api-usage.md](../../../specs/01_DEPENDENCY_ECOSYSTEM/ecos-04_deprecated-api-usage.md) is a compatibility alias.
 > **Category:** [Dependency & Ecosystem Health](../../01_DEPENDENCY_ECOSYSTEM.md) · **Shared configuration:** [11_WEIGHTS_THRESHOLDS_CONFIG.md](../../11_WEIGHTS_THRESHOLDS_CONFIG.md) · **Catalog guide:** [README.md](../../README.md)
-> **Canonical path:** `docs/rubric/indicators/01_DEPENDENCY_ECOSYSTEM/ECOS-04_deprecated-api-usage.md`
 
 ## 1. Identity
 

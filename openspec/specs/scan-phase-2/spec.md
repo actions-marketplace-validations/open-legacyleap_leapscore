@@ -194,11 +194,11 @@ The system SHALL emit TEST-05 via marker grep (`test.skip`, `xit`, `pytest.mark.
 The system SHALL emit 12 additional clone-lane facts using only static-src planes (tree enumeration, greps, YAML/JSON parse, lockfile parse, and a vendored offline end-of-life snapshot) with `fast` budget class (DOCS-08 `api-budgeted` for optional releases API). A fact derived by enumerating or parsing the target — presence, counts, paths, parsed manifest values — SHALL be reported `measured`; any residual magnitude the detector did not derive from the target SHALL NOT be reported as `measured` (it is `estimated` where the indicator's spec defines a clamp, else `unknown`). A detector SHALL report `unknown` when the tree is not enumerable (or `unknown "rate-limited"` for DOCS-08 on GH 403), and never `N/A` for scored repos; evidence pointers SHALL reference enumerated paths, and evidence producers SHALL name the tool that actually ran.
 
 #### Scenario: DOCS-01 ADR inventory measured
-- **WHEN** scan reads a repo with `docs/adr/0001-record.md` and 14 ADRs, newest 40 days old, sampled majors documented
+- **WHEN** scan reads a repo with an ADR directory holding 14 ADRs (`0001-record.md` and 13 more), newest 40 days old, sampled majors documented
 - **THEN** `docs01` fact `{adr_dir:"docs/adr", adr_count:14, newest_adr_days:40}` status `measured` and score maps per `docs-01_*.md §5` (candidate 3)
 
 #### Scenario: DOCS-03 runbooks presence measured
-- **WHEN** tree contains `docs/runbooks/deploy.md` and `docs/runbooks/incident.md`
+- **WHEN** the target tree contains runbook files `deploy.md` and `incident.md` under its runbook directory
 - **THEN** `docs03` fact marks presence/coverage and maps to `measured` score per spec
 
 #### Scenario: DOCS-04 onboarding guide measured

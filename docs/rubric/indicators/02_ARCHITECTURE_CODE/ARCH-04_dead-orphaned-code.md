@@ -1,8 +1,6 @@
 # ARCH-04 — Dead & Orphaned Code
 
-> **Canonical unified indicator contract.** This file combines the rubric semantics and implementation contract for ARCH-04. Edit this file; the legacy path [arch-04_dead-orphaned-code.md](../../../specs/02_ARCHITECTURE_CODE/arch-04_dead-orphaned-code.md) is a compatibility alias.
 > **Category:** [Architecture & Code Quality](../../02_ARCHITECTURE_CODE.md) · **Shared configuration:** [11_WEIGHTS_THRESHOLDS_CONFIG.md](../../11_WEIGHTS_THRESHOLDS_CONFIG.md) · **Catalog guide:** [README.md](../../README.md)
-> **Canonical path:** `docs/rubric/indicators/02_ARCHITECTURE_CODE/ARCH-04_dead-orphaned-code.md`
 
 ## 1. Identity
 

@@ -1,8 +1,6 @@
 # FE-05 — Client-Side Architecture Debt
 
-> **Canonical unified indicator contract.** This file combines the rubric semantics and implementation contract for FE-05. Edit this file; the legacy path [fe-05_client-side-architecture-debt.md](../../../specs/10_FRONTEND_CLIENT/fe-05_client-side-architecture-debt.md) is a compatibility alias.
 > **Category:** [Frontend & Client Health](../../10_FRONTEND_CLIENT.md) · **Shared configuration:** [11_WEIGHTS_THRESHOLDS_CONFIG.md](../../11_WEIGHTS_THRESHOLDS_CONFIG.md) · **Catalog guide:** [README.md](../../README.md)
-> **Canonical path:** `docs/rubric/indicators/10_FRONTEND_CLIENT/FE-05_client-side-architecture-debt.md`
 
 ## 1. Identity
 

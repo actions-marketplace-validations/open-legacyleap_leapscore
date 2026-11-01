@@ -1,8 +1,6 @@
 # DATA-01 — Schema Migration Backlog / "Migration Hell"
 
-> **Canonical unified indicator contract.** This file combines the rubric semantics and implementation contract for DATA-01. Edit this file; the legacy path [data-01_schema-migration-backlog-migration-hell.md](../../../specs/05_DATA_SCHEMA/data-01_schema-migration-backlog-migration-hell.md) is a compatibility alias.
 > **Category:** [Data & Schema Evolution](../../05_DATA_SCHEMA.md) · **Shared configuration:** [11_WEIGHTS_THRESHOLDS_CONFIG.md](../../11_WEIGHTS_THRESHOLDS_CONFIG.md) · **Catalog guide:** [README.md](../../README.md)
-> **Canonical path:** `docs/rubric/indicators/05_DATA_SCHEMA/DATA-01_schema-migration-backlog-migration-hell.md`
 
 ## 1. Identity
 

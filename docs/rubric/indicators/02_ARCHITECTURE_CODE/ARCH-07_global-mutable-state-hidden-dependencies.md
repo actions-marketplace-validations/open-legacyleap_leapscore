@@ -1,8 +1,6 @@
 # ARCH-07 — Global Mutable State & Hidden Dependencies
 
-> **Canonical unified indicator contract.** This file combines the rubric semantics and implementation contract for ARCH-07. Edit this file; the legacy path [arch-07_global-mutable-state-hidden-dependencies.md](../../../specs/02_ARCHITECTURE_CODE/arch-07_global-mutable-state-hidden-dependencies.md) is a compatibility alias.
 > **Category:** [Architecture & Code Quality](../../02_ARCHITECTURE_CODE.md) · **Shared configuration:** [11_WEIGHTS_THRESHOLDS_CONFIG.md](../../11_WEIGHTS_THRESHOLDS_CONFIG.md) · **Catalog guide:** [README.md](../../README.md)
-> **Canonical path:** `docs/rubric/indicators/02_ARCHITECTURE_CODE/ARCH-07_global-mutable-state-hidden-dependencies.md`
 
 ## 1. Identity
 

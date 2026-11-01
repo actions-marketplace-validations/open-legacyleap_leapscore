@@ -1,8 +1,6 @@
 # DATA-06 — Data Lifecycle Management Deficits
 
-> **Canonical unified indicator contract.** This file combines the rubric semantics and implementation contract for DATA-06. Edit this file; the legacy path [data-06_data-lifecycle-management-deficits.md](../../../specs/05_DATA_SCHEMA/data-06_data-lifecycle-management-deficits.md) is a compatibility alias.
 > **Category:** [Data & Schema Evolution](../../05_DATA_SCHEMA.md) · **Shared configuration:** [11_WEIGHTS_THRESHOLDS_CONFIG.md](../../11_WEIGHTS_THRESHOLDS_CONFIG.md) · **Catalog guide:** [README.md](../../README.md)
-> **Canonical path:** `docs/rubric/indicators/05_DATA_SCHEMA/DATA-06_data-lifecycle-management-deficits.md`
 
 ## 1. Identity
 

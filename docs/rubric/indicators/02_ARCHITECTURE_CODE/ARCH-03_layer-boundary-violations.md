@@ -1,8 +1,6 @@
 # ARCH-03 — Layer & Boundary Violations
 
-> **Canonical unified indicator contract.** This file combines the rubric semantics and implementation contract for ARCH-03. Edit this file; the legacy path [arch-03_layer-boundary-violations.md](../../../specs/02_ARCHITECTURE_CODE/arch-03_layer-boundary-violations.md) is a compatibility alias.
 > **Category:** [Architecture & Code Quality](../../02_ARCHITECTURE_CODE.md) · **Shared configuration:** [11_WEIGHTS_THRESHOLDS_CONFIG.md](../../11_WEIGHTS_THRESHOLDS_CONFIG.md) · **Catalog guide:** [README.md](../../README.md)
-> **Canonical path:** `docs/rubric/indicators/02_ARCHITECTURE_CODE/ARCH-03_layer-boundary-violations.md`
 
 ## 1. Identity
 

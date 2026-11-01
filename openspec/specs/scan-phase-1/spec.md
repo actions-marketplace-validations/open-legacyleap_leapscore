@@ -109,7 +109,7 @@ The system SHALL roll up the requested MVP facts into the canonical scoring math
 - **WHEN** unified budget `~240s` expires with 15 of 19 detectors done
 - **THEN** final report shows `measured:15, unknown:87` with timed-out rows `unknown "budget-exceeded"`, status `degraded`, and no prior partial report was shown
 ### Requirement: Evidence and provenance per row
-The system SHALL attach to every `measured` row an `evidence` pointer (GH endpoint + key fields) and to every `unknown` row an `unknown_measure_path`; every fact SHALL carry `provenance: {tool: "gh-api", version, endpoint, durationMs}` and `evidencePointers` per `docs/plans/05:54` envelope (no score/status/confidence inside the detector).
+The system SHALL attach to every `measured` row an `evidence` pointer (GH endpoint + key fields) and to every `unknown` row an `unknown_measure_path`; every fact SHALL carry `provenance: {tool: "gh-api", version, endpoint, durationMs}` and `evidencePointers` per the `openspec/specs/report-envelope/spec.md:122` envelope (no score/status/confidence inside the detector).
 
 #### Scenario: PR hygiene evidence
 - **WHEN** VEL-09 fact is `measured`

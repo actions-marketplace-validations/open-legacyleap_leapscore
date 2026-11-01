@@ -1,8 +1,6 @@
 # FE-07 — Internationalization / Localization Debt
 
-> **Canonical unified indicator contract.** This file combines the rubric semantics and implementation contract for FE-07. Edit this file; the legacy path [fe-07_internationalization-localization-debt.md](../../../specs/10_FRONTEND_CLIENT/fe-07_internationalization-localization-debt.md) is a compatibility alias.
 > **Category:** [Frontend & Client Health](../../10_FRONTEND_CLIENT.md) · **Shared configuration:** [11_WEIGHTS_THRESHOLDS_CONFIG.md](../../11_WEIGHTS_THRESHOLDS_CONFIG.md) · **Catalog guide:** [README.md](../../README.md)
-> **Canonical path:** `docs/rubric/indicators/10_FRONTEND_CLIENT/FE-07_internationalization-localization-debt.md`
 
 ## 1. Identity
 

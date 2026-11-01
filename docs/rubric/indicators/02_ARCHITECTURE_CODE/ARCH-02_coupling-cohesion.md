@@ -1,8 +1,6 @@
 # ARCH-02 — Coupling & Cohesion
 
-> **Canonical unified indicator contract.** This file combines the rubric semantics and implementation contract for ARCH-02. Edit this file; the legacy path [arch-02_coupling-cohesion.md](../../../specs/02_ARCHITECTURE_CODE/arch-02_coupling-cohesion.md) is a compatibility alias.
 > **Category:** [Architecture & Code Quality](../../02_ARCHITECTURE_CODE.md) · **Shared configuration:** [11_WEIGHTS_THRESHOLDS_CONFIG.md](../../11_WEIGHTS_THRESHOLDS_CONFIG.md) · **Catalog guide:** [README.md](../../README.md)
-> **Canonical path:** `docs/rubric/indicators/02_ARCHITECTURE_CODE/ARCH-02_coupling-cohesion.md`
 
 ## 1. Identity
 

@@ -1,8 +1,6 @@
 # TEST-05 — Skipped / Disabled Tests
 
-> **Canonical unified indicator contract.** This file combines the rubric semantics and implementation contract for TEST-05. Edit this file; the legacy path [test-05_skipped-disabled-tests.md](../../../specs/03_TESTING_QUALITY/test-05_skipped-disabled-tests.md) is a compatibility alias.
 > **Category:** [Testing & Quality Engineering](../../03_TESTING_QUALITY.md) · **Shared configuration:** [11_WEIGHTS_THRESHOLDS_CONFIG.md](../../11_WEIGHTS_THRESHOLDS_CONFIG.md) · **Catalog guide:** [README.md](../../README.md)
-> **Canonical path:** `docs/rubric/indicators/03_TESTING_QUALITY/TEST-05_skipped-disabled-tests.md`
 
 ## 1. Identity
 

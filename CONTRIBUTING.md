@@ -16,7 +16,7 @@ Include the affected command or scan mode, expected and observed behavior, envir
 
 ## Rubric and generated files
 
-The rubric is single-sourced. Each indicator has one canonical file under `docs/rubric/indicators/<NN_CATEGORY>/` that combines its semantics (definition, impact, scoring criteria, remediation) with its implementation contract (applicability, detection, facts, status/score predicates, gates, budget, evidence). Edit that file; edit shared weights/thresholds in `docs/rubric/11_WEIGHTS_THRESHOLDS_CONFIG.md`. Do not edit the compatibility aliases under `docs/specs/` or the retired stubs under `docs/plans/`, and do not hand-edit derived views such as `docs/rubric/00_EXECUTIVE_RUBRIC.md`, the category index tables, `apps/scanner/src/scan/scoring/rubric.json`, or `apps/site/lib/generated/rubric.ts`.
+The rubric is single-sourced. Each indicator has one canonical file under `docs/rubric/indicators/<NN_CATEGORY>/` that combines its semantics (definition, impact, scoring criteria, remediation) with its implementation contract (applicability, detection, facts, status/score predicates, gates, budget, evidence). Edit that file; edit shared weights/thresholds in `docs/rubric/11_WEIGHTS_THRESHOLDS_CONFIG.md`. Do not hand-edit derived views such as `docs/rubric/00_EXECUTIVE_RUBRIC.md`, the category index tables, `apps/scanner/src/scan/scoring/rubric.json`, or `apps/site/lib/generated/rubric.ts`.
 
 Regenerate rubric outputs with `npm run compile:rubric` and verify them with `npm run check:rubric-consistency`. The committed Action bundle is also generated: rebuild it through the documented build path and run `npm run check:dist`; do not patch `action/dist/` by hand.
 

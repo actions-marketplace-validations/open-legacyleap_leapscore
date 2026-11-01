@@ -1,8 +1,6 @@
 # SEC-01 — Unpatched Vulnerabilities
 
-> **Canonical unified indicator contract.** This file combines the rubric semantics and implementation contract for SEC-01. Edit this file; the legacy path [sec-01_unpatched-vulnerabilities.md](../../../specs/04_SECURITY_COMPLIANCE/sec-01_unpatched-vulnerabilities.md) is a compatibility alias.
 > **Category:** [Security, Compliance & Vulnerability](../../04_SECURITY_COMPLIANCE.md) · **Shared configuration:** [11_WEIGHTS_THRESHOLDS_CONFIG.md](../../11_WEIGHTS_THRESHOLDS_CONFIG.md) · **Catalog guide:** [README.md](../../README.md)
-> **Canonical path:** `docs/rubric/indicators/04_SECURITY_COMPLIANCE/SEC-01_unpatched-vulnerabilities.md`
 
 ## 1. Identity
 

@@ -1,8 +1,6 @@
 # VEL-05 — Onboarding Lead Time to First Production PR
 
-> **Canonical unified indicator contract.** This file combines the rubric semantics and implementation contract for VEL-05. Edit this file; the legacy path [vel-05_onboarding-lead-time-to-first-production-pr.md](../../../specs/07_VELOCITY_OPERATIONAL/vel-05_onboarding-lead-time-to-first-production-pr.md) is a compatibility alias.
 > **Category:** [Developer Velocity & Operational Drag](../../07_VELOCITY_OPERATIONAL.md) · **Shared configuration:** [11_WEIGHTS_THRESHOLDS_CONFIG.md](../../11_WEIGHTS_THRESHOLDS_CONFIG.md) · **Catalog guide:** [README.md](../../README.md)
-> **Canonical path:** `docs/rubric/indicators/07_VELOCITY_OPERATIONAL/VEL-05_onboarding-lead-time-to-first-production-pr.md`
 
 ## 1. Identity
 

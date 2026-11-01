@@ -1,8 +1,6 @@
 # PERF-08 — Runtime Waste & Startup Latency
 
-> **Canonical unified indicator contract.** This file combines the rubric semantics and implementation contract for PERF-08. Edit this file; the legacy path [perf-08_runtime-waste-startup-latency.md](../../../specs/08_PERFORMANCE_CLOUD/perf-08_runtime-waste-startup-latency.md) is a compatibility alias.
 > **Category:** [Performance & Cloud/Infrastructure Fit](../../08_PERFORMANCE_CLOUD.md) · **Shared configuration:** [11_WEIGHTS_THRESHOLDS_CONFIG.md](../../11_WEIGHTS_THRESHOLDS_CONFIG.md) · **Catalog guide:** [README.md](../../README.md)
-> **Canonical path:** `docs/rubric/indicators/08_PERFORMANCE_CLOUD/PERF-08_runtime-waste-startup-latency.md`
 
 ## 1. Identity
 

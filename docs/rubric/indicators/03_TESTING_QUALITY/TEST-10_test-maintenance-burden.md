@@ -1,8 +1,6 @@
 # TEST-10 — Test Maintenance Burden
 
-> **Canonical unified indicator contract.** This file combines the rubric semantics and implementation contract for TEST-10. Edit this file; the legacy path [test-10_test-maintenance-burden.md](../../../specs/03_TESTING_QUALITY/test-10_test-maintenance-burden.md) is a compatibility alias.
 > **Category:** [Testing & Quality Engineering](../../03_TESTING_QUALITY.md) · **Shared configuration:** [11_WEIGHTS_THRESHOLDS_CONFIG.md](../../11_WEIGHTS_THRESHOLDS_CONFIG.md) · **Catalog guide:** [README.md](../../README.md)
-> **Canonical path:** `docs/rubric/indicators/03_TESTING_QUALITY/TEST-10_test-maintenance-burden.md`
 
 ## 1. Identity
 

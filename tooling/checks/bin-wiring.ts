@@ -75,11 +75,11 @@ for (const [name, root] of rootTargets) {
 // D4 — documented invocation sites: file exists and shows the command as an invocation →
 // a mapping must exist. The table is deliberately explicit (not a repo-wide grep): a
 // dropped mapping must fail exactly where docs/Actions/workflows still invoke the command.
-// Canonical/current sites come first; retained `docs/plans/` paths are compatibility stubs
-// (see docs/plans/README.md) kept because established links and checks still resolve them.
+// Canonical/current sites only: the retired path stubs that once mirrored these entries
+// are gone, and every command keeps a live site below.
 const INVOCATION_SITES: Record<string, string[]> = {
-  'leapscore-scan': ['apps/scanner/README.md', 'action/README.md', 'docs/plans/14_WORKFLOW_SCAN_V1.md'],
-  surface: ['apps/surface/README.md', '.github/workflows/leapscore-scan.yml', 'docs/plans/15_PROJECT_SURFACE_V1.md'],
+  'leapscore-scan': ['apps/scanner/README.md', 'action/README.md'],
+  surface: ['apps/surface/README.md', '.github/workflows/leapscore-scan.yml'],
 };
 // Every mapped command must also appear as an invocation at one of its listed sites —
 // otherwise the dropped-mapping check below guards nothing.

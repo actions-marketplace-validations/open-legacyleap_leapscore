@@ -1,8 +1,6 @@
 # ARCH-05 — Code Churn vs. Defect Hot Spots
 
-> **Canonical unified indicator contract.** This file combines the rubric semantics and implementation contract for ARCH-05. Edit this file; the legacy path [arch-05_code-churn-vs-defect-hot-spots.md](../../../specs/02_ARCHITECTURE_CODE/arch-05_code-churn-vs-defect-hot-spots.md) is a compatibility alias.
 > **Category:** [Architecture & Code Quality](../../02_ARCHITECTURE_CODE.md) · **Shared configuration:** [11_WEIGHTS_THRESHOLDS_CONFIG.md](../../11_WEIGHTS_THRESHOLDS_CONFIG.md) · **Catalog guide:** [README.md](../../README.md)
-> **Canonical path:** `docs/rubric/indicators/02_ARCHITECTURE_CODE/ARCH-05_code-churn-vs-defect-hot-spots.md`
 
 ## 1. Identity
 

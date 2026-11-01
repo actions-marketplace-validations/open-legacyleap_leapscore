@@ -70,7 +70,7 @@ The system SHALL evaluate per-indicator `na_when` using `archetype + planeInvent
 
 ### Requirement: Required / Relevant / Irrelevant tiers (C layer)
 
-The system SHALL assign each indicator an applicability tier per archetype: `required` (always applicable; missing = 0), `relevant` (applicable iff its plane is present; else `not_applicable`), `irrelevant` (never applicable for that archetype). The tier table SHALL be compiled from `docs/rubric` `Scope/overlaps` + `docs/specs` `na_when` and emitted in `rubric.json` alongside thresholds. Default for any unlisted indicator/archetype pair SHALL be `relevant`.
+The system SHALL assign each indicator an applicability tier per archetype: `required` (always applicable; missing = 0), `relevant` (applicable iff its plane is present; else `not_applicable`), `irrelevant` (never applicable for that archetype). The tier table SHALL be compiled from each indicator's `Scope/overlaps` plus its §5 `na_when` predicate under `docs/rubric/indicators/` and emitted in `rubric.json` alongside thresholds. Default for any unlisted indicator/archetype pair SHALL be `relevant`.
 
 #### Scenario: Tier drives N/A for docs repo
 - **WHEN** archetype `docs` and indicator `API-01` (contract drift) has tier `irrelevant` for `docs`
@@ -122,7 +122,7 @@ If multiple conditions apply, precedence is: `not_implemented` > `not_applicable
 
 ### Requirement: Coverage and report contract
 
-The system SHALL extend the Report contract (`docs/plans/06_DATA_MODEL_API.md:35`) with `coverage.not_implemented: number`, `coverage.not_applicable: number`, `snapshot.archetype`, `snapshot.planeInventory`, and per-row `status: measured|estimated|unknown|not_applicable|not_implemented` plus `reason` for the last two. `unknown` remains "cannot measure from URL even though applicable and implemented"; `not_applicable` means "correctly excluded for this repo type/planes"; `not_implemented` means "rubric lists it, engine hasn't built it yet." Gates whose sole source rows are `not_applicable` or `not_implemented` SHALL be that same status (not `proven`/`needs-verification`). The `measured-only` M&A view (`06:136`) SHALL continue to map `estimated→unknown`; `not_applicable` and `not_implemented` rows SHALL stay that status in that view.
+The system SHALL extend the report contract defined in `openspec/specs/report-envelope/spec.md:7` with `coverage.not_implemented: number`, `coverage.not_applicable: number`, `snapshot.archetype`, `snapshot.planeInventory`, and per-row `status: measured|estimated|unknown|not_applicable|not_implemented` plus `reason` for the last two. `unknown` remains "cannot measure from URL even though applicable and implemented"; `not_applicable` means "correctly excluded for this repo type/planes"; `not_implemented` means "rubric lists it, engine hasn't built it yet." Gates whose sole source rows are `not_applicable` or `not_implemented` SHALL be that same status (not `proven`/`needs-verification`). The `measured-only` view SHALL continue to map `estimated→unknown`; `not_applicable` and `not_implemented` rows SHALL stay that status in that view.
 
 #### Scenario: Coverage strip shows five buckets
 - **WHEN** a library scan in tranche A yields `measured 17, estimated 4, unknown 12, not_applicable 18, not_implemented 51` over 102

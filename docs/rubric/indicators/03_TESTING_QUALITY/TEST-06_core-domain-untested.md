@@ -1,8 +1,6 @@
 # TEST-06 — Core Domain Untested
 
-> **Canonical unified indicator contract.** This file combines the rubric semantics and implementation contract for TEST-06. Edit this file; the legacy path [test-06_core-domain-untested.md](../../../specs/03_TESTING_QUALITY/test-06_core-domain-untested.md) is a compatibility alias.
 > **Category:** [Testing & Quality Engineering](../../03_TESTING_QUALITY.md) · **Shared configuration:** [11_WEIGHTS_THRESHOLDS_CONFIG.md](../../11_WEIGHTS_THRESHOLDS_CONFIG.md) · **Catalog guide:** [README.md](../../README.md)
-> **Canonical path:** `docs/rubric/indicators/03_TESTING_QUALITY/TEST-06_core-domain-untested.md`
 
 ## 1. Identity
 

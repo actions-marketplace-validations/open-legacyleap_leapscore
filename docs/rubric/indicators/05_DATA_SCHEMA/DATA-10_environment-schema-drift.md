@@ -1,8 +1,6 @@
 # DATA-10 — Environment Schema Drift
 
-> **Canonical unified indicator contract.** This file combines the rubric semantics and implementation contract for DATA-10. Edit this file; the legacy path [data-10_environment-schema-drift.md](../../../specs/05_DATA_SCHEMA/data-10_environment-schema-drift.md) is a compatibility alias.
 > **Category:** [Data & Schema Evolution](../../05_DATA_SCHEMA.md) · **Shared configuration:** [11_WEIGHTS_THRESHOLDS_CONFIG.md](../../11_WEIGHTS_THRESHOLDS_CONFIG.md) · **Catalog guide:** [README.md](../../README.md)
-> **Canonical path:** `docs/rubric/indicators/05_DATA_SCHEMA/DATA-10_environment-schema-drift.md`
 
 ## 1. Identity
 

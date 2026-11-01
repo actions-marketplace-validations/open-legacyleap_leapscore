@@ -11,8 +11,6 @@ The rubric is the reviewable contract for LeapScore's 102 maintainability indica
 | [`11_WEIGHTS_THRESHOLDS_CONFIG.md`](./11_WEIGHTS_THRESHOLDS_CONFIG.md) | Canonical shared configuration | Weights, formulas, thresholds, bands, applicability vocabulary, gates, and calibration record. |
 | [`00_EXECUTIVE_RUBRIC.md`](./00_EXECUTIVE_RUBRIC.md) | Derived presentation | Compact view of catalog values; do not independently change indicator values. |
 | [`templates/`](./templates/) | Derived score sheets | Printable views; keep values aligned with the canonical catalog/configuration. |
-| [`docs/specs/`](../specs/) | Compatibility aliases | Established paths that redirect readers to `indicators/`; never edit an alias. |
-| [`docs/plans/`](../plans/) | Retired path stubs | Historical paths retained only where links or checks require them; current behavior belongs to OpenSpec. |
 
 Change indicator meaning, implementation, or remediation only in its unified file. Change shared scoring configuration only in `11_WEIGHTS_THRESHOLDS_CONFIG.md`. Regenerate derived artifacts with `npm run compile:rubric`; never hand-edit generated files.
 
@@ -84,20 +82,17 @@ These rules apply to every unified file and replace the former split-spec preamb
 8. **No execution:** Detectors do not run target-repository code. Execution-shaped recipes degrade to a static proxy or `unknown`.
 9. **v1 flags:** Tier A is `YES`; B with an approved static proxy is `PART`; otherwise `NO`, subject to the indicator's identity contract.
 
-## Canonical path, index, and alias map
+## Canonical path and index map
 
-| Existing or current path | Role after migration | Replacement/target |
-|---|---|---|
-| `docs/rubric/indicators/<NN_CATEGORY>/<ID>_<slug>.md` | Canonical editable indicator | The unified ten-section contract |
-| `docs/rubric/<NN_CATEGORY>.md` | Canonical category index | Links to every unified file in that category |
-| `docs/rubric/11_WEIGHTS_THRESHOLDS_CONFIG.md` | Canonical shared configuration | Weights, thresholds, bands, gates, applicability |
-| `docs/rubric/00_EXECUTIVE_RUBRIC.md`, `templates/` | Derived views | Regenerate/align from canonical sources |
-| `docs/specs/<NN_CATEGORY>/<id>_<slug>.md` | Compatibility alias | Links to the matching unified file; no contract content |
-| `docs/specs/README.md` | Compatibility guide | Explains the alias policy and links here |
-| `docs/plans/<file>.md` | Retired path stub | Links to OpenSpec, this catalog, or the relevant current README |
-| `openspec/specs/` | Current product behavior | Unchanged; authoritative for scan/report behavior |
+| Existing path | Role |
+|---|---|
+| `docs/rubric/indicators/<NN_CATEGORY>/<ID>_<slug>.md` | Canonical editable indicator — the unified ten-section contract |
+| `docs/rubric/<NN_CATEGORY>.md` | Canonical category index — links to every unified file in that category |
+| `docs/rubric/11_WEIGHTS_THRESHOLDS_CONFIG.md` | Canonical shared configuration — weights, thresholds, bands, gates, applicability |
+| `docs/rubric/00_EXECUTIVE_RUBRIC.md`, `templates/` | Derived views — regenerate/align from the canonical sources |
+| `openspec/specs/` | Current product behavior — authoritative for scan/report behavior |
 
-The only editable indicator source is `docs/rubric/indicators/`. A category index, alias, plan stub, generated registry, or OpenSpec reference must not become a second source.
+The only editable indicator source is `docs/rubric/indicators/`. A category index, generated registry, or OpenSpec reference must not become a second source.
 
 ## Validation
 
@@ -110,4 +105,4 @@ npm run check:documentation-structure
 npm run check:schemas
 ```
 
-The compiler enumerates canonical files in category/numeric order and keeps the existing generated JSON/TypeScript shape. The structure check proves 102 unique IDs, index coverage, required sections, alias-only legacy specs, retired plan stubs, and local targets.
+The compiler enumerates canonical files in category/numeric order and keeps the existing generated JSON/TypeScript shape. The structure check proves 102 unique IDs, index coverage, required sections, resolvable local links and cross-document citations, and that no redirect-only path exists.

@@ -1,8 +1,6 @@
 # FE-01 — UI Framework / Stack EOL & Deprecation
 
-> **Canonical unified indicator contract.** This file combines the rubric semantics and implementation contract for FE-01. Edit this file; the legacy path [fe-01_ui-framework-stack-eol-deprecation.md](../../../specs/10_FRONTEND_CLIENT/fe-01_ui-framework-stack-eol-deprecation.md) is a compatibility alias.
 > **Category:** [Frontend & Client Health](../../10_FRONTEND_CLIENT.md) · **Shared configuration:** [11_WEIGHTS_THRESHOLDS_CONFIG.md](../../11_WEIGHTS_THRESHOLDS_CONFIG.md) · **Catalog guide:** [README.md](../../README.md)
-> **Canonical path:** `docs/rubric/indicators/10_FRONTEND_CLIENT/FE-01_ui-framework-stack-eol-deprecation.md`
 
 ## 1. Identity
 

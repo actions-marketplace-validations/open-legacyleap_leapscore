@@ -1,8 +1,6 @@
 # API-02 — Versioning & Breaking-Change Discipline
 
-> **Canonical unified indicator contract.** This file combines the rubric semantics and implementation contract for API-02. Edit this file; the legacy path [api-02_versioning-breaking-change-discipline.md](../../../specs/06_API_INTEGRATION/api-02_versioning-breaking-change-discipline.md) is a compatibility alias.
 > **Category:** [API & Integration Surface](../../06_API_INTEGRATION.md) · **Shared configuration:** [11_WEIGHTS_THRESHOLDS_CONFIG.md](../../11_WEIGHTS_THRESHOLDS_CONFIG.md) · **Catalog guide:** [README.md](../../README.md)
-> **Canonical path:** `docs/rubric/indicators/06_API_INTEGRATION/API-02_versioning-breaking-change-discipline.md`
 
 ## 1. Identity
 

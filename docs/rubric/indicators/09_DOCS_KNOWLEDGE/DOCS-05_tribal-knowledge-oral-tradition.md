@@ -1,8 +1,6 @@
 # DOCS-05 — Tribal Knowledge & Oral Tradition
 
-> **Canonical unified indicator contract.** This file combines the rubric semantics and implementation contract for DOCS-05. Edit this file; the legacy path [docs-05_tribal-knowledge-oral-tradition.md](../../../specs/09_DOCS_KNOWLEDGE/docs-05_tribal-knowledge-oral-tradition.md) is a compatibility alias.
 > **Category:** [Documentation & Knowledge Continuity](../../09_DOCS_KNOWLEDGE.md) · **Shared configuration:** [11_WEIGHTS_THRESHOLDS_CONFIG.md](../../11_WEIGHTS_THRESHOLDS_CONFIG.md) · **Catalog guide:** [README.md](../../README.md)
-> **Canonical path:** `docs/rubric/indicators/09_DOCS_KNOWLEDGE/DOCS-05_tribal-knowledge-oral-tradition.md`
 
 ## 1. Identity
 

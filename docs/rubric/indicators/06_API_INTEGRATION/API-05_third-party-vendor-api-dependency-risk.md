@@ -1,8 +1,6 @@
 # API-05 — Third-Party & Vendor API Dependency Risk
 
-> **Canonical unified indicator contract.** This file combines the rubric semantics and implementation contract for API-05. Edit this file; the legacy path [api-05_third-party-vendor-api-dependency-risk.md](../../../specs/06_API_INTEGRATION/api-05_third-party-vendor-api-dependency-risk.md) is a compatibility alias.
 > **Category:** [API & Integration Surface](../../06_API_INTEGRATION.md) · **Shared configuration:** [11_WEIGHTS_THRESHOLDS_CONFIG.md](../../11_WEIGHTS_THRESHOLDS_CONFIG.md) · **Catalog guide:** [README.md](../../README.md)
-> **Canonical path:** `docs/rubric/indicators/06_API_INTEGRATION/API-05_third-party-vendor-api-dependency-risk.md`
 
 ## 1. Identity
 

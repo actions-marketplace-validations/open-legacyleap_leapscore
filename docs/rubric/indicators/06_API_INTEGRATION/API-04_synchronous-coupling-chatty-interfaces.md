@@ -1,8 +1,6 @@
 # API-04 — Synchronous Coupling & Chatty Interfaces
 
-> **Canonical unified indicator contract.** This file combines the rubric semantics and implementation contract for API-04. Edit this file; the legacy path [api-04_synchronous-coupling-chatty-interfaces.md](../../../specs/06_API_INTEGRATION/api-04_synchronous-coupling-chatty-interfaces.md) is a compatibility alias.
 > **Category:** [API & Integration Surface](../../06_API_INTEGRATION.md) · **Shared configuration:** [11_WEIGHTS_THRESHOLDS_CONFIG.md](../../11_WEIGHTS_THRESHOLDS_CONFIG.md) · **Catalog guide:** [README.md](../../README.md)
-> **Canonical path:** `docs/rubric/indicators/06_API_INTEGRATION/API-04_synchronous-coupling-chatty-interfaces.md`
 
 ## 1. Identity
 

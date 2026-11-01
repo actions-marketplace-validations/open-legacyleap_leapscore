@@ -1,8 +1,6 @@
 # SEC-08 — Compliance Drift
 
-> **Canonical unified indicator contract.** This file combines the rubric semantics and implementation contract for SEC-08. Edit this file; the legacy path [sec-08_compliance-drift.md](../../../specs/04_SECURITY_COMPLIANCE/sec-08_compliance-drift.md) is a compatibility alias.
 > **Category:** [Security, Compliance & Vulnerability](../../04_SECURITY_COMPLIANCE.md) · **Shared configuration:** [11_WEIGHTS_THRESHOLDS_CONFIG.md](../../11_WEIGHTS_THRESHOLDS_CONFIG.md) · **Catalog guide:** [README.md](../../README.md)
-> **Canonical path:** `docs/rubric/indicators/04_SECURITY_COMPLIANCE/SEC-08_compliance-drift.md`
 
 ## 1. Identity
 

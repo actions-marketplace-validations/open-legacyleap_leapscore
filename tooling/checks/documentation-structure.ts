@@ -1,13 +1,12 @@
-/** tooling/checks/documentation-structure.ts — unified catalog + compatibility structure */
-// Proves the documentation migration's invariants:
+/** tooling/checks/documentation-structure.ts — unified catalog + docs-tree structure */
+// Proves the documentation tree's invariants:
 //   - exactly 102 canonical unified indicator files under docs/rubric/indicators/;
 //   - each file has the full ten-section skeleton, or the approved reduced form for rows
 //     that can only emit `unknown`;
 //   - category indexes enumerate and link every canonical file (102 unique IDs);
-//   - docs/specs/ files are alias-only (ID + canonical target + deprecation notice, no
-//     contract body), and docs/specs/README.md is a compatibility guide;
-//   - docs/plans/ is a retirement notice plus path-level stubs that link to replacements;
-//   - local Markdown links resolve.
+//   - no path in docs/ is a redirect-only alias or a retired path stub;
+//   - local Markdown links resolve;
+//   - repository paths cited in openspec/specs/ resolve (and line suffixes land inside the file).
 // Run from the repository root: npm run check:documentation-structure.
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
@@ -15,8 +14,6 @@ import { dirname, join, resolve } from 'node:path';
 const ROOT = join(import.meta.dirname ?? '.', '../..');
 const RUBRIC = join(ROOT, 'docs/rubric');
 const INDICATORS = join(RUBRIC, 'indicators');
-const SPECS = join(ROOT, 'docs/specs');
-const PLANS = join(ROOT, 'docs/plans');
 
 const CATEGORIES = [
   { cat: 'ECOS', dir: '01_DEPENDENCY_ECOSYSTEM', index: '01_DEPENDENCY_ECOSYSTEM.md' },
@@ -181,102 +178,27 @@ for (const { cat, dir, index } of CATEGORIES) {
 if (indexed !== 102) violations.push(`category indexes enumerate ${indexed} IDs, expected 102`);
 
 // ---------------------------------------------------------------------------
-// 3. docs/specs compatibility aliases
+// 3. No redirect-only paths
 // ---------------------------------------------------------------------------
-const ALIAS_FORBIDDEN = [
-  '## 0. Identity', '## 1. Inputs', '## 2. Detection recipe', '## 3. Fact schema',
-  '## 4. Statusing', '## 5. Score mapping', '## 6. Gate hooks',
-  '## 7. Failure', '## 8. Evidence string', '## 9. Scope',
-  '## 7. Fact schema', '## 8. Status and score mapping',
-];
-if (!existsSync(join(SPECS, 'README.md'))) {
-  violations.push('docs/specs/README.md compatibility guide is missing');
-} else {
-  const guide = read(join(SPECS, 'README.md'));
-  if (!/compatib/i.test(guide) || !guide.includes('docs/rubric/indicators/')) {
-    violations.push('docs/specs/README.md is not a compatibility guide pointing at docs/rubric/indicators/');
-  }
-}
-let aliases = 0;
-const aliasIds = new Set<string>();
-for (const { dir } of CATEGORIES) {
-  const specDir = join(SPECS, dir);
-  if (!existsSync(specDir)) {
-    violations.push(`missing compatibility alias directory docs/specs/${dir}`);
+// The documentation tree keeps no path whose job is to point elsewhere. The two
+// grammars the retired alias and plan-stub trees used are rejected outright, so a
+// future redirect layer cannot return by adding files back.
+const redirectFiles: string[] = [];
+walk(join(ROOT, 'docs'), redirectFiles);
+for (const file of redirectFiles) {
+  const text = read(file).replace(/```[\s\S]*?```/g, '');
+  if (/^ID:\s*[A-Z]+-\d+\s*$/m.test(text) && /^Canonical target:/m.test(text)) {
+    violations.push(`${relative(file)}: redirect-only alias — an ID + "Canonical target:" pointer is not documentation`);
     continue;
   }
-  for (const file of readdirSync(specDir).filter((entry) => entry.endsWith('.md'))) {
-    const path = join(specDir, file);
-    const text = read(path);
-    const id = text.match(/^ID:\s*([A-Z]+-\d+)$/m)?.[1];
-    if (!id) {
-      violations.push(`${relative(path)}: alias is missing an "ID: <ID>" line`);
-      continue;
-    }
-    aliases++;
-    aliasIds.add(id);
-    const target = text.match(/^Canonical target:\s*`([^`]+)`$/m)?.[1];
-    if (!target) {
-      violations.push(`${relative(path)}: alias is missing "Canonical target: <path>"`);
-    } else {
-      const absoluteTarget = join(ROOT, target);
-      if (!existsSync(absoluteTarget)) violations.push(`${relative(path)}: canonical target does not exist — ${target}`);
-      else if (!absoluteTarget.startsWith(INDICATORS)) violations.push(`${relative(path)}: canonical target is outside docs/rubric/indicators/ — ${target}`);
-      const canonicalEntry = canonical.get(id);
-      if (canonicalEntry && relative(canonicalEntry.path) !== target) violations.push(`${relative(path)}: ${id} points at ${target}, expected ${relative(canonicalEntry.path)}`);
-    }
-    if (!/deprecat/i.test(text) || !/compatibility alias/i.test(text)) {
-      violations.push(`${relative(path)}: alias must state the deprecation and compatibility-alias policy`);
-    }
-    for (const forbidden of ALIAS_FORBIDDEN) {
-      if (text.includes(forbidden)) violations.push(`${relative(path)}: alias contains contract section "${forbidden}"`);
-    }
-    if (text.split('\n').length > 25) violations.push(`${relative(path)}: alias is longer than 25 lines — contract content may have crept in`);
+  const heading = text.match(/^#\s+([^\n]+)$/m)?.[1] ?? '';
+  if (/\bretired\b/i.test(heading)) {
+    violations.push(`${relative(file)}: heading marks a retired path stub — remove the path or carry its content, do not redirect`);
   }
-}
-if (aliases !== 102) violations.push(`expected 102 compatibility aliases under docs/specs/, found ${aliases}`);
-for (const id of canonical.keys()) {
-  if (!aliasIds.has(id)) violations.push(`${id}: canonical indicator has no docs/specs compatibility alias`);
 }
 
 // ---------------------------------------------------------------------------
-// 4. docs/plans retirement stubs
-// ---------------------------------------------------------------------------
-const PLAN_STUBS = [
-  '00_MASTER_INDEX.md', '01_PRODUCT_SPEC.md', '02_TRUST_SCORING_MODEL.md',
-  '03_ENGINEERABILITY_MATRIX.md', '04_V1_SCOPE.md', '05_DETECTION_ENGINE_BLUEPRINT.md',
-  '06_DATA_MODEL_API.md', '07_COMPETITIVE_LANDSCAPE.md', '08_SECURITY_ACCESS_MODEL.md',
-  '09_MONETIZATION_TIERS.md', '10_ROADMAP.md', '11_WEBSITE_SPEC.md',
-  '12_GITHUB_SURFACE_PLAN.md', '13_MVP_SLICE.md', '14_WORKFLOW_SCAN_V1.md',
-  '15_PROJECT_SURFACE_V1.md', '16_PROJECT_SURFACE_V2.md',
-];
-if (!existsSync(join(PLANS, 'README.md'))) {
-  violations.push('docs/plans/README.md retirement notice is missing');
-} else {
-  const notice = read(join(PLANS, 'README.md'));
-  if (!/retire/i.test(notice) || !/openspec/.test(notice)) {
-    violations.push('docs/plans/README.md is not a retirement notice pointing at OpenSpec/current docs');
-  }
-}
-for (const file of PLAN_STUBS) {
-  const path = join(PLANS, file);
-  if (!existsSync(path)) {
-    violations.push(`docs/plans/${file}: required path stub is missing`);
-    continue;
-  }
-  const text = read(path);
-  if (!/retired/i.test(text)) violations.push(`docs/plans/${file}: missing retirement marker`);
-  if (!/\]\([^)]*(openspec|rubric\/|PRODUCT|apps\/|README\.md|changes\/archive)/.test(text)) {
-    violations.push(`docs/plans/${file}: missing a current replacement link`);
-  }
-  if (text.split('\n').length > 40) violations.push(`docs/plans/${file}: stub is longer than 40 lines — plan prose may have been retained`);
-}
-for (const file of readdirSync(PLANS).filter((entry) => entry.endsWith('.md'))) {
-  if (!PLAN_STUBS.includes(file) && file !== 'README.md') violations.push(`docs/plans/${file}: unexpected authored plan file (expected a retirement stub)`);
-}
-
-// ---------------------------------------------------------------------------
-// 5. Local Markdown links
+// 4. Local Markdown links
 // ---------------------------------------------------------------------------
 const LINK_ROOTS = [
   join(ROOT, 'docs'),
@@ -326,10 +248,45 @@ for (const root of LINK_ROOTS) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// 5. Citations in current specifications
+// ---------------------------------------------------------------------------
+// A code span that names a repository path inside openspec/specs/** must resolve,
+// and a :NN (or :NN-MM) line suffix must land inside the cited file. Archived
+// changes are exempt because they record the tree as it was. Only backticked
+// spans under a known repository root are citations; fenced blocks, globs, path
+// templates (`<...>`), and URLs are examples, not references.
+const CITATION_ROOTS = ['docs/', 'apps/', 'packages/', 'openspec/', 'action/', 'tooling/'];
+let citationsChecked = 0;
+const specFiles: string[] = [];
+walk(join(ROOT, 'openspec/specs'), specFiles);
+for (const file of specFiles) {
+  const text = read(file).replace(/```[\s\S]*?```/g, '');
+  for (const match of text.matchAll(/`([^`\n]+)`/g)) {
+    const span = match[1].trim();
+    if (!CITATION_ROOTS.some((prefix) => span.startsWith(prefix))) continue;
+    if (/[*?{}<>\s]|\.\.\./.test(span)) continue;
+    const [, rawPath, rawSuffix] = span.match(/^([^:]+)(?::(.+))?$/) ?? [];
+    const target = (rawPath ?? span).replace(/[.,;]+$/, '');
+    // A :NN or :NN-MM suffix is a line citation; any other suffix is a symbol anchor.
+    const lines = rawSuffix && /^\d+(?:-\d+)?$/.test(rawSuffix) ? rawSuffix : undefined;
+    citationsChecked++;
+    const absolute = join(ROOT, target);
+    if (!existsSync(absolute)) {
+      violations.push(`${relative(file)}: citation does not resolve — ${span}`);
+      continue;
+    }
+    if (!lines) continue;
+    const lastLine = Number(lines.split('-').pop());
+    const length = read(absolute).split('\n').length;
+    if (lastLine > length) violations.push(`${relative(file)}: citation ${span} points past the end of ${target} (${length} lines)`);
+  }
+}
+
 if (violations.length) {
   console.error('documentation-structure violations:');
   for (const violation of violations.slice(0, 60)) console.error('  - ' + violation);
   if (violations.length > 60) console.error(`  ... and ${violations.length - 60} more`);
   process.exit(1);
 }
-console.log(`documentation-structure: ok (${canonical.size} canonical indicators, ${aliases} aliases, ${PLAN_STUBS.length} plan stubs, ${linksChecked} local links)`);
+console.log(`documentation-structure: ok (${canonical.size} canonical indicators, ${redirectFiles.length} docs files, ${citationsChecked} citations, ${linksChecked} local links)`);

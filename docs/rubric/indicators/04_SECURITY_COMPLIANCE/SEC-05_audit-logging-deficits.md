@@ -1,8 +1,6 @@
 # SEC-05 — Audit Logging Deficits
 
-> **Canonical unified indicator contract.** This file combines the rubric semantics and implementation contract for SEC-05. Edit this file; the legacy path [sec-05_audit-logging-deficits.md](../../../specs/04_SECURITY_COMPLIANCE/sec-05_audit-logging-deficits.md) is a compatibility alias.
 > **Category:** [Security, Compliance & Vulnerability](../../04_SECURITY_COMPLIANCE.md) · **Shared configuration:** [11_WEIGHTS_THRESHOLDS_CONFIG.md](../../11_WEIGHTS_THRESHOLDS_CONFIG.md) · **Catalog guide:** [README.md](../../README.md)
-> **Canonical path:** `docs/rubric/indicators/04_SECURITY_COMPLIANCE/SEC-05_audit-logging-deficits.md`
 
 ## 1. Identity
 

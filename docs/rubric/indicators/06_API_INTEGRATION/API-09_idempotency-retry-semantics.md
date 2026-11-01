@@ -1,8 +1,6 @@
 # API-09 — Idempotency & Retry Semantics
 
-> **Canonical unified indicator contract.** This file combines the rubric semantics and implementation contract for API-09. Edit this file; the legacy path [api-09_idempotency-retry-semantics.md](../../../specs/06_API_INTEGRATION/api-09_idempotency-retry-semantics.md) is a compatibility alias.
 > **Category:** [API & Integration Surface](../../06_API_INTEGRATION.md) · **Shared configuration:** [11_WEIGHTS_THRESHOLDS_CONFIG.md](../../11_WEIGHTS_THRESHOLDS_CONFIG.md) · **Catalog guide:** [README.md](../../README.md)
-> **Canonical path:** `docs/rubric/indicators/06_API_INTEGRATION/API-09_idempotency-retry-semantics.md`
 
 ## 1. Identity
 

@@ -1,8 +1,6 @@
 # TEST-03 — Test Pyramid Inversion
 
-> **Canonical unified indicator contract.** This file combines the rubric semantics and implementation contract for TEST-03. Edit this file; the legacy path [test-03_test-pyramid-inversion.md](../../../specs/03_TESTING_QUALITY/test-03_test-pyramid-inversion.md) is a compatibility alias.
 > **Category:** [Testing & Quality Engineering](../../03_TESTING_QUALITY.md) · **Shared configuration:** [11_WEIGHTS_THRESHOLDS_CONFIG.md](../../11_WEIGHTS_THRESHOLDS_CONFIG.md) · **Catalog guide:** [README.md](../../README.md)
-> **Canonical path:** `docs/rubric/indicators/03_TESTING_QUALITY/TEST-03_test-pyramid-inversion.md`
 
 ## 1. Identity
 
