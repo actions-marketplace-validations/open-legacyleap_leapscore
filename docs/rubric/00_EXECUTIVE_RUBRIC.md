@@ -2,9 +2,9 @@
 
 The reusable scoring template. Print this sheet, score every row 0–3 (or N/A), check the gates, compute the rollup.
 
-> **Derived view:** all weights, thresholds, and gate rules live canonically in `11_WEIGHTS_THRESHOLDS_CONFIG.md`; every indicator's 4-level criteria, thresholds, and core-path bound live in its encyclopedia entry (`01_…`–`10_…`). Edit there, regenerate here.
+> **Derived view:** all weights, thresholds, and gate rules live canonically in `11_WEIGHTS_THRESHOLDS_CONFIG.md`; every indicator's 4-level criteria, thresholds, and core-path bound live in its unified file under `indicators/<NN_CATEGORY>/`. Edit there, regenerate here.
 
-**Companion files:** README (index) · `01_…`–`10_…` (canonical encyclopedia) · `11_…` (canonical config) · `templates/` (blank score sheets)
+**Companion files:** README (catalog guide) · `01_…`–`10_…` (category indexes) · `indicators/` (canonical indicator files) · `11_…` (canonical config) · `templates/` (blank score sheets)
 
 ---
 
@@ -12,7 +12,7 @@ The reusable scoring template. Print this sheet, score every row 0–3 (or N/A),
 
 If **any** of the following is Red Flag, the verdict is **capped at "High"** no matter the numeric total. These are debts that make the system *unsafe or impossible to modernize incrementally*.
 
-| # | Gate | Red Flag trigger | Encyclopedia entry |
+| # | Gate | Red Flag trigger | Source indicator |
 |---|------|------------------|--------------------|
 | G1 | Credential exposure | Active plaintext secrets/credentials in source, history, or config | SEC-02 |
 | G2 | Critical vuln exposure | Any Critical CVE > 14 days unpatched on an internet-exposed path | SEC-01 |
@@ -29,7 +29,7 @@ If **any** of the following is Red Flag, the verdict is **capped at "High"** no 
 
 ## Part 1 — Scoring guide
 
-Score each applicable, measurable standard indicator **0–3**; mark N/A (with reason) when a row does not apply. An applicable but unmeasurable row is `unknown`: disclose it as unscored and keep it in the category denominator. A detector not implemented in this scanner release is `not_implemented` and is excluded from the denominator. Every indicator's exact 4-level criteria live in its encyclopedia entry.
+Score each applicable, measurable standard indicator **0–3**; mark N/A (with reason) when a row does not apply. An applicable but unmeasurable row is `unknown`: disclose it as unscored and keep it in the category denominator. A detector not implemented in this scanner release is `not_implemented` and is excluded from the denominator. Every indicator's exact 4-level criteria live in its unified indicator file.
 
 | Score | Meaning |
 |-------|---------|
@@ -41,9 +41,9 @@ Score each applicable, measurable standard indicator **0–3**; mark N/A (with r
 | **Unknown** | Applicable but not measurable; no score, disclosed, and included in the frozen denominator |
 | **Not implemented** | No detector in this scanner release; disclosed and excluded from the denominator |
 
-**Core-path taxonomy (global, computed once):** every 1-vs-0 and 2-vs-1 call uses the *global* core-path definition — core = files reachable from public entry points that touch **money / auth / PII / compliance-sensitive behavior**. Where an entry scopes itself differently, its encyclopedia `Scope/overlaps` field says so. The engine computes membership once; human auditors use the same rule.
+**Core-path taxonomy (global, computed once):** every 1-vs-0 and 2-vs-1 call uses the *global* core-path definition — core = files reachable from public entry points that touch **money / auth / PII / compliance-sensitive behavior**. Where an entry scopes itself differently, its unified file's `Scope/overlaps` section says so. The engine computes membership once; human auditors use the same rule.
 
-**Deep-dive indicators (18 + 1 FE):** not in this sheet. They belong to the encyclopedia and are scored only in deep audits. When a deep audit runs them, they **fold into their category's applicable set** and change that category % (see `11` §2) — a deep-audit total is *not* a standard-audit total plus footnote.
+**Deep-dive indicators (18 + 1 FE):** not in this sheet. They belong to the unified catalog and are scored only in deep audits. When a deep audit runs them, they **fold into their category's applicable set** and change that category % (see `11` §2) — a deep-audit total is *not* a standard-audit total plus footnote.
 
 ---
 

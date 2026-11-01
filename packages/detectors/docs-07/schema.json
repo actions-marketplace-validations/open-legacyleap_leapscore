@@ -5,7 +5,7 @@
   "properties": {
     "placeholder": {
       "type": "string",
-      "description": "replace with SPECS §3 facts"
+      "description": "replace with the unified indicator §7 fact schema"
     }
   },
   "required": [],

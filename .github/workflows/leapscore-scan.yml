@@ -2,7 +2,7 @@
 # Checkout-first: the Action scans the checked-out working tree with
 # `leapscore-scan scan <path>` — no internal clone, no PAT for self scans.
 # Surfacing: sealed report syncs labeled issues into the runner repo (no check
-# runs, boards, or comments — see docs/plans/15_PROJECT_SURFACE_V1.md).
+# runs, boards, or comments — see openspec/specs/issue-surfacing/).
 name: LeapScore scan
 
 permissions:

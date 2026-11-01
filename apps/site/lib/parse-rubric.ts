@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 
 const RUBRIC_DIR = path.resolve(process.cwd(), "..", "..", "docs/rubric");
+const INDICATORS_DIR = path.join(RUBRIC_DIR, "indicators");
 
 export interface Indicator {
   id: string;
@@ -30,73 +31,108 @@ export interface Category {
   indicators: Indicator[];
 }
 
+/**
+ * Parse one canonical unified indicator file (`docs/rubric/indicators/<NN_CATEGORY>/<ID>_*.md`).
+ * The unified skeleton is the single source; this reads the human-facing fields the
+ * rubric browser renders.
+ */
+function parseIndicator(file: string): Indicator | null {
+  const content = fs.readFileSync(file, "utf-8");
+  const lines = content.split("\n");
+
+  const title = lines.find((line) => line.startsWith("# "));
+  const match = title?.match(/^# ([A-Z]+-\d+) [—–-] (.+)$/);
+  if (!match) return null;
+
+  const bullets = new Map<string, string>();
+  const table = new Map<string, string>();
+  for (const raw of lines) {
+    const line = raw.trim();
+    const bullet = line.match(/^- \*\*(.+?):\*\*\s*(.*)$/);
+    if (bullet) {
+      if (!bullets.has(bullet[1])) bullets.set(bullet[1], bullet[2].trim());
+      continue;
+    }
+    const cell = line.match(/^\| ([^|]+?) \| ([^|]+?) \|$/);
+    if (cell && !table.has(cell[1].trim())) table.set(cell[1].trim(), cell[2].trim());
+  }
+
+  const bulletValue = (prefix: string): string => {
+    for (const [key, value] of bullets) if (key.startsWith(prefix)) return value;
+    return "";
+  };
+
+  let scopeOverlaps = "";
+  const scopeIndex = lines.findIndex((line) => line.trim() === "### Scope/overlaps");
+  if (scopeIndex >= 0) {
+    const prose: string[] = [];
+    for (let i = scopeIndex + 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (line.startsWith("#")) break;
+      if (line) prose.push(line);
+    }
+    scopeOverlaps = prose.join(" ");
+  }
+
+  return {
+    id: match[1],
+    name: match[2].trim(),
+    definition: bulletValue("Definition"),
+    whyItMatters: bulletValue("Why it signals obsolescence") || bulletValue("Why it matters"),
+    detectionMethod: bulletValue("Detection method"),
+    yellowFlag: bulletValue("Yellow flag"),
+    redFlag: bulletValue("Red flag"),
+    remediation: bulletValue("Remediation playbook"),
+    scoringCriteria: bulletValue("Scoring criteria"),
+    verifyEffort: table.get("Verify effort") ?? "",
+    engineTier: table.get("Engine tier") ?? "",
+    defaultStatus: table.get("Default status") ?? "",
+    scopeOverlaps,
+  };
+}
+
 export function parseRubric(): Category[] {
   try {
-    const files = fs.readdirSync(RUBRIC_DIR).filter(f => f.match(/^(0[1-9]|10)_.*\.md$/));
-    
-    return files.map(file => {
+    const files = fs
+      .readdirSync(RUBRIC_DIR)
+      .filter((f) => f.match(/^(0[1-9]|10)_.*\.md$/))
+      .sort();
+    const categoryDirs = fs.readdirSync(INDICATORS_DIR).sort();
+
+    return files.map((file) => {
       const content = fs.readFileSync(path.join(RUBRIC_DIR, file), "utf-8");
       const lines = content.split("\n");
-      
-      const categoryName = lines[0].replace(/^# \d{2} — /, "").replace(/\*.*?\*/g, "").trim();
+
       const categoryId = file.split("_")[0];
-      
+      const categoryName = lines[0].replace(/^# \d{2} — /, "").trim();
+
       let summary = "";
       let thesis = "";
       let weightBase = "";
       let weightFE = "";
       let indicatorCounts = "";
-      
-      for (const line of lines) {
-        if (line.includes("**One-line thesis:**")) thesis = line.split("**One-line thesis:**")[1].trim();
-        if (line.includes("**Category summary:**")) summary = line.split("**Category summary:**")[1].trim();
-        if (line.includes("> **Weight:**")) {
-            const parts = line.split("·");
-            weightBase = parts[0].split("**Weight:**")[1].trim();
-            weightFE = parts[1].trim();
-            indicatorCounts = parts.slice(2).join(" · ").trim();
-        }
-      }
-      
-      const indicators: Indicator[] = [];
-      
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if (line.startsWith("### ")) {
-          const match = line.match(/### ([A-Z0-9-]+) [—–-–] (.*)/);
-          if (match) {
-            const [_, id, name] = match;
-            
-            const data: Partial<Indicator> = { id, name };
-            
-            // Extract the engine fields line first
-            for (let j = i + 1; j < i + 3; j++) {
-                if (lines[j]?.includes("**Engine tier:**")) {
-                    const parts = lines[j].split("·");
-                    data.engineTier = parts[0].split("**Engine tier:**")[1].trim();
-                    data.defaultStatus = parts[1].split("**Default status:**")[1].trim();
-                    data.scopeOverlaps = parts[2].split("**Scope/overlaps:**")[1].trim();
-                }
-            }
 
-            // Extract content lines
-            for (let j = i + 1; j < i + 30; j++) {
-              if (!lines[j]) continue;
-              if (lines[j].includes("- **Definition:**")) data.definition = lines[j].split("- **Definition:**")[1].trim();
-              if (lines[j].includes("- **Why it matters:**")) data.whyItMatters = lines[j].split("- **Why it matters:**")[1].trim();
-              if (lines[j].includes("- **Detection method:**")) data.detectionMethod = lines[j].split("- **Detection method:**")[1].trim();
-              if (lines[j].includes("- **Yellow flag")) data.yellowFlag = lines[j].split("):")[1].trim();
-              if (lines[j].includes("- **Red flag")) data.redFlag = lines[j].split("):")[1].trim();
-              if (lines[j].includes("- **Remediation playbook:**")) data.remediation = lines[j].split("- **Remediation playbook:**")[1].trim();
-              if (lines[j].includes("- **Scoring criteria")) data.scoringCriteria = lines[j].split("):")[1].trim();
-              if (lines[j].includes("- **Verify effort:**")) data.verifyEffort = lines[j].split("- **Verify effort:**")[1].trim();
-            }
-            
-            indicators.push(data as Indicator);
-          }
+      for (const line of lines) {
+        if (line.includes("**Thesis:**")) thesis = line.split("**Thesis:**")[1].trim();
+        if (line.includes("**Category summary:**")) summary = line.split("**Category summary:**")[1].trim();
+        const weights = line.match(/Base weight:\s*(.+?)\s*·\s*FE-active weight:\s*(.+?)\s*·\s*(.+)$/);
+        if (weights) {
+          weightBase = weights[1].trim();
+          weightFE = weights[2].trim();
+          indicatorCounts = weights[3].trim();
         }
       }
-      
+
+      const categoryDir = categoryDirs.find((dir) => dir.startsWith(`${categoryId}_`));
+      const indicators: Indicator[] = categoryDir
+        ? fs
+            .readdirSync(path.join(INDICATORS_DIR, categoryDir))
+            .filter((entry) => entry.endsWith(".md"))
+            .sort()
+            .map((entry) => parseIndicator(path.join(INDICATORS_DIR, categoryDir, entry)))
+            .filter((indicator): indicator is Indicator => indicator !== null)
+        : [];
+
       return { id: categoryId, name: categoryName, summary, thesis, weightBase, weightFE, indicatorCounts, indicators };
     });
   } catch (e) {

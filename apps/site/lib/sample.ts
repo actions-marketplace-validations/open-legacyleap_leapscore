@@ -3,7 +3,7 @@
  * Every number is derivable: row scores ↑ this file → lib/scoring.ts recomputes
  * category%, weighted contribution, and the headline. The weighted total is
  * exactly 58.00 (see lib/score.consistency.test.ts). Remediation text is pulled
- * verbatim from docs/rubric encyclopedia playbooks.
+ * verbatim from the unified indicator remediation playbooks (`docs/rubric/indicators/`).
  */
 
 import type { Gate, IndicatorRow } from "@/lib/types";

@@ -1,84 +1,14 @@
-# ECOS-07 — Build Reproducibility & Lockfile Integrity — Implementation Spec
+# ECOS-07 — Build Reproducibility & Lockfile Integrity — Compatibility Alias
 
-> **Authority:** This file defines the ECOS-07 implementation contract. The [ECOS rubric category](../../rubric/01_DEPENDENCY_ECOSYSTEM.md) owns its definition, thresholds, and scoring criteria; [`docs/specs/README.md`](../README.md) defines the normative cross-cutting conventions.
+> **Deprecated path — compatibility alias only.** This file is retained so established links
+> keep resolving. It contains no rubric or implementation contract; the canonical unified
+> indicator file is the only editable source.
+>
+> **Canonical target:** [`docs/rubric/indicators/01_DEPENDENCY_ECOSYSTEM/ECOS-07_build-reproducibility-lockfile-integrity.md`](../../rubric/indicators/01_DEPENDENCY_ECOSYSTEM/ECOS-07_build-reproducibility-lockfile-integrity.md)
 
-## 0. Identity
+ID: ECOS-07
+Canonical target: `docs/rubric/indicators/01_DEPENDENCY_ECOSYSTEM/ECOS-07_build-reproducibility-lockfile-integrity.md`
+Replacement: [Unified rubric catalog](../../rubric/README.md) · [ECOS category index](../../rubric/01_DEPENDENCY_ECOSYSTEM.md)
 
-| field | value |
-|---|---|
-| Tier / default status | A · **measured** |
-| v1 flag | YES |
-| Gates fed | none |
-| Rollup / deep-dive | standard · folds into ECOS category % |
-| Verify effort | ⚡ ≤ 30 min (double-build 🔶 excluded from v1 — no execution) |
-| Thresholds & 0–3 criteria | see encyclopedia §ECOS-07 |
-
-## 1. Inputs
-
-- **Planes:** static-src + gh-api (CI config)
-- **Tools:** git tree enumeration; lockfile/manifest parsers; CI YAML parser
-- **Rate-cost:** none
-- **Ecosystems:** npm/yarn/pnpm (`package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`) · pip/poetry/uv (`poetry.lock`, `requirements*.txt` pin-scan, `uv.lock`) · `go.sum` · `Gemfile.lock` · Maven (`maven-shade-plugin` versions, no true lockfile → flag) · Gradle (`gradle.lockfile`) · NuGet (`packages.lock.json` is lock evidence; classic `packages.config` has **no lockfile mechanism** → disclosed as structural, generalizing the Maven precedent)
-- **Applicability:** `na_when: zero manifests of any kind` → unknown, never N/A (a build exists even unpinned). Actually: clause-b N/A when tree contains zero build/config files at all (docs-only repo).
-
-## 2. Detection recipe
-
-1. `git ls-files` → lockfile presence per ecosystem; an ecosystem with no lockfile mechanism (Maven, classic NuGet `packages.config`) is recorded in `lockfile_mechanism_absent` — absence is structural, never scored as a missing lockfile.
-2. Pin ratio: % of manifest entries with exact pins vs ranges (`>=`, `*`, `latest`, floating tags) — for mechanism-absent ecosystems this is the primary reproducibility signal.
-3. Staleness: lockfile mtime vs manifest mtime in git history (lock older than last manifest change = stale).
-4. CI immutability scan: install commands matching immutable set (`npm ci`, `pip install --require-hashes`, `--frozen-lockfile`, `yarn --immutable`, `go mod download` w/ go.sum) vs mutable (`npm install`, bare `pip install -r`).
-5. Registry-pin checks: integrity-hash fields present in lockfile schema version.
-
-## 3. Fact schema
-
-```json
-{"ecos07": {
-  "lockfiles": [{"path": "packages.lock.json", "ecosystem": "csharp", "stale": false, "integrity_hashes": true, "packages": 42}],
-  "lockfile_mechanism_absent": ["csharp:packages.config"],
-  "pin_ratio": 96.2,
-  "ci_immutable_install": {"enforced": true, "evidence": ".github/workflows/ci.yml:31 npm ci"},
-  "mutable_install_sites": []}}
-```
-
-## 4. Statusing rules
-
-```yaml
-measured_when:  >=1 manifest detected            # presence/absence of lockfile is itself the fact
-estimated_when: never                             # this row is fully decidable statically
-unknown_when:   zero build/config files AND zero manifests (clause-b -> na instead) or tree un-enumerable
-na_when:        docs-only/no-build tree (clause-b, reason recorded)
-clamp:          [1,2]                             # n/a — measured-only row
-confidence:     medium; low when git history is unavailable (staleness dropped)
-```
-
-## 5. Score mapping (predicates)
-
-Thresholds/criteria: see encyclopedia §ECOS-07.
-
-- `3`: all ecosystems locked ∧ stale=false ∧ `ci_immutable_install.enforced`
-- `2`: locked ∧ (`stale` ∨ ¬enforced)
-- `1`: some services/dirs locked, others not (multi-manifest partial coverage)
-- `0`: no lockfile for a prod manifest ∨ `pin_ratio < R_PIN%` ∨ mutable CI installs on prod path
-
-Mechanism-absent ecosystems (`lockfile_mechanism_absent`: Maven, classic NuGet) are exempt from the missing-lockfile limb of `0` — absence is structural; their pin ratio carries the reproducibility judgment.
-
-## 6. Gate hooks
-
-none.
-
-## 7. Failure & budget semantics
-
-- Budget class: `fast`
-- History unavailable (shallow clone budget) → staleness check dropped, note in evidence; status stays measured (presence facts intact)
-- A mechanism-absent ecosystem demotes nothing; the disclosure travels in `lockfile_mechanism_absent` + a basis pointer
-
-## 8. Evidence string
-
-```
-evidence: "lockfile-parse: lockfile={present|absent} ({paths}); pin_ratio={p}%; ci={'npm ci' @ ci.yml:31}"
-basis:    "lockfile-parse: no lockfile mechanism for {ecosystems} — absence is structural"
-```
-
-## 9. Scope/overlaps echo
-
-Lockfile presence and build reproducibility; registry/provenance hardening is ECOS-10.
+Do not edit this file. Change the indicator in its canonical unified file and regenerate
+derived artifacts with `npm run compile:rubric`.

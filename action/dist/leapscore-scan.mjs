@@ -15,7 +15,7 @@ var rubric_default;
 var init_rubric = __esm({
   "../../src/scan/scoring/rubric.json"() {
     rubric_default = {
-      _comment: "COMPILED from docs/rubric/01_*.md...10_*.md + 11_WEIGHTS_THRESHOLDS_CONFIG.md \u2014 do not hand-edit. Run npm run compile:rubric.",
+      _comment: "COMPILED from docs/rubric/indicators/<NN_CATEGORY>/*.md + 11_WEIGHTS_THRESHOLDS_CONFIG.md \u2014 do not hand-edit. Run npm run compile:rubric.",
       rubricVersion: "6f88ddc",
       weights: {
         base: {

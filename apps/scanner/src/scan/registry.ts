@@ -4,7 +4,7 @@ import type { Detector } from './detector';
 // the repo root); validates tier/budget/planes/ecosystems. The engine-native detectors under
 // src/scan/detectors/ are the live path — this registry reads the per-indicator manifests.
 // Adding indicator 103 = adding a folder — orchestrator never edited (Q9).
-// Stub: real impl reads filesystem, checks SPECS skeleton §0-§9 exists, schema.json valid.
+// Stub: real impl reads filesystem, checks the unified indicator skeleton exists, schema.json valid.
 
 export type Manifest = {
   id: string;

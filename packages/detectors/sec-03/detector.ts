@@ -7,7 +7,7 @@ export const detector: Detector = {
   planes: ['static-src'],
   ecosystems: 'all',
   async detect(_ctx: ScanContext, _abort: AbortSignal): Promise<RawFact> {
-    // C-tier: no URL-provable signal — return empty facts; scorer emits unknown + whatItTakes (SPECS reduced skeleton)
+    // C-tier: no URL-provable signal — return empty facts; scorer emits unknown + whatItTakes (unified reduced form)
     return { detectorId: 'SEC-03', schemaVersion: '1.0.0', facts: {}, evidencePointers: [], provenance: { tool: 'none', version: '0', flags: [], durationMs: 0 }, truncated: false };
   },
 };

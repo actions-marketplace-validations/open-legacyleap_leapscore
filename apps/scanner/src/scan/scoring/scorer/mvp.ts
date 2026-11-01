@@ -22,7 +22,7 @@ function flattenFacts(facts: Record<string, unknown>, detectorId: string): Recor
   return facts as Record<string, unknown>;
 }
 
-// --- Score + reason helpers per indicator (spec §5 + encyclopedia rationale) ---
+// --- Score + reason helpers per indicator (scoring criteria + rationale) ---
 
 function scoreDocs01(f: Record<string, unknown>): number {
   const c = (f.adr_count as number) ?? 0;
@@ -220,7 +220,7 @@ function reasonEcos08(score: number, f: Record<string, unknown>): string {
 
 // --- detector-honesty rows: spec §5 predicates (no constant grading) ---
 
-/** ECOS-01 — runtime EOL. Encyclopedia §ECOS-01; YELLOW_MARGIN 180d. */
+/** ECOS-01 — runtime EOL. Unified §ECOS-01; YELLOW_MARGIN 180d. */
 const ECOS01_YELLOW_MARGIN_DAYS = 180;
 const ECOS01_CORE_PIN = /dockerfile|workflow|ci|\.github/i;
 function scoreEcos01(f: Record<string, unknown>): number {
@@ -240,7 +240,7 @@ function reasonEcos01(score: number, f: Record<string, unknown>): string {
   return `${desc}; all runtimes within support — per ECOS-01 Green: runtime current — score 3.`;
 }
 
-/** ECOS-02 — major package drift. Encyclopedia §ECOS-02; Y1 30 / R1 50. */
+/** ECOS-02 — major package drift. Unified §ECOS-02; Y1 30 / R1 50. */
 const ECOS02_Y1 = 30;
 const ECOS02_R1 = 50;
 function scoreEcos02(f: Record<string, unknown>): number {
@@ -263,7 +263,7 @@ function reasonEcos02(score: number, f: Record<string, unknown>): string {
   return `${pct1}% ≥1 major behind; core framework within a major — per ECOS-02 Green: minor drift only — score 3.`;
 }
 
-/** ECOS-03 — abandoned libraries. Encyclopedia §ECOS-03; Y 12mo / R 24mo. */
+/** ECOS-03 — abandoned libraries. Unified §ECOS-03; Y 12mo / R 24mo. */
 const ECOS03_Y_MONTHS = 12;
 const ECOS03_R_MONTHS = 24;
 function scoreEcos03(f: Record<string, unknown>): number {
@@ -286,7 +286,7 @@ function reasonEcos03(score: number, f: Record<string, unknown>): string {
   return `all ${total} load-bearing deps maintained — per ECOS-03 Green: no abandonment — score 3.`;
 }
 
-/** ECOS-05 — license compliance. Encyclopedia §ECOS-05 (G8 reads copyleft+closed). */
+/** ECOS-05 — license compliance. Unified §ECOS-05 (G8 reads copyleft+closed). */
 function scoreEcos05(f: Record<string, unknown>): number {
   const strong = (f.copyleft_strong as unknown[]) ?? [];
   const unknown = (f.license_unknown_count as number) ?? 0;
@@ -307,7 +307,7 @@ function reasonEcos05(score: number, f: Record<string, unknown>): string {
   return `${total} direct deps, ${unknown} unknown, no strong copyleft; SBOM ${sbom ? 'present' : 'absent'} — per ECOS-05 ${sbom ? 'Green' : 'Yellow'}: ${sbom ? 'compliant' : 'clean but no SBOM'} — score ${score} (estimated clamp [1,2]).`;
 }
 
-/** ECOS-07 — lockfile integrity. Encyclopedia §ECOS-07; R_PIN 50. */
+/** ECOS-07 — lockfile integrity. Unified §ECOS-07; R_PIN 50. */
 const ECOS07_R_PIN = 50;
 function scoreEcos07(f: Record<string, unknown>): number {
   const locks = (f.lockfiles as Array<{ stale?: boolean }>) ?? [];
@@ -331,7 +331,7 @@ function reasonEcos07(score: number, f: Record<string, unknown>): string {
   return `${desc}; pin_ratio ${pin}%; CI immutable (${enforced?.evidence}) — per ECOS-07 Green: lockfile + immutable CI — score 3.`;
 }
 
-/** ARCH-05 — churn vs defect hot spots. Encyclopedia §ARCH-05; Y_SHARE 0.5. */
+/** ARCH-05 — churn vs defect hot spots. Unified §ARCH-05; Y_SHARE 0.5. */
 const ARCH05_Y_SHARE = 0.5;
 function scoreArch05(f: Record<string, unknown>): number {
   const hotspots = (f.hotspots as Array<{ in_core_path?: boolean }>) ?? [];
@@ -371,7 +371,7 @@ function reasonTest03(score: number, f: Record<string, unknown>): string {
   return `${desc} — per TEST-03 Yellow flag: overweight E2E but unit layer exists — score 2 (estimated clamp [1,2]; 3 unreachable by construction).`;
 }
 
-/** TEST-05 — skipped tests. Encyclopedia §TEST-05; gold <2%, yellow 5–10%, red >10% or aged >6mo. */
+/** TEST-05 — skipped tests. Unified §TEST-05; gold <2%, yellow 5–10%, red >10% or aged >6mo. */
 const TEST05_GOLD_RATIO = 0.02;
 const TEST05_RED_RATIO = 0.10;
 const TEST05_AGED_DAYS = 180;
@@ -394,7 +394,7 @@ function reasonTest05(score: number, f: Record<string, unknown>): string {
   return `${desc} — per TEST-05 Yellow flag: 2–10% skipped — score 2.`;
 }
 
-/** SEC-01 — unpatched vulnerabilities. Encyclopedia §SEC-01 (G2 reads critical>14d reachable). */
+/** SEC-01 — unpatched vulnerabilities. Unified §SEC-01 (G2 reads critical>14d reachable). */
 const SEC01_CRITICAL_DAYS = 14;
 const SEC01_HIGH_YELLOW_DAYS = 30;
 function scoreSec01(f: Record<string, unknown>): number {
@@ -418,7 +418,7 @@ function reasonSec01(score: number, f: Record<string, unknown>): string {
   return `zero open high/critical — per SEC-01 Green: SLAs met — score 3.`;
 }
 
-/** SEC-02 — hardcoded secrets. Encyclopedia §SEC-02 (G1 reads verified/tree/history). */
+/** SEC-02 — hardcoded secrets. Unified §SEC-02 (G1 reads verified/tree/history). */
 const SEC02_CORE_PATH = /(^|\/)(config|conf|env|deploy|deployment|k8s|helm|terraform|secrets?|\.env|auth|ci|\.github)(\/|\.|$)/i;
 function scoreSec02(f: Record<string, unknown>): number {
   const tree = (f.tree_findings as Array<{ file?: string; verified?: boolean }>) ?? [];

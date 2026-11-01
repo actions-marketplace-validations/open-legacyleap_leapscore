@@ -37,7 +37,7 @@ the only binary it spawns). It runs on stock Node ≥ 20; nothing else. The buil
 - **Git install (`npx -p "<repo>#<ref>" leapscore-scan`):** a git install of this repo
   installs only the root package, so the root `package.json` `bin` block must keep the
   same `leapscore-scan` → `apps/scanner/dist/leapscore-scan.mjs` mapping. This is the form
-  `.github/workflows` and `docs/plans/14_WORKFLOW_SCAN_V1.md` use.
+  `.github/workflows` and the [workflow-scan specification](../../openspec/specs/workflow-scan/spec.md) use.
 
 The workspace `bin` is the local authority: the shim is generated from it, and any
 rename must move it there. `npm run check:bin-wiring` at the repo root enforces both

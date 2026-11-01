@@ -1,5 +1,5 @@
 {
-  "_comment": "COMPILED from docs/rubric/01_*.md...10_*.md + 11_WEIGHTS_THRESHOLDS_CONFIG.md — do not hand-edit. Run npm run compile:rubric.",
+  "_comment": "COMPILED from docs/rubric/indicators/<NN_CATEGORY>/*.md + 11_WEIGHTS_THRESHOLDS_CONFIG.md — do not hand-edit. Run npm run compile:rubric.",
   "rubricVersion": "6f88ddc",
   "weights": {
     "base": {

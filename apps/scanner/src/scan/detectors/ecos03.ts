@@ -8,7 +8,7 @@ const WHAT_IT_TAKES =
   'resolve each load-bearing dependency to its last-release date from a package-metadata source (the vendored snapshot ships last_release for a curated subset)';
 
 const MONTH_MS = 30 * 86_400_000;
-/** Red/Y thresholds (encyclopedia §ECOS-03): unmaintained > R months is the fire;
+/** Red/Y thresholds (unified ECOS-03 §3): unmaintained > R months is the fire;
  * 12–R months is the warning band. */
 const R_MONTHS = 24;
 const Y_MONTHS = 12;

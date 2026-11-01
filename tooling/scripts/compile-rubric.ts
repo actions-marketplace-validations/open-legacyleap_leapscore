@@ -1,10 +1,11 @@
 /** tooling/scripts/compile-rubric.ts — canonical markdown -> apps/scanner rubric.json + generated registry */
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { createHash } from 'node:crypto';
 
 const ROOT = join(import.meta.dirname ?? '.', '../..');
 const RUBRIC_DIR = join(ROOT, 'docs/rubric');
+const INDICATORS_DIR = join(RUBRIC_DIR, 'indicators');
 const OUT_JSON = join(ROOT, 'apps/scanner/src/scan/scoring/rubric.json');
 const OUT_TS = join(ROOT, 'apps/site/lib/generated/rubric.ts');
 
@@ -26,47 +27,58 @@ type Indicator = {
   remediation: Remediation;
 };
 
-const CATEGORY_FILES: Array<{ file: string; cat: string; label: string }> = [
-  { file: '01_DEPENDENCY_ECOSYSTEM.md', cat: 'ECOS', label: 'Dependency & Ecosystem Health' },
-  { file: '02_ARCHITECTURE_CODE.md', cat: 'ARCH', label: 'Architecture & Code Quality' },
-  { file: '03_TESTING_QUALITY.md', cat: 'TEST', label: 'Testing & Quality Engineering' },
-  { file: '04_SECURITY_COMPLIANCE.md', cat: 'SEC', label: 'Security, Compliance & Vulnerability' },
-  { file: '05_DATA_SCHEMA.md', cat: 'DATA', label: 'Data & Schema Evolution' },
-  { file: '06_API_INTEGRATION.md', cat: 'API', label: 'API & Integration Surface' },
-  { file: '07_VELOCITY_OPERATIONAL.md', cat: 'VEL', label: 'Developer Velocity & Operational Drag' },
-  { file: '08_PERFORMANCE_CLOUD.md', cat: 'PERF', label: 'Performance & Cloud/Infrastructure Fit' },
-  { file: '09_DOCS_KNOWLEDGE.md', cat: 'DOCS', label: 'Documentation & Knowledge Continuity' },
-  { file: '10_FRONTEND_CLIENT.md', cat: 'FE', label: 'Frontend & Client Health' },
+const CATEGORY_FILES: Array<{ file: string; dir: string; cat: string; label: string }> = [
+  { file: '01_DEPENDENCY_ECOSYSTEM.md', dir: '01_DEPENDENCY_ECOSYSTEM', cat: 'ECOS', label: 'Dependency & Ecosystem Health' },
+  { file: '02_ARCHITECTURE_CODE.md', dir: '02_ARCHITECTURE_CODE', cat: 'ARCH', label: 'Architecture & Code Quality' },
+  { file: '03_TESTING_QUALITY.md', dir: '03_TESTING_QUALITY', cat: 'TEST', label: 'Testing & Quality Engineering' },
+  { file: '04_SECURITY_COMPLIANCE.md', dir: '04_SECURITY_COMPLIANCE', cat: 'SEC', label: 'Security, Compliance & Vulnerability' },
+  { file: '05_DATA_SCHEMA.md', dir: '05_DATA_SCHEMA', cat: 'DATA', label: 'Data & Schema Evolution' },
+  { file: '06_API_INTEGRATION.md', dir: '06_API_INTEGRATION', cat: 'API', label: 'API & Integration Surface' },
+  { file: '07_VELOCITY_OPERATIONAL.md', dir: '07_VELOCITY_OPERATIONAL', cat: 'VEL', label: 'Developer Velocity & Operational Drag' },
+  { file: '08_PERFORMANCE_CLOUD.md', dir: '08_PERFORMANCE_CLOUD', cat: 'PERF', label: 'Performance & Cloud/Infrastructure Fit' },
+  { file: '09_DOCS_KNOWLEDGE.md', dir: '09_DOCS_KNOWLEDGE', cat: 'DOCS', label: 'Documentation & Knowledge Continuity' },
+  { file: '10_FRONTEND_CLIENT.md', dir: '10_FRONTEND_CLIENT', cat: 'FE', label: 'Frontend & Client Health' },
 ];
 
 const CATEGORY_LABELS: Record<string, string> = Object.fromEntries(CATEGORY_FILES.map(f => [f.cat, f.label]));
 
+/** Read one field from the §1 Identity table (`| field | value |`). */
+function identityField(text: string, field: string): string {
+  const match = text.match(new RegExp(`^\\|\\s*${field}\\s*\\|\\s*([^|]*?)\\s*\\|\\s*$`, 'm'));
+  return match ? match[1].trim() : '';
+}
+
+function numericId(id: string): number {
+  return parseInt(id.split('-')[1] ?? '0', 10);
+}
+
+/**
+ * Enumerate the canonical unified indicator files under docs/rubric/indicators/ in
+ * deterministic category/numeric order. Each file is the single source of identity,
+ * remediation, and the implementation contract; the category pages are navigation only.
+ */
 function parseIndicators(): Indicator[] {
   const indicators: Indicator[] = [];
-  for (const { file, cat } of CATEGORY_FILES) {
-    const text = readFileSync(join(RUBRIC_DIR, file), 'utf-8');
-    // Match headings like "### ECOS-01 — Runtime/Language EOL"
-    const headingRegex = /###\s+([A-Z]+-\d+)\s+[—-]\s+([^\n]+)/g;
-    let m: RegExpExecArray | null;
-    while ((m = headingRegex.exec(text)) !== null) {
-      const id = m[1].trim();
-      const name = m[2].trim();
-      // Extract following block up to next heading (dynamic, cap 8k to avoid cross-contamination)
-      const start = m.index;
-      const nextHeadingIdx = text.indexOf('\n### ', start + 1);
-      const sliceEnd = nextHeadingIdx !== -1 ? Math.min(nextHeadingIdx, start + 8000) : start + 8000;
-      const block = text.slice(start, sliceEnd);
-      // tier: **Engine tier:** A
-      const tierMatch = block.match(/\*\*Engine tier:\*\*\s*([A-D])/);
-      const tier = tierMatch ? tierMatch[1] : 'B';
-      const statusMatch = block.match(/\*\*Default status:\*\*\s*(\w+)/);
-      const default_status = statusMatch ? statusMatch[1].toLowerCase() : 'unknown';
-      const effortMatch = block.match(/Verify effort:\*\*\s*([^\n]+)/);
-      let raw = effortMatch ? effortMatch[1].trim() : '⚡ ≤30 min';
+  for (const { dir, cat } of CATEGORY_FILES) {
+    const categoryDir = join(INDICATORS_DIR, dir);
+    const files = readdirSync(categoryDir)
+      .filter((file) => file.endsWith('.md'))
+      .sort((a, b) => numericId(a) - numericId(b));
+    for (const file of files) {
+      const text = readFileSync(join(categoryDir, file), 'utf-8');
+      // H1 like "# ECOS-01 — Runtime/Language EOL"
+      const heading = text.match(/^#\s+([A-Z]+-\d+)\s+[—-]\s+([^\n]+)$/m);
+      if (!heading) throw new Error(`${dir}/${file}: missing "# <ID> — <Name>" heading`);
+      const id = heading[1].trim();
+      const name = heading[2].trim();
+
+      // tier: | Engine tier | A |
+      const tier = identityField(text, 'Engine tier').match(/\b([A-D])\b/)?.[1] ?? 'B';
+      const statusValue = identityField(text, 'Default status');
+      const default_status = (statusValue.match(/\b(measured|estimated|unknown)\b/)?.[1] ?? 'unknown').toLowerCase();
+      const effortValue = identityField(text, 'Verify effort');
+      let raw = effortValue.split('—')[0].trim();
       // Normalize effort to symbols
-      // raw like "⚡ ≤ 30 min — read pins..." -> take first token up to "—"
-      raw = raw.split('—')[0].trim();
-      // Ensure spacing consistency
       let effort = raw;
       if (raw.includes('⚡')) effort = '⚡ ≤30 min';
       else if (raw.includes('🔶')) effort = '🔶 ~2–4 h';
@@ -77,7 +89,7 @@ function parseIndicators(): Indicator[] {
       let structural = '';
       let gold_standard = '';
       let fallback = false;
-      const playbookMatch = block.match(/\*\*Remediation playbook:\*\*\s*([\s\S]*?)(?=\n- \*\*Gold|\n- \*\*Scoring|\n###\s+[A-Z]+-\d+|\n##\s|$)/);
+      const playbookMatch = text.match(/\*\*Remediation playbook:\*\*\s*([\s\S]*?)(?=\n- \*\*Gold|\n- \*\*Scoring|\n###\s+[A-Z]+-\d+|\n##\s|$)/);
       if (playbookMatch) {
         const rawPlaybook = playbookMatch[1].replace(/\s+/g, ' ').trim();
         // Try split on Quick win: ... Structural fix: ...
@@ -109,13 +121,13 @@ function parseIndicators(): Indicator[] {
       } else {
         fallback = true;
       }
-      const goldMatch = block.match(/\*\*Gold standard[^:]*:\*\*\s*([^\n]+)/);
+      const goldMatch = text.match(/\*\*Gold standard[^:]*:\*\*\s*([^\n]+)/);
       if (goldMatch) gold_standard = goldMatch[1].trim();
       if (fallback && quick_win) {
         // still keep playbook as quick_win, warn later in doCheck
       }
       const remediation: Remediation = { quick_win, structural, gold_standard, effort };
-      indicators.push({ id, category: id.split('-')[0], name, tier, default_status, effort, raw_effort: raw, remediation });
+      indicators.push({ id, category: id.split('-')[0] ?? cat, name, tier, default_status, effort, raw_effort: raw, remediation });
     }
   }
   // Sort by category order then numeric
@@ -124,9 +136,7 @@ function parseIndicators(): Indicator[] {
     const ai = catOrder.indexOf(a.category);
     const bi = catOrder.indexOf(b.category);
     if (ai !== bi) return ai - bi;
-    const an = parseInt(a.id.split('-')[1], 10);
-    const bn = parseInt(b.id.split('-')[1], 10);
-    return an - bn;
+    return numericId(a.id) - numericId(b.id);
   });
   return indicators;
 }
@@ -196,7 +206,7 @@ function buildPayload(indicators: Indicator[]) {
   const gates = ['G1', 'G2', 'G3', 'G4', 'G5', 'G6', 'G7', 'G8'];
   const rubricVersion = createHash('sha256').update(JSON.stringify(indicators)).digest('hex').slice(0, 7);
   return {
-    _comment: 'COMPILED from docs/rubric/01_*.md...10_*.md + 11_WEIGHTS_THRESHOLDS_CONFIG.md — do not hand-edit. Run npm run compile:rubric.',
+    _comment: 'COMPILED from docs/rubric/indicators/<NN_CATEGORY>/*.md + 11_WEIGHTS_THRESHOLDS_CONFIG.md — do not hand-edit. Run npm run compile:rubric.',
     rubricVersion,
     weights,
     applicability,
@@ -205,6 +215,133 @@ function buildPayload(indicators: Indicator[]) {
     indicators,
     categories: CATEGORY_FILES.map(f => ({ id: f.cat, name: f.label, weight_base: (weights.base as Record<string, number>)[f.cat] ?? (f.cat === 'FE' ? 0 : 0), weight_fe: (weights.feActive as Record<string, number>)[f.cat] ?? (f.cat === 'FE' ? 10 : 0) })),
   };
+}
+
+/** Read the canonical category indexes and shared configuration, and fail on drift. */
+function validateSources(indicators: Indicator[]): string[] {
+  const problems: string[] = [];
+  const idPattern = /^([A-Z]+)-(\d{2})$/;
+  const byCategory = new Map<string, string[]>();
+
+  // 1. Canonical file enumeration: one file per ID, category membership, filename identity.
+  const seen = new Map<string, string>();
+  for (const { dir, cat, file } of CATEGORY_FILES) {
+    const categoryDir = join(INDICATORS_DIR, dir);
+    if (!existsSync(categoryDir)) {
+      problems.push(`missing canonical directory docs/rubric/indicators/${dir}`);
+      continue;
+    }
+    const files = readdirSync(categoryDir).filter((f) => f.endsWith('.md')).sort((a, b) => numericId(a) - numericId(b));
+    if (!files.length) problems.push(`docs/rubric/indicators/${dir} has no indicator files`);
+    const ids: string[] = [];
+    for (const canonicalFile of files) {
+      const text = readFileSync(join(categoryDir, canonicalFile), 'utf-8');
+      const heading = text.match(/^#\s+([A-Z]+-\d+)\s+[—-]\s+([^\n]+)$/m);
+      if (!heading) {
+        problems.push(`${dir}/${canonicalFile}: missing "# <ID> — <Name>" heading`);
+        continue;
+      }
+      const id = heading[1].trim();
+      const fileId = canonicalFile.split('_')[0]?.toUpperCase();
+      if (!idPattern.test(id)) problems.push(`${dir}/${canonicalFile}: malformed ID ${id}`);
+      if (fileId !== id) problems.push(`${dir}/${canonicalFile}: filename ID ${fileId} does not match heading ID ${id}`);
+      if (id.split('-')[0] !== cat) problems.push(`${dir}/${canonicalFile}: ID ${id} does not belong to category ${cat}`);
+      const previous = seen.get(id);
+      if (previous) problems.push(`duplicate ID ${id}: ${previous} and ${dir}/${canonicalFile}`);
+      seen.set(id, `${dir}/${canonicalFile}`);
+      ids.push(id);
+    }
+    byCategory.set(file, ids);
+  }
+  if (seen.size !== 102) problems.push(`expected exactly 102 unique IDs, found ${seen.size}`);
+
+  // 2. Unified metadata: identity fields parse, and match the compiled indicator.
+  const compiled = new Map(indicators.map((indicator) => [indicator.id, indicator]));
+  for (const [id, path] of seen) {
+    const indicator = compiled.get(id);
+    if (!indicator) {
+      problems.push(`${id}: canonical file not parsed into the registry (${path})`);
+      continue;
+    }
+    const text = readFileSync(join(INDICATORS_DIR, path), 'utf-8');
+    const identity = {
+      ID: identityField(text, 'ID'),
+      Name: identityField(text, 'Name'),
+      Tier: identityField(text, 'Engine tier'),
+      Status: identityField(text, 'Default status'),
+      Effort: identityField(text, 'Verify effort'),
+    };
+    if (identity.ID !== id) problems.push(`${path}: identity table ID "${identity.ID}" does not match ${id}`);
+    if (identity.Name !== indicator.name) problems.push(`${path}: identity table name "${identity.Name}" does not match H1 "${indicator.name}"`);
+    if (!/^[A-D]$/.test(identity.Tier)) problems.push(`${path}: malformed engine tier "${identity.Tier}"`);
+    if (!/^(measured|estimated|unknown)$/.test(identity.Status)) problems.push(`${path}: malformed default status "${identity.Status}"`);
+    if (!identity.Effort) problems.push(`${path}: missing verify effort`);
+    if (indicator.tier !== identity.Tier) problems.push(`${path}: compiled tier "${indicator.tier}" does not match identity "${identity.Tier}"`);
+    if (indicator.default_status !== identity.Status) problems.push(`${path}: compiled status "${indicator.default_status}" does not match identity "${identity.Status}"`);
+  }
+
+  // 3. Category indexes enumerate exactly the canonical IDs, in order.
+  for (const { file, cat, dir } of CATEGORY_FILES) {
+    const indexPath = join(RUBRIC_DIR, file);
+    if (!existsSync(indexPath)) {
+      problems.push(`missing category index ${file}`);
+      continue;
+    }
+    const indexText = readFileSync(indexPath, 'utf-8');
+    const indexIds = [...indexText.matchAll(/^\|\s*([A-Z]+-\d+)\s*\|/gm)].map((m) => m[1]);
+    const canonicalIds = byCategory.get(file) ?? [];
+    if (indexIds.join(',') !== canonicalIds.join(',')) {
+      problems.push(`${file}: index IDs [${indexIds.join(',')}] do not match canonical ${cat} files [${canonicalIds.join(',')}]`);
+    }
+    for (const id of canonicalIds) {
+      const slug = seen.get(id)?.split('/')[1];
+      if (slug && !indexText.includes(`./indicators/${dir}/${slug}`)) problems.push(`${file}: missing link to ${slug}`);
+    }
+  }
+
+  // 4. Shared configuration: weights, tiers, and gates in 11/00 match the compiled payload.
+  const expected = buildPayload(indicators);
+  const configText = readFileSync(join(RUBRIC_DIR, '11_WEIGHTS_THRESHOLDS_CONFIG.md'), 'utf-8');
+  const weightTable = (heading: string): Record<string, number> => {
+    const start = configText.indexOf(heading);
+    if (start === -1) return {};
+    const end = configText.indexOf('\n### ', start + 1);
+    const block = configText.slice(start, end === -1 ? configText.length : end);
+    const table: Record<string, number> = {};
+    for (const match of block.matchAll(/^\|\s*([^|*]+?)\s*\|\s*([\d.]+)%\s*\|/gm)) {
+      const label = match[1].trim();
+      const category = CATEGORY_FILES.find((entry) => entry.label === label)?.cat;
+      if (category) table[category] = Number(match[2]);
+    }
+    return table;
+  };
+  const base = weightTable('### Base weight set');
+  const feActive = weightTable('### FE-active weight set');
+  for (const { cat } of CATEGORY_FILES) {
+    if (cat !== 'FE') {
+      if (base[cat] == null) problems.push(`11 base weights: missing category ${cat}`);
+      else if (base[cat] !== expected.weights.base[cat as keyof typeof expected.weights.base]) problems.push(`11 base weight for ${cat}: ${base[cat]} vs compiled ${expected.weights.base[cat as keyof typeof expected.weights.base]}`);
+    } else if (base[cat] != null) {
+      problems.push(`11 base weights: FE must be absent from the base set (FE is conditional)`);
+    }
+    if (feActive[cat] == null) problems.push(`11 FE-active weights: missing category ${cat}`);
+    else if (feActive[cat] !== expected.weights.feActive[cat as keyof typeof expected.weights.feActive]) problems.push(`11 FE-active weight for ${cat}: ${feActive[cat]} vs compiled ${expected.weights.feActive[cat as keyof typeof expected.weights.feActive]}`);
+  }
+  const low = configText.match(/^\|\s*Low\s*\|\s*≥\s*(\d+)%/m)?.[1];
+  const moderate = configText.match(/^\|\s*Moderate\s*\|\s*(\d+)–(\d+)%/m);
+  const high = configText.match(/^\|\s*High\s*\|\s*(\d+)–(\d+)%/m);
+  const critical = configText.match(/^\|\s*Critical\s*\|\s*<\s*(\d+)%/m)?.[1];
+  if (Number(low) !== expected.tiers.healthy) problems.push(`11 tier threshold Low: ${low} vs compiled ${expected.tiers.healthy}`);
+  if (!moderate || [Number(moderate[1]), Number(moderate[2])].join(',') !== expected.tiers.moderate.join(',')) problems.push(`11 tier threshold Moderate does not match compiled ${expected.tiers.moderate.join('–')}`);
+  if (!high || [Number(high[1]), Number(high[2])].join(',') !== expected.tiers.highRisk.join(',')) problems.push(`11 tier threshold High does not match compiled ${expected.tiers.highRisk.join('–')}`);
+  if (Number(critical) !== expected.tiers.critical) problems.push(`11 tier threshold Critical: ${critical} vs compiled ${expected.tiers.critical}`);
+  const executive = readFileSync(join(RUBRIC_DIR, '00_EXECUTIVE_RUBRIC.md'), 'utf-8');
+  const gateRows = [...executive.matchAll(/^\|\s*(G\d+)\s*\|/gm)].map((m) => m[1]);
+  if (gateRows.length !== expected.gates.length || gateRows.some((gate, index) => gate !== expected.gates[index])) {
+    problems.push(`00 gate roster [${gateRows.join(',')}] does not match compiled [${expected.gates.join(',')}]`);
+  }
+
+  return problems;
 }
 
 function writeJson(payload: ReturnType<typeof buildPayload>) {
@@ -217,7 +354,7 @@ function writeGeneratedTs(indicators: Indicator[]) {
   mkdirSync(dir, { recursive: true });
   const esc = (s: string) => s.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
   const lines: string[] = [];
-  lines.push('// Generated by tooling/scripts/compile-rubric.ts — do not hand-edit. Source: docs/rubric/*');
+  lines.push('// Generated by tooling/scripts/compile-rubric.ts — do not hand-edit. Source: docs/rubric/indicators/*');
   lines.push('export type RemediationMeta = { quick_win: string; structural: string; gold_standard: string; effort: string };');
   lines.push('export type IndicatorMeta = { id: string; category: string; name: string; tier: string; default_status: string; effort: string; remediation: RemediationMeta };');
   lines.push('export const INDICATOR_REGISTRY: Record<string, IndicatorMeta> = {');
@@ -246,10 +383,19 @@ function writeGeneratedTs(indicators: Indicator[]) {
 }
 
 function doCompile() {
-  const indicators = parseIndicators();
-  if (indicators.length !== 102) {
-    console.warn(`warning: expected 102 indicators, got ${indicators.length} — check docs/rubric parsing`);
-    // still write, but consistency will fail
+  let indicators: Indicator[];
+  try {
+    indicators = parseIndicators();
+  } catch (error) {
+    console.error(`compile:rubric failed — cannot read canonical indicator files: ${(error as Error).message}`);
+    process.exit(1);
+  }
+  const sourceProblems = validateSources(indicators);
+  if (sourceProblems.length) {
+    console.error('compile:rubric failed — canonical source validation:');
+    for (const problem of sourceProblems.slice(0, 40)) console.error('  - ' + problem);
+    if (sourceProblems.length > 40) console.error(`  ... and ${sourceProblems.length - 40} more`);
+    process.exit(1);
   }
   const payload = buildPayload(indicators);
   writeJson(payload);
@@ -257,7 +403,20 @@ function doCompile() {
 }
 
 function doCheck() {
-  const indicators = parseIndicators();
+  let indicators: Indicator[];
+  try {
+    indicators = parseIndicators();
+  } catch (error) {
+    console.error(`check:rubric-consistency failed — cannot read canonical indicator files: ${(error as Error).message}`);
+    process.exit(1);
+  }
+  const sourceProblems = validateSources(indicators);
+  if (sourceProblems.length) {
+    console.error('check:rubric-consistency failed — canonical source validation:');
+    for (const problem of sourceProblems.slice(0, 40)) console.error('  - ' + problem);
+    if (sourceProblems.length > 40) console.error(`  ... and ${sourceProblems.length - 40} more`);
+    process.exit(1);
+  }
   const expected = buildPayload(indicators);
   if (!existsSync(OUT_JSON)) {
     console.error('check:rubric-consistency failed — rubric.json missing; run npm run compile:rubric');

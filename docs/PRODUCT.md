@@ -2,7 +2,7 @@
 
 LeapScore examines a codebase for maintainability and modernization risks. It reports evidence-backed indicator findings, a score when the scan has sufficient signal, and a prioritized path toward the next score band. The public rubric provides the shared vocabulary for the scanner, report readers, and contributors.
 
-This page is explanatory, not a behavior contract. Current behavior is specified in [OpenSpec](../openspec/specs/); rubric meanings and scoring rules are canonical in [`docs/rubric/`](./rubric/), and detection contracts are canonical in [`docs/specs/`](./specs/).
+This page is explanatory, not a behavior contract. Current behavior is specified in [OpenSpec](../openspec/specs/); rubric meanings, scoring rules, and detection contracts are canonical in the unified catalog under [`docs/rubric/indicators/`](./rubric/indicators/).
 
 ## What it does
 

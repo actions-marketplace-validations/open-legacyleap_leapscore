@@ -59,9 +59,9 @@ Applicability is determined from `archetype + planeInventory` (`has_server/has_d
 Category% = (sum of measured and estimated row scores ÷ ((measured + estimated + applicable unknown row count) × 3)) × 100
 ```
 
-- Every indicator has explicit 4-level scoring criteria (score 3 / 2 / 1 / 0) in its encyclopedia entry — see each `XX-NN` entry.
+- Every indicator has explicit 4-level scoring criteria (score 3 / 2 / 1 / 0) in its unified file — see `indicators/<NN_CATEGORY>/<ID>_*.md`.
 - Count `measured`, `estimated`, and applicable `unknown` rows in the denominator. Only measured and estimated scores contribute to the numerator; unknown remains disclosed as unscored.
-- A row that is `not_applicable` or `not_implemented` is excluded from *both* numerator and denominator. Record the reason; indicator applicability rules live in the encyclopedia and implementation specs.
+- A row that is `not_applicable` or `not_implemented` is excluded from *both* numerator and denominator. Record the reason; indicator applicability rules live in the unified indicator files.
 - **Deep-dive rows fold into the category** when a deep audit runs them. Include each applicable measured, estimated, or unknown deep-dive row in the denominator when run; exclude not-applicable and not-implemented rows. A standard audit may have less measured coverage than a deep audit; unknowns remain visible in either.
 - A category may hold a **variable number of standard rows** (e.g., ARCH has 10, ECOS has 8). The formula is row-count agnostic by construction.
 
@@ -86,7 +86,7 @@ Category% = (sum of measured and estimated row scores ÷ ((measured + estimated 
 
 Weights, tier thresholds, and per-indicator Yellow/Red thresholds are **asserted until calibrated**. Calibration is a scheduled, evidence-driven activity, not a one-time event:
 
-1. **Pre-v1 A-tier spot-check:** before the LeapScore engine cuts over, run every A-tier indicator with a mechanical threshold against 5–10 diverse real public repos (the cross-check quiz in `docs/plans/03`). Adjust thresholds that misclassify; record every adjustment in §5.
+1. **Pre-v1 A-tier spot-check:** before the LeapScore engine cuts over, run every A-tier indicator with a mechanical threshold against 5–10 diverse real public repos (the cross-check quiz formerly recorded in the retired planning corpus). Adjust thresholds that misclassify; record every adjustment in §5.
 2. **Post-audit calibration:** after every N completed audits (target: 20), fit the tier thresholds and category weights against the collected `score-vs-outcome` data (audit score vs. subsequent incident/refactor/velocity observations). Re-visit any threshold that classifies a known-good or known-bad system the wrong way.
 3. **Review cadence:** quarterly review of this file; every change lands here first and propagates to derived views.
 

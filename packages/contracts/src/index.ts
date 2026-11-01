@@ -149,7 +149,7 @@ export interface BandPathStep {
   recoverable_pp: number;
   /** The row's verify-effort tag, verbatim from the compiled registry. */
   effort: string;
-  /** Registry remediation quick win where the encyclopedia defines one. */
+  /** Registry remediation quick win where the unified indicator defines one. */
   quick_win?: string;
 }
 
@@ -541,7 +541,7 @@ export function localSlugFromPath(raw: string): string {
 // Score badge — a derived view over an already-sealed envelope (capability
 // score-badge). The badge states four facts (score, band, coverage, scan month)
 // and never introduces, recomputes, or reinterprets a graded quantity. Design
-// rationale: docs/plans/12_GITHUB_SURFACE_PLAN.md §badge.
+// rationale: openspec/specs/score-badge/.
 // ---------------------------------------------------------------------------
 
 /** Coverage floor for headline suppression: the headline is withheld when fewer

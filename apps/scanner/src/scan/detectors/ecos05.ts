@@ -10,7 +10,7 @@ const WHAT_IT_TAKES =
 
 type LicenseClass = 'strong' | 'weak' | 'permissive' | 'unknown';
 
-/** Classify a license string (encyclopedia §ECOS-05): strong copyleft (GPL/AGPL),
+/** Classify a license string (unified ECOS-05 §2–§3): strong copyleft (GPL/AGPL),
  * weak copyleft (LGPL/MPL/EPL/CDDL), permissive, or unknown. */
 export function classifyLicense(license: string | null | undefined): LicenseClass {
   if (!license) return 'unknown';

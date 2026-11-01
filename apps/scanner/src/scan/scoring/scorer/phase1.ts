@@ -20,7 +20,7 @@ export type Phase1Row = {
   remediation?: { quick_win: string; structural: string; gold_standard: string; effort: string };
 };
 
-// Simple score predicates matching encyclopedia Y/R bands loosely — enough for Phase 1 hero dial
+// Simple score predicates matching unified indicator Y/R bands loosely — enough for Phase 1 hero dial
 function scoreVel06(facts: Record<string, unknown>): number {
   const bf = (facts.vel06 as { bus_factor_repo?: number } | undefined)?.bus_factor_repo ?? 1;
   const share = (facts.vel06 as { top_author_share?: number } | undefined)?.top_author_share ?? 1;

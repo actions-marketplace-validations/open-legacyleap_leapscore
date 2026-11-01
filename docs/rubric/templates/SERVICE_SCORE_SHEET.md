@@ -4,7 +4,7 @@
 
 **Scoring legend:** 3 = Healthy (no flags) · 2 = Minor debt (yellow in non-core paths) · 1 = Severe debt (yellow in core OR red in isolated paths) · 0 = Critical (red in core OR across multiple paths) · **N/A** = not applicable (reason recorded; excluded) · **Unknown** = applicable but unmeasurable (unscored; included in the frozen denominator) · **Not implemented** = no detector in this scanner release (excluded).
 
-**Core-path rule:** core = files reachable from public entry points touching money / auth / PII / compliance (global taxonomy — `00` Part 1). Per-indicator criteria live in the encyclopedia entry.
+**Core-path rule:** core = files reachable from public entry points touching money / auth / PII / compliance (global taxonomy — `00` Part 1). Per-indicator criteria live in its unified file under `indicators/`.
 
 **Category % = (Σ measured and estimated scores ÷ ((measured + estimated + applicable unknown count) × 3)) × 100.** Unknown rows add denominator without numerator points. Exclude N/A and not-implemented rows. Deep-dive rows (last line of each category) fold into the denominator when run and applicable.
 

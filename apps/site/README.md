@@ -48,4 +48,4 @@ There is **no `/api/scan` and no `/api/reports/[runId]`** — those site-side sc
 
 ## Note on derived percentages
 
-The locked plan text describes coverage as "65/25/10", but exact rounding of 49/19/8 over 76 rows yields 64/25/11. The counts (49/19/8) are canonical and asserted in `lib/score.consistency.test.ts`; the displayed percentages come from `scoring.ts` rounding. See `docs/plans/00` open questions.
+The locked plan text describes coverage as "65/25/10", but exact rounding of 49/19/8 over 76 rows yields 64/25/11. The counts (49/19/8) are canonical and asserted in `lib/score.consistency.test.ts`; the displayed percentages come from `scoring.ts` rounding. The historical rounding question is recorded in the retired planning corpus; the counts above are the current contract.

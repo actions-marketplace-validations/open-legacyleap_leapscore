@@ -16,7 +16,7 @@ Include the affected command or scan mode, expected and observed behavior, envir
 
 ## Rubric and generated files
 
-The rubric is single-sourced. Edit indicator semantics and thresholds in the canonical encyclopedia under `docs/rubric/01_…`–`10_…` and `docs/rubric/11_WEIGHTS_THRESHOLDS_CONFIG.md`; edit detector recipes and fact/status predicates in the matching `docs/specs/` implementation spec. Do not hand-edit derived views such as `docs/rubric/00_EXECUTIVE_RUBRIC.md`, category-weight tables, `docs/plans/03_ENGINEERABILITY_MATRIX.md`, `apps/scanner/src/scan/scoring/rubric.json`, or `apps/site/lib/generated/rubric.ts`.
+The rubric is single-sourced. Each indicator has one canonical file under `docs/rubric/indicators/<NN_CATEGORY>/` that combines its semantics (definition, impact, scoring criteria, remediation) with its implementation contract (applicability, detection, facts, status/score predicates, gates, budget, evidence). Edit that file; edit shared weights/thresholds in `docs/rubric/11_WEIGHTS_THRESHOLDS_CONFIG.md`. Do not edit the compatibility aliases under `docs/specs/` or the retired stubs under `docs/plans/`, and do not hand-edit derived views such as `docs/rubric/00_EXECUTIVE_RUBRIC.md`, the category index tables, `apps/scanner/src/scan/scoring/rubric.json`, or `apps/site/lib/generated/rubric.ts`.
 
 Regenerate rubric outputs with `npm run compile:rubric` and verify them with `npm run check:rubric-consistency`. The committed Action bundle is also generated: rebuild it through the documented build path and run `npm run check:dist`; do not patch `action/dist/` by hand.
 
@@ -27,10 +27,10 @@ From the repository root, install dependencies with `npm install`. Run the check
 | Change area | Checks |
 |---|---|
 | Scanner or report behavior | `npm test`, `npm run lint`, `npm run build` |
-| Rubric semantics or generated rubric | `npm run compile:rubric`, `npm run check:rubric-consistency`, `npm test` |
+| Rubric semantics or generated rubric | `npm run compile:rubric`, `npm run check:rubric-consistency`, `npm run check:schemas`, `npm run check:documentation-structure`, `npm test` |
 | Detector, site, or surface boundaries | `npm run check:detector-isolation`, `npm run check:site-boundary`, `npm run check:surface-boundary` |
 | CLI wiring or shipped Action bundle | `npm run check:bin-wiring`, `npm run check:dist` |
-| Documentation or package metadata | Validate links and commands affected by the change; run `npm test` and the relevant package checks |
+| Documentation or package metadata | `npm run check:documentation-structure`, `npm run check:schemas`; validate commands affected by the change and run `npm test` |
 
 ## Product boundaries
 
