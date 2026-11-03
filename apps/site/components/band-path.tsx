@@ -30,14 +30,12 @@ export function BandPath({
       {block.classes.length > 0 ? (
         <div className="mt-3 space-y-4">
           {block.classes.map((c) => (
-            <div key={c.label}>
+            <div key={c.tag}>
               <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                 <span className="flex items-center gap-2">
+                  <span className="font-mono text-sm text-ink">{c.tag}</span>
                   <span className="text-sm font-medium text-ink">
-                    {c.label}
-                  </span>
-                  <span className="rounded border border-hairline bg-panel-raised px-1 py-0 text-[10px] text-faint">
-                    {c.effort}
+                    {c.verify}
                   </span>
                 </span>
                 <span className="font-mono text-xs text-muted">
@@ -61,10 +59,11 @@ export function BandPath({
                         </span>
                       </div>
                       <div className="mt-0.5 text-[11px] text-faint">
-                        {s.effort}
+                        {s.verify}
                       </div>
                       {s.quick_win ? (
                         <p className="mt-1 line-clamp-2 text-xs leading-snug text-muted">
+                          <span className="text-faint">Quick win:</span>{" "}
                           {s.quick_win}
                         </p>
                       ) : null}

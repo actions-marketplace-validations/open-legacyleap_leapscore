@@ -1,4 +1,5 @@
 import type { DeepDiveScopeEntry, TopBlocker } from "@/lib/types";
+import { verifyEffortLabel } from "@leapscore/contracts";
 import { INDICATOR_REGISTRY } from "@/lib/generated/rubric";
 
 function truncateQuickWin(s: string, n = 110): string {
@@ -20,7 +21,7 @@ export function TopBlockers({ blockers }: { blockers?: TopBlocker[] }) {
         {safe.map((b) => {
           const pp = parseFloat(b.weight_pp);
           const reg = INDICATOR_REGISTRY[b.row];
-          const effort = reg?.effort ?? "⚡ ≤30 min";
+          const effort = verifyEffortLabel(reg?.effort);
           const quickWin = (reg?.remediation?.quick_win ?? "").trim();
           const excerpt = truncateQuickWin(quickWin);
           return (

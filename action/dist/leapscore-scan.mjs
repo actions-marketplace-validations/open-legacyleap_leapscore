@@ -3477,10 +3477,15 @@ function assessmentCtaForBand(tier) {
 }
 __name(assessmentCtaForBand, "assessmentCtaForBand");
 var BAND_PATH_CLASS_META = {
-  sprint: { label: "Sprint", effort: "\u26A1 \u226430 min" },
-  quarter: { label: "Quarter", effort: "\u{1F536} 2\u20134 h" },
-  structural: { label: "Structural", effort: "\u{1F537} 1\u20132 days" }
+  sprint: { tag: "\u26A1", verify: "Verify in \u226430 min" },
+  quarter: { tag: "\u{1F536}", verify: "Verify in 2\u20134 h" },
+  structural: { tag: "\u{1F537}", verify: "Verify in 1\u20132 days" }
 };
+function verifyEffortLabel(effort) {
+  const tag = String(effort ?? "").trim();
+  return `Verify effort: ${tag === "" ? "unknown" : tag}`;
+}
+__name(verifyEffortLabel, "verifyEffortLabel");
 function bandPathBlock(path, opts) {
   const unreached = path.unreached_rows > 0 ? `${path.unreached_rows} row${path.unreached_rows === 1 ? "" : "s"} could not be reached by this path (unknown or not implemented).` : null;
   const assumption = "Assumes applicability is unchanged \u2014 a fix that adds or removes a plane can move the denominators.";
@@ -3499,10 +3504,10 @@ function bandPathBlock(path, opts) {
   const needed = path.points_needed ?? 0;
   const classes = path.classes.map((c) => {
     const meta = BAND_PATH_CLASS_META[c.class];
-    const arrival = c.arrival === "alone" ? `${meta.label} alone reaches ${destination}` : c.arrival === "combined" ? `${meta.label} crosses only with the classes before it` : `${meta.label} stays short of ${destination}`;
+    const arrival = c.arrival === "alone" ? `These rows alone reach ${destination}` : c.arrival === "combined" ? "These rows cross only with the classes before it" : `These rows stay short of ${destination}`;
     return {
-      label: meta.label,
-      effort: meta.effort,
+      tag: meta.tag,
+      verify: meta.verify,
       total: `${formatPp(c.pp)}pp`,
       cumulative: `${formatPp(c.cumulative_pp)}pp`,
       arrival,
@@ -3510,7 +3515,7 @@ function bandPathBlock(path, opts) {
         row: s.row,
         name: s.name,
         pp: `+${formatPp(s.recoverable_pp)}pp`,
-        effort: s.effort,
+        verify: verifyEffortLabel(s.effort),
         ...s.quick_win ? { quick_win: s.quick_win } : {}
       }))
     };
@@ -3533,8 +3538,9 @@ function formatBandPathClause(path, tier) {
   const head = `next:${path.destination} +${formatPp(path.points_needed ?? 0)}pp`;
   const crossing = path.classes.find((c) => c.arrival !== "not-reached");
   if (!crossing) return `${head} unreachable`;
-  if (crossing.arrival === "alone") return `${head} via ${crossing.class}`;
-  const chain = path.classes.filter((c) => c.cumulative_pp <= crossing.cumulative_pp).map((c) => c.class);
+  const tag = /* @__PURE__ */ __name((c) => BAND_PATH_CLASS_META[c.class].tag, "tag");
+  if (crossing.arrival === "alone") return `${head} via ${tag(crossing)}`;
+  const chain = path.classes.filter((c) => c.cumulative_pp <= crossing.cumulative_pp).map(tag);
   return `${head} via ${chain.join("+")}`;
 }
 __name(formatBandPathClause, "formatBandPathClause");
@@ -10650,8 +10656,8 @@ __name(identitySummaryLine, "identitySummaryLine");
 function renderPathHtml(path, tier, score) {
   const block = bandPathBlock(path, { tier, score });
   const classes = block.classes.map((c) => {
-    const steps = c.steps.map((s) => `<li><strong>${esc(s.row)} ${esc(s.name)}</strong> ${esc(s.pp)} \u2014 ${esc(s.effort)}${s.quick_win ? `: ${esc(s.quick_win)}` : ""}</li>`).join("\n");
-    return `<h3>${esc(c.label)} (${esc(c.effort)}) \u2014 ${esc(c.total)}, cumulative ${esc(c.cumulative)}: ${esc(c.arrival)}</h3>
+    const steps = c.steps.map((s) => `<li><strong>${esc(s.row)} ${esc(s.name)}</strong> ${esc(s.pp)} \xB7 ${esc(s.verify)}${s.quick_win ? ` \u2014 Quick win: ${esc(s.quick_win)}` : ""}</li>`).join("\n");
+    return `<h3>${esc(c.tag)} ${esc(c.verify)} \u2014 ${esc(c.total)}, cumulative ${esc(c.cumulative)}: ${esc(c.arrival)}</h3>
 <ul>${steps}</ul>`;
   }).join("\n");
   return `<h2>${esc(block.heading)}</h2>
@@ -10667,8 +10673,8 @@ function renderPathMarkdown(path, tier, score) {
   const lines = [`## ${block.heading}`, ``, block.statement];
   for (const c of block.classes) {
     lines.push(``);
-    lines.push(`**${c.label}** (${c.effort}) \u2014 ${c.total}, cumulative ${c.cumulative}: ${c.arrival}`);
-    for (const s of c.steps) lines.push(`- **${s.row} ${s.name}** ${s.pp} \u2014 ${s.effort}${s.quick_win ? `: ${s.quick_win}` : ""}`);
+    lines.push(`**${c.tag} ${c.verify}** \u2014 ${c.total}, cumulative ${c.cumulative}: ${c.arrival}`);
+    for (const s of c.steps) lines.push(`- **${s.row} ${s.name}** ${s.pp} \xB7 ${s.verify}${s.quick_win ? ` \u2014 Quick win: ${s.quick_win}` : ""}`);
   }
   if (block.shortfall) {
     lines.push(``);

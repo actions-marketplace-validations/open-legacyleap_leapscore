@@ -311,6 +311,20 @@ describe('3.5 terminal and unreachable states render explicit statements', () =>
       expect(doc).not.toContain('Reach ');
     }
   });
+
+  it('renders each class by its tag and verification framing, never a calendar noun', () => {
+    const block = bandPathBlock(unreachablePath, { tier: 'Moderate', score: 30 });
+    for (const doc of [
+      renderHtml({ ...base, score: 30, tier: 'High', nextBandPath: unreachablePath }),
+      renderMarkdown({ ...base, score: 30, tier: 'High', nextBandPath: unreachablePath }),
+    ]) {
+      expect(block.classes[0].tag).toBe('⚡');
+      expect(doc).toContain(`${block.classes[0].tag} ${block.classes[0].verify}`);
+      expect(doc).toContain('Verify effort: ⚡ ≤30 min');
+      // The step's quick win is labelled as remediation prose, not as the tag's duration.
+      expect(doc).not.toMatch(/Sprint|Quarter|Structural/);
+    }
+  });
 });
 
 describe('6.1 one derivation serves every surface', () => {
@@ -335,7 +349,7 @@ describe('6.1 one derivation serves every surface', () => {
       expect(html).toContain(block.statement);
       for (const c of block.classes) {
         expect(md).toContain(c.arrival);
-        expect(md).toContain(`**${c.label}**`);
+        expect(md).toContain(`**${c.tag} ${c.verify}**`);
         expect(html).toContain(c.arrival);
         for (const s of c.steps.slice(0, 3)) {
           expect(md).toContain(s.row);

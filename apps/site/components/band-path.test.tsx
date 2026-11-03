@@ -27,24 +27,27 @@ describe("site next-band path block", () => {
     expect(html).toContain(fixtureBlock.statement);
     expect(html).toContain("Reach Low — 22pp needed (band floor 80, sealed 58).");
 
-    // each class's label, effort, totals, cumulative arrival, and its steps
+    // each class's tag, verification framing, totals, cumulative arrival, and its steps
     expect(fixtureBlock.classes.length).toBeGreaterThan(0);
     for (const c of fixtureBlock.classes) {
-      expect(html).toContain(c.label);
-      expect(html).toContain(c.effort);
+      expect(html).toContain(c.tag);
+      expect(html).toContain(c.verify);
       expect(html).toContain(`${c.total} · cumulative ${c.cumulative}`);
       expect(html).toContain(c.arrival);
       for (const s of c.steps) {
         expect(html).toContain(`href="#row-${s.row}"`);
         expect(html).toContain(s.pp);
+        expect(html).toContain(s.verify);
       }
     }
-    // honest arrival is rendered, not smoothed: sprint crosses alone, quarter
-    // still names its combined-only arrival
-    expect(fixtureBlock.classes[0].arrival).toContain("Sprint alone reaches Low");
+    // honest arrival is rendered, not smoothed: the cheapest class crosses
+    // alone, the next one still names its combined-only arrival
+    expect(fixtureBlock.classes[0].arrival).toBe("These rows alone reach Low");
     expect(fixtureBlock.classes[1].arrival).toBe(
-      "Quarter crosses only with the classes before it",
+      "These rows cross only with the classes before it",
     );
+    // No surface borrows the retired calendar vocabulary.
+    expect(html).not.toMatch(/Sprint|Quarter|Structural/);
 
     // unreached-row disclosure and the stated assumption
     expect(html).toContain(fixtureBlock.unreached as string);
@@ -120,7 +123,7 @@ describe("site next-band path block", () => {
     expect(block.shortfall).not.toBeNull();
     expect(html).toContain(block.shortfall as string);
     expect(html).toContain("3pp short, and 4 rows this path could not reach would have to be graded first");
-    expect(html).toContain("Sprint stays short of Moderate");
+    expect(html).toContain("These rows stay short of Moderate");
   });
 
   it("renders no block at all when the report carries no path", () => {

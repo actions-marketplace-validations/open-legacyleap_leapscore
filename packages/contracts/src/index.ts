@@ -988,24 +988,39 @@ export function assessmentCtaForBand(tier: string): string {
 // from the sealed field (report-envelope: no duplicated grammar).
 // ---------------------------------------------------------------------------
 
-const BAND_PATH_CLASS_META: Record<BandPathCostClass, { label: string; effort: string }> = {
-  sprint: { label: "Sprint", effort: "⚡ ≤30 min" },
-  quarter: { label: "Quarter", effort: "🔶 2–4 h" },
-  structural: { label: "Structural", effort: "🔷 1–2 days" },
+/** A class carries no name of its own: it is identified by the verify-effort
+ * tag the rows in it share (band-path, D1). The tag is the same vocabulary the
+ * compact stdout clause speaks; `verify` frames it as measurement, never as the
+ * duration of the remediation beside it. */
+const BAND_PATH_CLASS_META: Record<BandPathCostClass, { tag: string; verify: string }> = {
+  sprint: { tag: "⚡", verify: "Verify in ≤30 min" },
+  quarter: { tag: "🔶", verify: "Verify in 2–4 h" },
+  structural: { tag: "🔷", verify: "Verify in 1–2 days" },
 };
+
+/** Verification-effort framing for any surface that renders a row's `effort`
+ * tag (report-rendering: verify-effort provenance). A missing tag is unknown
+ * cost — never the cheapest bracket. */
+export function verifyEffortLabel(effort: string | null | undefined): string {
+  const tag = String(effort ?? "").trim();
+  return `Verify effort: ${tag === "" ? "unknown" : tag}`;
+}
 
 export interface BandPathBlockStep {
   row: string;
   name: string;
   /** Signed recoverable points, e.g. `+2.22pp`. */
   pp: string;
-  effort: string;
+  /** Verification-effort framing of the row's tag, e.g. `Verify effort: ⚡ ≤30 min`. */
+  verify: string;
   quick_win?: string;
 }
 
 export interface BandPathBlockClass {
-  label: string;
-  effort: string;
+  /** Tag identity of the class, e.g. `⚡` — the stdout clause speaks it too. */
+  tag: string;
+  /** Per-step verification framing, e.g. `Verify in ≤30 min`. */
+  verify: string;
   /** Recoverable points within this class alone, e.g. `4.2pp`. */
   total: string;
   /** Recoverable points through this class and every class before it. */
@@ -1053,13 +1068,13 @@ export function bandPathBlock(path: NextBandPath, opts: { tier: string; score: n
     const meta = BAND_PATH_CLASS_META[c.class];
     const arrival =
       c.arrival === "alone"
-        ? `${meta.label} alone reaches ${destination}`
+        ? `These rows alone reach ${destination}`
         : c.arrival === "combined"
-          ? `${meta.label} crosses only with the classes before it`
-          : `${meta.label} stays short of ${destination}`;
+          ? "These rows cross only with the classes before it"
+          : `These rows stay short of ${destination}`;
     return {
-      label: meta.label,
-      effort: meta.effort,
+      tag: meta.tag,
+      verify: meta.verify,
       total: `${formatPp(c.pp)}pp`,
       cumulative: `${formatPp(c.cumulative_pp)}pp`,
       arrival,
@@ -1067,7 +1082,7 @@ export function bandPathBlock(path: NextBandPath, opts: { tier: string; score: n
         row: s.row,
         name: s.name,
         pp: `+${formatPp(s.recoverable_pp)}pp`,
-        effort: s.effort,
+        verify: verifyEffortLabel(s.effort),
         ...(s.quick_win ? { quick_win: s.quick_win } : {}),
       })),
     };
@@ -1092,14 +1107,17 @@ export function bandPathBlock(path: NextBandPath, opts: { tier: string; score: n
 }
 
 /** Compact stdout clause (band-path D7): destination, distance, and the class
- * that crosses — or the honest non-arrival / terminal state. */
+ * that crosses — or the honest non-arrival / terminal state. Classes are named
+ * by the tag identity every report surface renders, never by the persisted
+ * cost-class key. */
 export function formatBandPathClause(path: NextBandPath, tier: string): string {
   if (path.terminal) return `next:none (at ${tier})`;
   const head = `next:${path.destination} +${formatPp(path.points_needed ?? 0)}pp`;
   const crossing = path.classes.find((c) => c.arrival !== "not-reached");
   if (!crossing) return `${head} unreachable`;
-  if (crossing.arrival === "alone") return `${head} via ${crossing.class}`;
-  const chain = path.classes.filter((c) => c.cumulative_pp <= crossing.cumulative_pp).map((c) => c.class);
+  const tag = (c: BandPathClass): string => BAND_PATH_CLASS_META[c.class].tag;
+  if (crossing.arrival === "alone") return `${head} via ${tag(crossing)}`;
+  const chain = path.classes.filter((c) => c.cumulative_pp <= crossing.cumulative_pp).map(tag);
   return `${head} via ${chain.join("+")}`;
 }
 

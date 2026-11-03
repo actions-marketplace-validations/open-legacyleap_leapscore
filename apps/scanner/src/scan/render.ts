@@ -82,8 +82,8 @@ export function identitySummaryLine(identity: ReportIdentity): string {
 function renderPathHtml(path: NextBandPath, tier: string, score: number): string {
   const block = bandPathBlock(path, { tier, score });
   const classes = block.classes.map((c) => {
-    const steps = c.steps.map((s) => `<li><strong>${esc(s.row)} ${esc(s.name)}</strong> ${esc(s.pp)} — ${esc(s.effort)}${s.quick_win ? `: ${esc(s.quick_win)}` : ''}</li>`).join('\n');
-    return `<h3>${esc(c.label)} (${esc(c.effort)}) — ${esc(c.total)}, cumulative ${esc(c.cumulative)}: ${esc(c.arrival)}</h3>
+    const steps = c.steps.map((s) => `<li><strong>${esc(s.row)} ${esc(s.name)}</strong> ${esc(s.pp)} · ${esc(s.verify)}${s.quick_win ? ` — Quick win: ${esc(s.quick_win)}` : ''}</li>`).join('\n');
+    return `<h3>${esc(c.tag)} ${esc(c.verify)} — ${esc(c.total)}, cumulative ${esc(c.cumulative)}: ${esc(c.arrival)}</h3>
 <ul>${steps}</ul>`;
   }).join('\n');
   return `<h2>${esc(block.heading)}</h2>
@@ -97,8 +97,8 @@ function renderPathMarkdown(path: NextBandPath, tier: string, score: number): st
   const lines: string[] = [`## ${block.heading}`, ``, block.statement];
   for (const c of block.classes) {
     lines.push(``);
-    lines.push(`**${c.label}** (${c.effort}) — ${c.total}, cumulative ${c.cumulative}: ${c.arrival}`);
-    for (const s of c.steps) lines.push(`- **${s.row} ${s.name}** ${s.pp} — ${s.effort}${s.quick_win ? `: ${s.quick_win}` : ''}`);
+    lines.push(`**${c.tag} ${c.verify}** — ${c.total}, cumulative ${c.cumulative}: ${c.arrival}`);
+    for (const s of c.steps) lines.push(`- **${s.row} ${s.name}** ${s.pp} · ${s.verify}${s.quick_win ? ` — Quick win: ${s.quick_win}` : ''}`);
   }
   if (block.shortfall) {
     lines.push(``);

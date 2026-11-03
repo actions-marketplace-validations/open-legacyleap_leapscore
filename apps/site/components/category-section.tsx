@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 
+import { verifyEffortLabel } from "@leapscore/contracts";
 import type { CategoryScore, IndicatorRow } from "@/lib/types";
 
 import {
@@ -168,7 +169,7 @@ function FactPill({ k, v }: { k: string; v: unknown }) {
   );
 }
 
-function RowDetail({ r }: { r: IndicatorRow }) {
+export function RowDetail({ r }: { r: IndicatorRow }) {
   return (
     <div className="space-y-2 text-xs leading-relaxed">
       <p className="text-muted">{r.reason}</p>
@@ -244,7 +245,7 @@ function RowDetail({ r }: { r: IndicatorRow }) {
             {r.status === "estimated" ? (
               <span className="rounded border border-hairline bg-panel-raised px-1 py-0 text-[10px] text-faint">estimated</span>
             ) : null}
-            <span className="text-[11px] text-faint">{r.remediation.effort}</span>
+            <span className="text-[11px] text-faint">{verifyEffortLabel(r.remediation.effort)}</span>
           </div>
           <div className="mt-1 text-muted">
             <span className="text-ink">Quick win.</span>{" "}
@@ -297,7 +298,7 @@ function Row({ r }: { r: IndicatorRow }) {
                 </span>
               )}
               <span className="hidden shrink-0 text-[11px] text-faint sm:inline">
-                {r.effort}
+                {verifyEffortLabel(r.effort)}
               </span>
             </div>
           </AccordionTrigger>

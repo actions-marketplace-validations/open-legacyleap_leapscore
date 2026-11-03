@@ -24,6 +24,7 @@ import {
   formatPp,
   formatBandPathClause,
   bandPathBlock,
+  verifyEffortLabel,
   DELTA_DOCUMENT,
   DELTA_SCHEMA_VERSION,
   isDeltaDocument,
@@ -208,12 +209,14 @@ describe("next-band path contract field (band-path)", () => {
     expect(formatPp(5)).toBe("5");
   });
 
-  it("stdout clause names destination, distance, and the crossing class", () => {
-    expect(formatBandPathClause(path, "High")).toBe("next:Moderate +5pp via sprint+quarter");
+  it("stdout clause names destination, distance, and the crossing class by tag", () => {
+    expect(formatBandPathClause(path, "High")).toBe("next:Moderate +5pp via ⚡+🔶");
     const alone = { ...path, classes: [{ ...path.classes[0], pp: 6.1, cumulative_pp: 6.1, arrival: "alone" as const }] };
-    expect(formatBandPathClause(alone, "High")).toBe("next:Moderate +5pp via sprint");
+    expect(formatBandPathClause(alone, "High")).toBe("next:Moderate +5pp via ⚡");
     const unreachable = { ...path, classes: [path.classes[0]] };
     expect(formatBandPathClause(unreachable, "High")).toBe("next:Moderate +5pp unreachable");
+    // The clause never falls back to the persisted cost-class key.
+    expect(formatBandPathClause(path, "High")).not.toMatch(/sprint|quarter|structural/i);
   });
 
   it("terminal clause carries no destination", () => {
@@ -231,16 +234,41 @@ describe("next-band path contract field (band-path)", () => {
     expect(block.shortfall).toMatch(/No combination of graded deductions reaches Moderate/);
     expect(block.shortfall).toMatch(/6 rows .* would have to be graded first/);
     expect(block.unreached).toMatch(/^6 rows could not be reached/);
-    expect(block.classes[0].arrival).toBe("Sprint stays short of Moderate");
+    expect(block.classes[0].arrival).toBe("These rows stay short of Moderate");
   });
 
   it("block reports per-class cumulative arrival without smoothing", () => {
     const block = bandPathBlock(path, { tier: "High", score: 48 });
-    expect(block.classes.map((c) => [c.label, c.total, c.cumulative, c.arrival])).toEqual([
-      ["Sprint", "4.2pp", "4.2pp", "Sprint stays short of Moderate"],
-      ["Quarter", "2.6pp", "6.8pp", "Quarter crosses only with the classes before it"],
+    expect(block.classes.map((c) => [c.tag, c.verify, c.total, c.cumulative, c.arrival])).toEqual([
+      ["⚡", "Verify in ≤30 min", "4.2pp", "4.2pp", "These rows stay short of Moderate"],
+      ["🔶", "Verify in 2–4 h", "2.6pp", "6.8pp", "These rows cross only with the classes before it"],
     ]);
     expect(block.shortfall).toBeNull();
+  });
+
+  it("no class label or arrival sentence borrows a calendar or remediation noun", () => {
+    const block = bandPathBlock(path, { tier: "High", score: 48 });
+    for (const c of block.classes) {
+      expect(c.verify).toMatch(/^Verify in /);
+      for (const s of [c.verify, c.arrival]) {
+        expect(s).not.toMatch(/sprint|quarter|structural|quick win|weeks?|months?/i);
+      }
+    }
+  });
+
+  it("every step renders its tag as verification effort, not remediation duration", () => {
+    const block = bandPathBlock(path, { tier: "High", score: 48 });
+    const step = block.classes[0].steps[0];
+    expect(step.verify).toBe("Verify effort: 🔶 ~2–4 h");
+    expect(step.quick_win).toBe("patch today");
+    expect(step).not.toHaveProperty("effort");
+  });
+
+  it("an absent effort tag renders as unknown cost, never the cheapest bracket", () => {
+    expect(verifyEffortLabel("⚡ ≤30 min")).toBe("Verify effort: ⚡ ≤30 min");
+    expect(verifyEffortLabel(undefined)).toBe("Verify effort: unknown");
+    expect(verifyEffortLabel("  ")).toBe("Verify effort: unknown");
+    expect(verifyEffortLabel(null)).toBe("Verify effort: unknown");
   });
 
   it("an additive field keeps the contract at the current version", () => {
