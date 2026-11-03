@@ -17,6 +17,24 @@ export type BudgetController = {
  * not a control loop. Value confirmed by the 1.4 corpus spike; see change notes. */
 export const KILLER_TIMEOUT_MS = 240_000;
 
+/** Tree-read budget partitioned across the clone/local detectors. */
+export const DETECTOR_TREE_BYTE_BUDGET = 4 * 1024 * 1024;
+
+/** Read allocation reserved for the identity pass (report-identity design D2/D5):
+ * the pass runs before the detector partition, with its own reader and its own
+ * counter, so an identity read cap can never be mistaken for a detector cap and
+ * identity cost cannot starve a detector. Reserved *on top of* the detector tree
+ * budget — fixed work gets a base, indicator-derived work gets the rest, on the
+ * `withCloneBase` precedent — so every detector's byte partition is identical
+ * with and without the identity pass. */
+export const IDENTITY_READ_ALLOCATION = 2 * 1024 * 1024;
+
+/** The scan's total tree-read budget: detector partition plus the reserved
+ * identity allocation. `identity: false` is the same scan without the pass. */
+export function scanTreeReadBudget(opts: { identity?: boolean } = {}): number {
+  return DETECTOR_TREE_BYTE_BUDGET + (opts.identity === false ? 0 : IDENTITY_READ_ALLOCATION);
+}
+
 export function createBudgetController(opts: { timeoutMs?: number; byteCap?: number; sampleN?: number } = {}): BudgetController {
   const timeoutMs = opts.timeoutMs ?? 10_000; // Phase-1 default; Phase-2 uses 240_000
   const byteCap = opts.byteCap ?? 4 * 1024 * 1024;

@@ -6,6 +6,7 @@ import { DeepDiveScope, TopBlockers } from "@/components/blockers";
 import { CategorySection } from "@/components/category-section";
 import { DialGauge } from "@/components/dial-gauge";
 import { GatesTable } from "@/components/gates-table";
+import { IdentityCard } from "@/components/identity-card";
 import { ReportNextStep } from "@/components/report-next-step";
 import { SampleFullTable } from "@/components/sample-full-table";
 import { tierForScore } from "@/lib/scoring";
@@ -43,45 +44,9 @@ export function ReportView({
 }) {
   const tier = tierForScore(report.headline.score);
 
-  // When persistedMeta is provided (from server), render persisted variants inside
-  // the client boundary to avoid passing Link-containing ReactNodes across RSC.
-  const effectiveSubtitle = persistedMeta ? (
-    <div className="mt-1 space-y-0.5 text-xs text-faint">
-      <div>
-        schema {report.report_schema} · {report.snapshot.rubric_version} · {report.snapshot.scanned_at.slice(0, 10)} ·{" "}
-        <Link href="/reports" className="underline underline-offset-2 hover:text-foreground">
-          all reports
-        </Link>
-      </div>
-      <div>
-        run {persistedMeta.runId} · engine {persistedMeta.engineSha7} · repo commit{" "}
-        <span className="font-mono">{persistedMeta.repoSha === "unknown" ? "unknown" : persistedMeta.repoSha.slice(0, 7)}</span> · duration{" "}
-        {Math.round(persistedMeta.durationMs / 1000)}s / {Math.round(persistedMeta.budgetMs / 1000)}s budget · ran {persistedMeta.ranAt}
-      </div>
-    </div>
-  ) : (
-    subtitle ?? (
-      <p className="mt-1 text-xs text-faint">
-        schema {report.report_schema} · {report.snapshot.rubric_version} · {report.snapshot.scanned_at.slice(0, 10)}
-      </p>
-    )
-  );
-
-  const effectiveFooterExtra = persistedMeta ? (
-    <span>
-      Persisted {persistedMeta.ranAt} · engine {report.snapshot.engine_version} · rubric {report.snapshot.rubric_version} ·{" "}
-      <a href={rawJsonUrl(persistedMeta.runId)} className="underline underline-offset-2 hover:text-foreground">
-        raw JSON
-      </a>
-      <span> · </span>
-      <Link href={`/live?repo=${encodeURIComponent(persistedMeta.repo)}`} className="underline underline-offset-2 hover:text-foreground">
-        rerun
-      </Link>
-    </span>
-  ) : (
-    footerExtra
-  );
-
+  // Provenance is demoted, never deleted (report-rendering): the instrument's
+  // receipt renders in a collapsed band below the evidence sections. Only the
+  // header actions stay in the chrome.
   const effectiveHeaderActions = persistedMeta ? (
     <p className="text-xs text-muted">
       <Link href="/reports" className="underline underline-offset-2 hover:text-foreground">
@@ -153,27 +118,10 @@ export function ReportView({
             )}
           </div>
         ) : null}
-
-        {persistedMeta ? (
-          <div className="mt-4 grid gap-3 rounded-lg border border-hairline bg-panel/30 p-3 text-xs lg:grid-cols-[1fr_auto]">
-            <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 sm:grid-cols-4">
-              <div><span className="text-faint">SCHEMA</span> <span className="ml-2 font-mono text-muted">{report.report_schema}</span></div>
-              <div><span className="text-faint">RUBRIC</span> <span className="ml-2 font-mono text-muted">{report.snapshot.rubric_version}</span></div>
-              <div><span className="text-faint">ENGINE</span> <span className="ml-2 font-mono text-muted">{persistedMeta.engineSha7} <span className="text-faint">/</span> {report.snapshot.engine_version}</span></div>
-              <div><span className="text-faint">COMMIT</span> <span className="ml-2 font-mono text-muted">{persistedMeta.repoSha === 'unknown' ? 'unknown' : persistedMeta.repoSha.slice(0,7)}</span></div>
-              <div className="col-span-2 sm:col-span-2"><span className="text-faint">RUN</span> <span className="ml-2 font-mono text-[11px] text-muted break-all">{persistedMeta.runId}</span></div>
-              <div><span className="text-faint">DURATION</span> <span className="ml-2 font-mono text-muted">{Math.round(persistedMeta.durationMs/1000)}s <span className="text-faint">/ {Math.round(persistedMeta.budgetMs/1000)}s</span></span></div>
-              <div><span className="text-faint">RAN</span> <span className="ml-2 font-mono text-muted">{persistedMeta.ranAt.slice(0,19)}Z</span></div>
-            </div>
-            <div className="flex shrink-0 items-start gap-2 lg:flex-col lg:items-end">
-              <a href={rawJsonUrl(persistedMeta.runId)} className="rounded border border-hairline bg-background px-2.5 py-1 font-mono text-xs text-muted hover:text-foreground">raw JSON</a>
-              <Link href={`/live?repo=${encodeURIComponent(persistedMeta.repo)}`} className="rounded bg-foreground px-2.5 py-1 text-xs font-medium text-background hover:opacity-90">rerun</Link>
-            </div>
-          </div>
-        ) : (
-          <div className="mt-2 text-xs text-faint">{effectiveSubtitle}</div>
-        )}
       </div>
+
+      {/* Subject band: what the code is, before what the verdict says about it. */}
+      <IdentityCard report={report} />
 
       <div className="grid gap-8 lg:grid-cols-[260px_minmax(0,1fr)]">
         <div className="flex flex-col items-center">
@@ -251,12 +199,53 @@ export function ReportView({
       <div className="mt-10 border-t border-hairline pt-8">
         <DeepDiveScope scope={report.deep_dive_scope} />
       </div>
-      <p className="mt-8 text-xs text-faint">
-        {report.snapshot.scanned_at} · engine {report.snapshot.engine_version} · {report.snapshot.rubric_version}
-        {(report.snapshot as unknown as { scanned_commit?: string }).scanned_commit
-          ? ` · commit ${(report.snapshot as unknown as { scanned_commit: string }).scanned_commit.slice(0, 7)}`
-          : ""}
-      </p>
+
+      {/* Provenance band: the instrument's receipt, below the evidence sections
+          and collapsed by default. Every value survives; nothing here is chrome. */}
+      <details className="mt-10 rounded-lg border border-hairline bg-panel/20 p-4" data-testid="provenance-band">
+        <summary className="cursor-pointer text-xs font-medium tracking-wider text-faint uppercase">
+          Provenance — the instrument&apos;s receipt
+        </summary>
+        <div className="mt-3 grid gap-3 text-xs lg:grid-cols-[1fr_auto]">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 sm:grid-cols-4">
+            <div><span className="text-faint">SCHEMA</span> <span className="ml-2 font-mono text-muted">{report.report_schema}</span></div>
+            <div><span className="text-faint">RUBRIC</span> <span className="ml-2 font-mono text-muted">{report.snapshot.rubric_version}</span></div>
+            <div className="col-span-2 sm:col-span-2"><span className="text-faint">ENGINE</span> <span className="ml-2 font-mono text-muted">{persistedMeta ? `${persistedMeta.engineSha7} / ` : ""}{report.snapshot.engine_version}</span></div>
+            {!report.identity && (persistedMeta?.repoSha ?? report.snapshot.scanned_commit) ? (
+              <div>
+                <span className="text-faint">COMMIT</span>{" "}
+                <span className="ml-2 font-mono text-muted">
+                  {(() => {
+                    const sha = persistedMeta?.repoSha ?? report.snapshot.scanned_commit ?? "unknown";
+                    return sha === "unknown" ? "unknown" : sha.slice(0, 7);
+                  })()}
+                </span>
+              </div>
+            ) : null}
+            {persistedMeta ? (
+              <>
+                <div className="col-span-2"><span className="text-faint">RUN</span> <span className="ml-2 font-mono text-[11px] break-all text-muted">{persistedMeta.runId}</span></div>
+                <div><span className="text-faint">DURATION</span> <span className="ml-2 font-mono text-muted">{Math.round(persistedMeta.durationMs / 1000)}s <span className="text-faint">/ {Math.round(persistedMeta.budgetMs / 1000)}s</span></span></div>
+                <div><span className="text-faint">RAN</span> <span className="ml-2 font-mono text-muted">{persistedMeta.ranAt.slice(0, 19)}Z</span></div>
+              </>
+            ) : (
+              <div className="col-span-2 sm:col-span-2"><span className="text-faint">SCAN TIME</span> <span className="ml-2 font-mono text-muted">{report.snapshot.scanned_at}</span></div>
+            )}
+          </div>
+          <div className="flex shrink-0 items-start gap-2 lg:flex-col lg:items-end">
+            {persistedMeta ? (
+              <>
+                <a href={rawJsonUrl(persistedMeta.runId)} className="rounded border border-hairline bg-background px-2.5 py-1 font-mono text-xs text-muted hover:text-foreground">raw JSON</a>
+                <Link href={`/live?repo=${encodeURIComponent(persistedMeta.repo)}`} className="rounded bg-foreground px-2.5 py-1 text-xs font-medium text-background hover:opacity-90">rerun</Link>
+              </>
+            ) : (
+              footerExtra
+            )}
+          </div>
+        </div>
+        {subtitle ? <div className="mt-2 text-xs text-faint">{subtitle}</div> : null}
+      </details>
+
       <ReportNextStep tier={report.headline.tier} score={report.headline.score} />
     </div>
   );

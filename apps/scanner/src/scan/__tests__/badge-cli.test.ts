@@ -172,6 +172,9 @@ describe('4.4 --badge leaves the sealed trio and the fingerprint untouched', () 
         delete env.meta.filename;
         delete env.report.id;
         delete env.report.snapshot.scanned_at;
+        // The identity subject records the same run-scoped scan instant (it is
+        // the same sealed value, not a second clock), so it is scrubbed too.
+        if (env.report.identity) delete env.report.identity.subject.scanned_at;
         delete env.trace;
         return env;
       };

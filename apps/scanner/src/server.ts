@@ -11,6 +11,7 @@ import {
   normalizeRepoForSlug,
   repoSlugFromUrl,
   resolveEngineSha7,
+  type ReportIdentity,
 } from "@leapscore/contracts";
 import { runUnifiedScan } from "./scan/orchestrator.js";
 import { sealScan } from "./scan/scoring/seal.js";
@@ -140,6 +141,7 @@ async function handleScan(req: http.IncomingMessage, res: http.ServerResponse, u
     let finalFacts: FactRecord[] | undefined;
     let snapshot: unknown;
     let scanId: string | undefined;
+    let identity: ReportIdentity | undefined;
     let budgetMs = 0;
     let totalCost = 0;
     let lastPct = 0;
@@ -195,6 +197,7 @@ async function handleScan(req: http.IncomingMessage, res: http.ServerResponse, u
       if (evt.type === "done") {
         finalFacts = evt.facts as FactRecord[];
         snapshot = evt.snapshot;
+        identity = evt.identity;
         scanId = evt.id;
         break;
       }
@@ -217,6 +220,7 @@ async function handleScan(req: http.IncomingMessage, res: http.ServerResponse, u
       budgetMs,
       startMs,
       trace: trace as never,
+      identity,
       archetypeOverride,
       engineRef,
       execImpl: gitExec,

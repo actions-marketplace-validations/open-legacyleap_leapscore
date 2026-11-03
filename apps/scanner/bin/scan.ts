@@ -22,6 +22,7 @@ import {
   type DeltaDocument,
   type NextBandPath,
   type ReportEnvelope,
+  type ReportIdentity,
 } from '@leapscore/contracts';
 
 export const USAGE = `leapscore-scan [scan] [<path> | --repo <owner/repo>] --out <dir> [--strict] [--fail-under <0-100> | --fail-under-band <critical|high|moderate|low>] [--baseline <report.json> [--ratchet[=<tolerance-pp>]]] [--badge <path>] [--sha <sha>] [--engine-ref <sha>] [--score-policy frozen|legacy]
@@ -505,6 +506,7 @@ async function runLocalMain(
   let budgetMs = 0;
   let facts: unknown[] = [];
   let snapshot: Record<string, unknown> | null = null;
+  let identity: RenderInput['identity'] | undefined;
   let scanId: string | undefined;
   try {
     const killerEnv = (o.env.LEAPSCORE_KILLER_MS ?? '') as string;
@@ -539,6 +541,7 @@ async function runLocalMain(
       } else if (evt.type === 'done') {
         facts = (evt.facts as unknown[]) ?? [];
         snapshot = evt.snapshot as Record<string, unknown>;
+        identity = (evt as { identity?: RenderInput['identity'] }).identity;
         scanId = evt.id as string | undefined;
         break;
       }
@@ -560,6 +563,7 @@ async function runLocalMain(
     budgetMs,
     startMs: o.startMs,
     trace: o.trace as never,
+    identity,
     engineRef: o.engineRef,
     env: o.env as NodeJS.ProcessEnv,
     // 2.3: engine identity from release metadata (--engine-ref / LEAPSCORE_SHA),
@@ -584,6 +588,7 @@ async function runRemoteMain(repo: string, o: RunOpts): Promise<number> {
   let budgetMs = 0;
   let facts: never[] | unknown[] = [];
   let snapshot: unknown = null;
+  let identity: RenderInput['identity'] | undefined;
   let scanId: string | undefined;
   try {
     const killerEnv = (o.env.LEAPSCORE_KILLER_MS ?? '') as string;
@@ -618,6 +623,7 @@ async function runRemoteMain(repo: string, o: RunOpts): Promise<number> {
       } else if (evt.type === 'done') {
         facts = (evt.facts as unknown[]) ?? [];
         snapshot = evt.snapshot ?? null;
+        identity = (evt as { identity?: RenderInput['identity'] }).identity;
         scanId = evt.id as string | undefined;
         break;
       }
@@ -639,6 +645,7 @@ async function runRemoteMain(repo: string, o: RunOpts): Promise<number> {
     budgetMs,
     startMs: o.startMs,
     trace: o.trace as never,
+    identity,
     engineRef: o.engineRef,
     env: o.env as NodeJS.ProcessEnv,
     // 2.3: engine identity from release metadata (--engine-ref / LEAPSCORE_SHA),
@@ -668,6 +675,7 @@ export async function writeReportsAndExit(
     coverage: { measured: number; estimated: number; unknown: number };
     top_blockers: Array<{ row: string; name: string; points_lost: number; weight_pp: string; summary: string; evidence_file?: string; rule?: string }>;
     next_band_path?: NextBandPath;
+    identity?: ReportIdentity;
     categories: Array<{ id: string; name: string; category_score: number | null; weight: number; applicable: number }>;
     snapshot: { repo?: string; scanned_commit?: string; scanned_at?: string };
     status: string;
@@ -689,6 +697,7 @@ export async function writeReportsAndExit(
     gates: (report.gates ?? []) as RenderInput['gates'],
     topBlockers: (report.top_blockers ?? []) as RenderInput['topBlockers'],
     nextBandPath: report.next_band_path,
+    identity: report.identity,
     gateCapped: report.headline.gate_capped === true,
     uncappedTier: report.headline.uncapped_tier,
     cappedByGates: report.headline.capped_by_gates,
@@ -772,6 +781,7 @@ type RenderInput = {
   gates: Array<{ id: string; name: string; status: string; note: string }>;
   topBlockers: Array<{ row: string; name: string; points_lost: number; weight_pp: string; summary: string; evidence_file?: string; rule?: string }>;
   categories: Array<{ id: string; name: string; category_score: number | null; weight: number; applicable: number }>;
+  identity?: ReportIdentity;
 };
 
 const invokedDirectly = (() => {

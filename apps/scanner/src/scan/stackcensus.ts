@@ -45,15 +45,28 @@ function emptyEntry(id: 'vb6' | 'delphi'): StackCensusEntry {
   return { id, detected: false, project_files: [], evidence: [], file_count: 0 };
 }
 
-/** Census over the canonical sorted walk: deterministic, read-free (paths only). */
-export async function scanStackCensus(ctx: Pick<ScanContext, 'clonePath'>, signal?: AbortSignal): Promise<StackCensus> {
+/** Census over the canonical sorted walk: deterministic, read-free (paths only).
+ *
+ * `opts.paths` lets a caller that already walked the tree hand its list in, so a
+ * scan that derives identity reuses one traversal instead of adding another
+ * (report-identity design D9). Detectors keep calling without it — their read
+ * accounting is unchanged. */
+export async function scanStackCensus(
+  ctx: Pick<ScanContext, 'clonePath'>,
+  signal?: AbortSignal,
+  opts: { paths?: readonly string[] } = {},
+): Promise<StackCensus> {
   let paths: string[] = [];
   let truncated = false;
-  try {
-    const walk = await walkSortedTree(ctx.clonePath);
-    paths = walk.paths.filter((p) => !p.endsWith('/'));
-  } catch {
-    truncated = true;
+  if (opts.paths) {
+    paths = opts.paths.filter((p) => !p.endsWith('/'));
+  } else {
+    try {
+      const walk = await walkSortedTree(ctx.clonePath);
+      paths = walk.paths.filter((p) => !p.endsWith('/'));
+    } catch {
+      truncated = true;
+    }
   }
   if (signal?.aborted) truncated = true;
   paths.sort();
@@ -76,10 +89,14 @@ export async function scanStackCensus(ctx: Pick<ScanContext, 'clonePath'>, signa
 const STACK_CENSUS_CACHE_KEY = 'stackcensus:census';
 
 /** Memoized census shared by ECOS-01 pins, plane evidence and disclosures. */
-export async function cachedStackCensus(ctx: ScanContext, signal?: AbortSignal): Promise<StackCensus> {
+export async function cachedStackCensus(
+  ctx: ScanContext,
+  signal?: AbortSignal,
+  opts: { paths?: readonly string[] } = {},
+): Promise<StackCensus> {
   const cached = ctx.cache.get(STACK_CENSUS_CACHE_KEY);
   if (cached) return cached as StackCensus;
-  const census = await scanStackCensus(ctx, signal);
+  const census = await scanStackCensus(ctx, signal, opts);
   ctx.cache.set(STACK_CENSUS_CACHE_KEY, census);
   return census;
 }

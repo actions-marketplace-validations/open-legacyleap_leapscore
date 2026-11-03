@@ -334,47 +334,15 @@ export function LiveReportClient({ repo: initialRepo }: { repo: string }) {
   // No navigation: the scanner keeps no store, so a sealed run has no
   // retrievable page. The terminal frame is the sole artefact.
   if (report) {
-    const measured = report.coverage.measured;
-    const totalForLabel = indicatorCount ?? (report.coverage.measured + report.coverage.unknown + report.coverage.estimated + report.coverage.not_applicable);
-    const elapsedS = Math.floor(elapsedMs / 1000);
     const runId = persistedMeta?.runId ?? pendingRunId;
     return (
-      <div className="mx-auto max-w-5xl px-4 py-10">
-        <div className="sticky top-0 z-10 -mx-4 border-b border-hairline bg-background/80 px-4 py-3 backdrop-blur">
-          <div className="mx-auto max-w-5xl">
-            <div className="flex items-center justify-between gap-4">
-              <p className="text-xs tracking-wider text-faint uppercase">Live report — sealed · {elapsedS}s</p>
-              <p className="font-mono text-xs text-muted">100% · sealed</p>
-            </div>
-            <div className="mt-2 h-2 w-full overflow-hidden rounded bg-panel">
-              <div className="h-full bg-foreground" style={{ width: `100%` }} />
-            </div>
-            <p className="mt-1 text-xs text-faint">
-              {measured} of {totalForLabel} indicators measured · {report.status}
-              {runId ? ` · ${runId.slice(0, 32)}…` : ""}
-            </p>
-          </div>
-        </div>
-        <div className="mb-8 mt-6">
-          <h1 className="mt-1 font-mono text-2xl font-semibold tracking-tight">{report.snapshot.repo}</h1>
-          {(report.snapshot as unknown as { archetype?: string; archetype_confidence?: string }).archetype ? (
-            <div className="mt-1 text-xs text-muted">Detected: {(report.snapshot as unknown as { archetype: string }).archetype} ({(report.snapshot as unknown as { archetype_confidence: string }).archetype_confidence})</div>
-          ) : null}
-        </div>
-
-        <ReportView report={report} title="Live report" />
-        <div className="mt-6">
-          <ScanTraceView trace={traces} />
-        </div>
-
-        <p className="mt-6 text-center text-xs text-faint">
-          {runId ? (
-            <>Sealed as <span className="font-mono">{runId}</span> · re-run to see this report again</>
-          ) : (
-            <>Report sealed · re-run to see this report again</>
-          )}
-        </p>
-      </div>
+      <SealedLiveReport
+        report={report}
+        traces={traces}
+        elapsedMs={elapsedMs}
+        indicatorCount={indicatorCount}
+        runId={runId}
+      />
     );
   }
 
@@ -470,4 +438,64 @@ function tierLabel(color: string): string {
     critical: "text-tier-critical",
   };
   return map[color] ?? "text-muted";
+}
+
+/**
+ * The revealed (sealed) live state. Exported so the placement invariant — subject
+ * band above the verdict, provenance only in the collapsed receipt — is testable
+ * without mounting the scan stream (report-rendering: live chrome is minimal).
+ */
+export function SealedLiveReport({
+  report,
+  traces,
+  elapsedMs,
+  indicatorCount,
+  runId,
+}: {
+  report: Report;
+  traces: TraceEntry[];
+  elapsedMs: number;
+  indicatorCount: number | null;
+  runId: string | null | undefined;
+}) {
+  const measured = report.coverage.measured;
+  const totalForLabel =
+    indicatorCount ??
+    report.coverage.measured + report.coverage.unknown + report.coverage.estimated + report.coverage.not_applicable;
+  const elapsedS = Math.floor(elapsedMs / 1000);
+  return (
+    <div className="mx-auto max-w-5xl px-4 py-10">
+      <div className="sticky top-0 z-10 -mx-4 border-b border-hairline bg-background/80 px-4 py-3 backdrop-blur">
+        <div className="mx-auto max-w-5xl">
+          <div className="flex items-center justify-between gap-4">
+            <p className="text-xs tracking-wider text-faint uppercase">Live report — sealed · {elapsedS}s</p>
+            <p className="font-mono text-xs text-muted">100% · sealed</p>
+          </div>
+          <div className="mt-2 h-2 w-full overflow-hidden rounded bg-panel">
+            <div className="h-full bg-foreground" style={{ width: `100%` }} />
+          </div>
+          <p className="mt-1 text-xs text-faint">
+            {measured} of {totalForLabel} indicators measured · {report.status}
+            {runId ? ` · ${runId.slice(0, 32)}…` : ""}
+          </p>
+        </div>
+      </div>
+      <div className="mt-6" />
+
+      <ReportView report={report} title="Live report" />
+      <div className="mt-6">
+        <ScanTraceView trace={traces} />
+      </div>
+
+      <p className="mt-6 text-center text-xs text-faint">
+        {runId ? (
+          <>
+            Sealed as <span className="font-mono">{runId}</span> · re-run to see this report again
+          </>
+        ) : (
+          <>Report sealed · re-run to see this report again</>
+        )}
+      </p>
+    </div>
+  );
 }

@@ -3,12 +3,15 @@ import { stat, readFile as fsReadFile } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { join, resolve } from 'node:path';
-import { createBudgetControllerForIndicators, budgetForIndicators, BUDGET_COST, INDICATOR_BUDGET_CLASS, computeSampleN, partitionByteCap, isKillerTrip } from './budget';
+import { createBudgetControllerForIndicators, budgetForIndicators, BUDGET_COST, INDICATOR_BUDGET_CLASS, computeSampleN, partitionByteCap, isKillerTrip, IDENTITY_READ_ALLOCATION } from './budget';
 import { walkSortedTree } from './tree';
 import { buildToolVersions, toolVersion } from './detectors/common';
 import { snapshotVersions } from './snapshots';
 import { sniffEcosystems } from './ecosystem';
 import { classifyArchetype, classifyArchetypePerRoot } from './archetype';
+import { cachedStackCensus } from './stackcensus';
+import { degradedIdentity, deriveIdentity } from './identity';
+import type { ReportIdentity } from '@leapscore/contracts';
 import { validateFact, type FactRecord } from './facts';
 import { createStrictFetch, StrictOfflineError } from './offline';
 import { ENGINE_VERSION } from '../identity';
@@ -187,6 +190,8 @@ export async function* runLocalScan(
   const totalCost = ids.reduce((a, id) => a + (BUDGET_COST[INDICATOR_BUDGET_CLASS[id] ?? 'fast'] ?? 5000), 0) + 30000;
   const budget = createBudgetControllerForIndicators(ids, { withCloneBase: true, byteCap: opts.byteCap, killerMs: opts.killerMs });
   const start = Date.now();
+  // One scan instant, shared by the snapshot and the identity subject.
+  const scannedAt = new Date().toISOString();
   const signal = budget.signal;
   const scanId = `ls_${Date.now().toString(36)}`;
 
@@ -203,14 +208,16 @@ export async function* runLocalScan(
   const commitSha = opts.scannedCommitOverride ?? await resolveLocalCommit(absPath);
 
   // Deterministic bounding (1.2): single canonical sorted walk → fileCount → sampleN,
-  // threaded into every slow detector's lease before fan-out.
+  // threaded into every slow detector's lease before fan-out. The same walk list
+  // feeds the identity pass and the legacy census (report-identity D9).
   let sampleN: number | undefined;
+  let treeWalk: Awaited<ReturnType<typeof walkSortedTree>> | null = null;
   try {
-    const walk = await walkSortedTree(absPath);
-    sampleN = computeSampleN(walk.fileCount);
+    treeWalk = await walkSortedTree(absPath);
+    sampleN = computeSampleN(treeWalk.fileCount);
     budget.setSampleN(sampleN);
     const elapsedMs = Date.now() - start;
-    yield { type: 'trace', ts: elapsedMs, elapsedMs, label: `Tree walk — ${walk.fileCount} files, sampleN ${sampleN ?? 'full'} (canonical sorted order)`, phase: 'budget' };
+    yield { type: 'trace', ts: elapsedMs, elapsedMs, label: `Tree walk — ${treeWalk.fileCount} files, sampleN ${sampleN ?? 'full'} (canonical sorted order)`, phase: 'budget' };
   } catch {
     // walk failure must not fail the scan; detectors fall back to full reads
   }
@@ -257,6 +264,47 @@ export async function* runLocalScan(
     // abandonment) reference the scan start, not each detector's wall clock.
     scanMs: start,
   };
+
+  // Identity pass (report-identity D2): scan-driver work beside archetype
+  // classification, never a detector. Local lane reads every in-scope file, so a
+  // small target is `measured` — cheap here, so no stride is needed. It uses its
+  // own reader bound to the reserved identity allocation and never fails the run.
+  let identity: ReportIdentity | undefined;
+  if (treeWalk) {
+    const identityStart = Date.now();
+    const subject = { repo: absPath, commit: commitSha, scanned_at: scannedAt };
+    try {
+      const census = await cachedStackCensus(ctx, signal, { paths: treeWalk.paths });
+      identity = await deriveIdentity({
+        walk: treeWalk,
+        manifests: ctx.manifests,
+        readFile: bindLocalReadFile(absPath, { byteCap: IDENTITY_READ_ALLOCATION, signal }),
+        archetype: archetypeResult,
+        census,
+        subject,
+        signal,
+        // Local lane reads every in-scope file (report-identity D5): coverage is
+        // complete, so the magnitude is measured rather than extrapolated.
+        readAll: true,
+      });
+    } catch (identityError) {
+      const detail = identityError instanceof Error ? identityError.message : String(identityError);
+      identity = degradedIdentity(subject, `identity pass failed: ${detail.slice(0, 200)}`);
+    }
+    const elapsedMs = Date.now() - start;
+    const lineItem = identity.size.lines;
+    const lineLabel = lineItem
+      ? `${lineItem.status === 'estimated' ? '~' : ''}${lineItem.value ?? 'unknown'}`
+      : 'unknown';
+    yield { type: 'trace', ts: elapsedMs, elapsedMs, label: `Identity — ${identity.size.files ?? 0} files · ${lineLabel} lines · ${identity.stack.languages.length} languages`, phase: 'archetype', durationMs: Date.now() - identityStart };
+  } else {
+    // The pass ran but had no tree to describe: state that, rather than leaving
+    // the block silently absent.
+    identity = degradedIdentity(
+      { repo: absPath, commit: commitSha, scanned_at: scannedAt },
+      'tree walk did not complete — identity could not be derived',
+    );
+  }
 
   let reqIds = ids;
   let reqDetectors = LOCAL_DETECTORS.filter((_, i) => ids.includes(LOCAL_IDS[i]));
@@ -375,7 +423,7 @@ export async function* runLocalScan(
 
   const snapshot: Record<string, unknown> = {
     repo: absPath,
-    scanned_at: new Date().toISOString(),
+    scanned_at: scannedAt,
     engine_version: ENGINE_VERSION,
     rubric_version: 'docs/rubric@tranche-a',
     scanned_commit: commitSha,
@@ -397,5 +445,5 @@ export async function* runLocalScan(
     snapshot.planeInventory = { has_server: false, has_data: false, has_deploy: false, has_client: false, has_test: false, evidence: { has_server: [], has_data: [], has_deploy: [], has_client: [], has_test: [] } };
     snapshot.archetype_evidence = ['local scan — archetype unavailable'];
   }
-  yield { type: 'done', facts, snapshot, id: scanId, strict: !!opts.strict };
+  yield { type: 'done', facts, snapshot, id: scanId, strict: !!opts.strict, identity };
 }

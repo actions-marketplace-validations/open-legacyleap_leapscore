@@ -180,6 +180,192 @@ export interface NextBandPath {
   terminal: boolean;
 }
 
+// ---------------------------------------------------------------------------
+// Target identity (capability `report-identity`) — what the scanned code *is*.
+//
+// Derived at scan time and excluded from grading exactly like `next_band_path`:
+// no identity value enters a row score, a category score, the headline, a tier,
+// a gate, the coverage counts, the next-band path, or `score_fingerprint`.
+// Membership rule: an identity field never carries a fact an indicator row
+// grades (dependency mass is ECOS-06, test surface is TEST-03, per-file line
+// distribution is ARCH-01, comment density is DOCS-06).
+// ---------------------------------------------------------------------------
+
+/** The three answers an identity measurement can give. `estimated` means an
+ *  extrapolated magnitude — never the scoring clamp that restricts estimated
+ *  indicator rows, because identity carries no score to clamp. */
+export type IdentityStatus = "measured" | "estimated" | "unknown";
+
+/** One identity value: the status the producer emitted plus the disclosure that
+ *  makes an estimate or an absence honest. Presentation (`~` marker and
+ *  two-significant-figure rounding) derives from `status` at render — it is
+ *  never stored, and a consumer never infers the status from `method` or
+ *  `covered`. */
+export interface IdentityItem {
+  status: IdentityStatus;
+  /** Stored magnitude; absent exactly when `status` is `unknown`. */
+  value?: number;
+  /** Why a value could not be measured (the lane or limit responsible). */
+  reason?: string;
+  /** How the value was obtained — disclosure only, never an input to status. */
+  method?: string;
+  /** Sample disclosure: files read against files in scope. */
+  covered?: { files_read: number; files_in_scope: number };
+  /** Identifier of the counting rule (`source-v1`), so a rule change is
+   *  distinguishable from a change in the target. */
+  scope?: string;
+}
+
+/** Whole-tree shape plus the single line magnitude. */
+export interface IdentitySize {
+  /** Status of the tree counts; `lines` carries its own status. */
+  status: IdentityStatus;
+  files?: number;
+  directories?: number;
+  reason?: string;
+  /** At most one line magnitude, never decomposed and never distributed. */
+  lines?: IdentityItem;
+}
+
+/** One language's share of the tree's in-scope source files. */
+export interface IdentityLanguage {
+  name: string;
+  /** Share of in-scope source files, 0–1. */
+  share: number;
+  files: number;
+}
+
+/** The sealed target-identity block: subject, shape, size, stack — no other
+ *  axis, and no value an indicator row grades. */
+export interface ReportIdentity {
+  /** What the target is. */
+  subject: {
+    repo: string;
+    /** Full commit sha, or the literal `unknown`. */
+    commit: string;
+    scanned_at: string;
+  };
+  /** How it is shaped. */
+  shape: {
+    status: IdentityStatus;
+    archetype: string;
+    confidence?: string;
+    planes?: Record<string, boolean>;
+    plane_evidence?: Record<string, string[]>;
+    /** Per-root entries when the target has more than one root. */
+    per_root?: Array<{
+      root: string;
+      archetype: string;
+      confidence?: string;
+      planes?: Record<string, boolean>;
+    }>;
+    reason?: string;
+  };
+  /** How big it is. */
+  size: IdentitySize;
+  /** What it is built from. */
+  stack: {
+    status: IdentityStatus;
+    languages: IdentityLanguage[];
+    primary_language?: string;
+    ecosystems: string[];
+    /** Presence-only framework names: no version, no support status. */
+    frameworks: string[];
+    /** Legacy-stack census (VB6/Delphi), presence-only. */
+    legacy_stacks?: Array<{ id: string; detected: boolean; files: number }>;
+    reason?: string;
+  };
+}
+
+/** Every field name the identity block declares (top level and nested). The
+ *  membership rule is checkable rather than a matter of taste: no name here may
+ *  be a metric an indicator row grades. */
+export const IDENTITY_FIELD_NAMES = [
+  "subject",
+  "shape",
+  "size",
+  "stack",
+  "repo",
+  "commit",
+  "scanned_at",
+  "status",
+  "archetype",
+  "confidence",
+  "planes",
+  "plane_evidence",
+  "per_root",
+  "root",
+  "files",
+  "directories",
+  "reason",
+  "lines",
+  "value",
+  "method",
+  "covered",
+  "scope",
+  "languages",
+  "name",
+  "share",
+  "primary_language",
+  "ecosystems",
+  "frameworks",
+  "legacy_stacks",
+  "id",
+  "detected",
+  "files_read",
+  "files_in_scope",
+] as const;
+
+/** Round to two significant figures. The producer stores what the renderer
+ *  prints for `estimated` values, so nobody quotes false precision out of the
+ *  JSON. */
+export function twoSignificantFigures(value: number): number {
+  if (!Number.isFinite(value) || value === 0) return 0;
+  const magnitude = Math.pow(10, Math.floor(Math.log10(Math.abs(value))) - 1);
+  return Math.round(value / magnitude) * magnitude;
+}
+
+/** Compact magnitude at two significant figures: `420000` → `420k`,
+ *  `1247` → `1.2k`, `58` → `58`. Display only — sealed values stay exact. */
+function compactMagnitude(value: number): string {
+  const abs = Math.abs(value);
+  if (abs < 1000) return String(Math.round(abs));
+  const units = [
+    { div: 1e3, suffix: "k" },
+    { div: 1e6, suffix: "M" },
+    { div: 1e9, suffix: "B" },
+  ];
+  let index = 0;
+  for (let i = 0; i < units.length; i++) if (abs >= units[i].div) index = i;
+  let scaled = twoSignificantFigures(abs / units[index].div);
+  if (scaled >= 1000 && index < units.length - 1) {
+    index += 1;
+    scaled = twoSignificantFigures(abs / units[index].div);
+  }
+  return `${String(Number(scaled.toFixed(2)))}${units[index].suffix}`;
+}
+
+/** The one display string for an identity value. `measured` prints the rounded
+ *  magnitude with no marker; `estimated` prints the same magnitude behind the
+ *  approximation marker; `unknown` states that the value was not measured and
+ *  names the reason. Every surface calls this — site, CLI markdown, CLI HTML —
+ *  so an approximation marker can never be hand-written into a fixture. */
+export function identityValueLabel(item: IdentityItem): string {
+  if (item.status === "unknown" || typeof item.value !== "number" || !Number.isFinite(item.value)) {
+    const reason = String(item.reason ?? "").trim();
+    return reason ? `not measured — ${reason}` : "not measured";
+  }
+  const text = compactMagnitude(item.value);
+  return item.status === "estimated" ? `~${text}` : text;
+}
+
+/** The status word beside an identity value, from the emitted status alone. */
+export function identityStatusLabel(item: IdentityItem): string {
+  if (item.status === "measured") return "measured";
+  if (item.status === "estimated") return "estimated";
+  return "not measured";
+}
+
 export interface Report {
   report_schema: string;
   id: string;
@@ -231,6 +417,10 @@ export interface Report {
   /** Derived next-band path (band-path): present unless the headline was
    * suppressed; derived from the sealed rows, never scored. */
   next_band_path?: NextBandPath;
+  /** Target identity (report-identity): what the scanned code is. Optional so
+   * envelopes written before it existed stay valid; absent means "the identity
+   * pass did not run", never "no identity to report". Never fingerprinted. */
+  identity?: ReportIdentity;
   /** Provenance of the sealed run (report-envelope): the producers that actually
    * ran and the vendored snapshot version ids that joined the fingerprint. */
   provenance?: {

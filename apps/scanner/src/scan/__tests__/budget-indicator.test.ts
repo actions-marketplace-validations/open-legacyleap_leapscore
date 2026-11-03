@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { budgetForIndicators, createBudgetControllerForIndicators, computeSampleN } from '../budget';
+import {
+  DETECTOR_TREE_BYTE_BUDGET,
+  IDENTITY_READ_ALLOCATION,
+  budgetForIndicators,
+  createBudgetControllerForIndicators,
+  computeSampleN,
+  partitionByteCap,
+  scanTreeReadBudget,
+} from '../budget';
 
 describe('indicator-driven budget', () => {
   it('6 IDs → ~15s (Phase1, no clone base)', () => {
@@ -45,5 +53,31 @@ describe('indicator-driven budget', () => {
     const { budgetMs } = budgetForIndicators(['VEL-06','VEL-09','VEL-08','VEL-10','SEC-07','TEST-08','ECOS-01','ECOS-02','ECOS-03','ECOS-05','ECOS-07','SEC-01','SEC-06','SEC-02','ARCH-01','ARCH-08','ARCH-05','TEST-03','TEST-05','DOCS-01','DOCS-03','DOCS-04','DOCS-08','DOCS-09','PERF-02','PERF-06','DATA-01','ECOS-06','ECOS-08','SEC-09','SEC-10'], { withCloneBase: true });
     expect(budgetMs).toBe(240_000);
     expect(budgetMs).toBeLessThanOrEqual(240_000);
+  });
+});
+
+describe('reserved identity read allocation (report-identity 3.1)', () => {
+  it('is a named reservation applied before the detector partition', () => {
+    expect(IDENTITY_READ_ALLOCATION).toBeGreaterThan(0);
+    expect(scanTreeReadBudget({ identity: true })).toBe(
+      DETECTOR_TREE_BYTE_BUDGET + IDENTITY_READ_ALLOCATION,
+    );
+    expect(scanTreeReadBudget({ identity: false })).toBe(DETECTOR_TREE_BYTE_BUDGET);
+    expect(scanTreeReadBudget({ identity: true }) - IDENTITY_READ_ALLOCATION).toBe(
+      DETECTOR_TREE_BYTE_BUDGET,
+    );
+  });
+
+  it('leaves every detector byte partition identical with and without the identity pass', () => {
+    for (const count of [1, 6, 25, 31]) {
+      const withIdentity = partitionByteCap(DETECTOR_TREE_BYTE_BUDGET, count);
+      const withoutIdentity = partitionByteCap(
+        scanTreeReadBudget({ identity: false }),
+        count,
+      );
+      expect(withIdentity).toBe(withoutIdentity);
+      // And the reservation is additive: it never comes out of the detector split.
+      expect(scanTreeReadBudget({ identity: true })).toBeGreaterThan(DETECTOR_TREE_BYTE_BUDGET);
+    }
   });
 });

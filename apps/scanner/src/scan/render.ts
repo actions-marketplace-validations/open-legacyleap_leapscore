@@ -1,5 +1,15 @@
 /** apps/scanner/src/scan/render.ts — self-contained HTML + Markdown emitters (spec: report-rendering) */
-import { assessmentUrlForBand, assessmentCtaForBand, bandPathBlock, gateCapStatement, METHODOLOGY_URL, POSITIONING_LINE, type NextBandPath } from '@leapscore/contracts';
+import {
+  assessmentUrlForBand,
+  assessmentCtaForBand,
+  bandPathBlock,
+  gateCapStatement,
+  identityValueLabel,
+  METHODOLOGY_URL,
+  POSITIONING_LINE,
+  type NextBandPath,
+  type ReportIdentity,
+} from '@leapscore/contracts';
 
 export type RenderInput = {
   score: number;
@@ -21,6 +31,10 @@ export type RenderInput = {
   /** Sealed next-band path (band-path): renders as one block after the top
    * risks and before the per-deduction detail; absent → no block at all. */
   nextBandPath?: NextBandPath;
+  /** Target identity (report-identity): rendered as one subject line above the
+   * verdict in both emitters; absent → no line at all. Every value string comes
+   * from the contract helpers, so markdown and HTML cannot disagree. */
+  identity?: ReportIdentity;
   /** Kill-switch cap disclosure (Gates G1–G8): when a proven gate lowered the
    * band, the report states which gates fired and what the score alone earned. */
   gateCapped?: boolean;
@@ -31,6 +45,33 @@ export type RenderInput = {
 
 function esc(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+/** The one identity line both emitters print above the verdict. It is composed
+ * from the sealed block through the contract helpers (`identityValueLabel`), so
+ * the CLI's line and the site card state the same value with the same marker. */
+export function identitySummaryLine(identity: ReportIdentity): string {
+  const bits: string[] = [];
+  if (identity.subject.repo) bits.push(identity.subject.repo);
+  const commit = identity.subject.commit && identity.subject.commit !== 'unknown'
+    ? identity.subject.commit.slice(0, 7)
+    : 'unknown';
+  bits.push(`commit ${commit}`);
+  if (typeof identity.size.files === 'number') bits.push(`${identity.size.files} files`);
+  if (typeof identity.size.directories === 'number') bits.push(`${identity.size.directories} dirs`);
+  const lines = identity.size.lines;
+  if (lines) {
+    bits.push(`${identityValueLabel(lines)} lines${lines.scope ? ` (${lines.scope})` : ''}`);
+  }
+  const primary = identity.stack.primary_language;
+  if (primary) bits.push(`primary ${primary}`);
+  if (identity.stack.ecosystems.length) bits.push(identity.stack.ecosystems.join(' + '));
+  if (identity.stack.frameworks.length) bits.push(identity.stack.frameworks.join(' + '));
+  const legacy = (identity.stack.legacy_stacks ?? []).filter((s) => s.detected).map((s) => s.id);
+  if (legacy.length) bits.push(legacy.join(' + '));
+  const archetype = identity.shape.archetype;
+  if (archetype && archetype !== 'unknown') bits.push(`archetype ${archetype}`);
+  return bits.join(' · ');
 }
 
 // METHODOLOGY_URL comes from the contract so the CLI's link and the site's
@@ -90,6 +131,7 @@ export function renderHtml(r: RenderInput): string {
     r.gateCapped && r.uncappedTier
       ? `<p class="gatecap"><strong>Verdict capped at ${esc(r.tier)}.</strong> ${esc(gateCapStatement(r.cappedByGates ?? [], r.uncappedTier))}</p>\n`
       : '';
+  const identityLine = r.identity ? `<p class="identity">${esc(identitySummaryLine(r.identity))}</p>\n` : '';
   const cats = r.categories.map((c) => `<li>${esc(c.id)} — ${esc(c.name)}: ${c.category_score == null ? 'n/a' : `${Math.round(c.category_score)}`} (weight ${c.weight}%)</li>`).join('\n');
   return `<!DOCTYPE html>
 <html lang="en">
@@ -101,11 +143,12 @@ export function renderHtml(r: RenderInput): string {
 body{font-family:system-ui,-apple-system,sans-serif;max-width:760px;margin:2rem auto;padding:0 1rem;color:#111;line-height:1.5}
 .score{font-size:2.5rem;font-weight:700}.band{display:inline-block;padding:.2rem .6rem;border-radius:999px;background:#111;color:#fff;font-weight:600}
 .meta{color:#555;font-size:.9rem}.cta{border:1px solid #111;padding:1rem;border-radius:.5rem;margin:1.5rem 0}
+.identity{color:#333;font-size:.95rem;font-family:ui-monospace,monospace;margin:0 0 .5rem}
 h2{margin-top:2rem}ul{padding-left:1.2rem}
 </style>
 </head>
 <body>
-${headline}
+${identityLine}${headline}
 <p class="meta">${esc(r.repo)} · commit ${esc(commitShort)} · ${esc(r.scannedAt)} · ${esc(r.runId)} · ${esc(r.status)} · coverage ${r.coverage.measured}m/${r.coverage.estimated}e/${r.coverage.unknown}u${r.fingerprint ? ` · fingerprint ${esc(r.fingerprint.slice(0, 12))}` : ''}</p>
 ${capNotice}<h2>Top risks</h2>
 <ul>${risks || '<li>No deductions — clean scan.</li>'}</ul>
@@ -127,6 +170,10 @@ export function renderMarkdown(r: RenderInput): string {
   const cta = assessmentCtaForBand(r.tier);
   const commitShort = r.repoSha && r.repoSha !== 'unknown' ? r.repoSha.slice(0, 7) : 'unknown';
   const lines: string[] = [];
+  if (r.identity) {
+    lines.push(identitySummaryLine(r.identity));
+    lines.push(``);
+  }
   lines.push(r.suppressed ? `# LeapScore: insufficient signal — ${r.repo}` : `# LeapScore: ${r.score}/${r.tier} — ${r.repo}`);
   lines.push(``);
   lines.push(`commit ${commitShort} · ${r.scannedAt} · \`${r.runId}\` · ${r.status} · coverage ${r.coverage.measured}m/${r.coverage.estimated}e/${r.coverage.unknown}u${r.fingerprint ? ` · fingerprint \`${r.fingerprint.slice(0, 12)}\`` : ''}`);

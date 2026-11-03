@@ -6,7 +6,7 @@
  * verbatim from the unified indicator remediation playbooks (`docs/rubric/indicators/`).
  */
 
-import type { Gate, IndicatorRow } from "@/lib/types";
+import type { Gate, IndicatorRow, ReportIdentity } from "@/lib/types";
 import { INDICATOR_REGISTRY, getIndicatorRemediation } from "@/lib/generated/rubric";
 
 type V = IndicatorRow["verdict_text"];
@@ -1644,3 +1644,48 @@ export const GATES: Gate[] = [
     note: "SBOM + licensee: BSD-compatible only.",
   },
 ];
+/* — target identity for the authored sample (report-identity) ——————————————
+ * Presentation derives the `~` marker and the rounding from `status`; nothing
+ * here stores a display string. The three statuses are all exercised by this one
+ * card: measured counts, an estimated line magnitude, and a shape stage the
+ * authored sample did not run.
+ */
+export const SAMPLE_IDENTITY: ReportIdentity = {
+  subject: {
+    repo: "django/django",
+    commit: "506fc82",
+    scanned_at: "2026-08-12T00:00:00Z",
+  },
+  shape: {
+    status: "unknown",
+    archetype: "unknown",
+    reason: "authored sample — archetype classification did not run",
+  },
+  size: {
+    status: "measured",
+    files: 3128,
+    directories: 412,
+    lines: {
+      status: "estimated",
+      value: 420000,
+      method: "stride-sample",
+      covered: { files_read: 40, files_in_scope: 1247 },
+      scope: "source-v1",
+    },
+  },
+  stack: {
+    status: "measured",
+    languages: [
+      { name: "Python", share: 0.72, files: 898 },
+      { name: "JavaScript", share: 0.18, files: 224 },
+      { name: "Other", share: 0.1, files: 125 },
+    ],
+    primary_language: "Python",
+    ecosystems: ["js", "py"],
+    frameworks: ["Django"],
+    legacy_stacks: [
+      { id: "vb6", detected: false, files: 0 },
+      { id: "delphi", detected: false, files: 0 },
+    ],
+  },
+};

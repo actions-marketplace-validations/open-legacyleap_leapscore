@@ -22,6 +22,7 @@ import {
   FE_ROWS,
   GATES,
   PERF_ROWS,
+  SAMPLE_IDENTITY,
   SEC_ROWS,
   TEST_ROWS,
   VEL_ROWS,
@@ -133,6 +134,9 @@ export class SampleReportProvider implements ReportProvider {
         ...DEEP_DIVE_ROWS,
         ...FE_ROWS,
       ],
+      // Subject band for the authored sample (report-identity): the same sealed
+      // shape a real scan seals, never re-derived by the consumer.
+      identity: SAMPLE_IDENTITY,
       sample: true,
     };
   }

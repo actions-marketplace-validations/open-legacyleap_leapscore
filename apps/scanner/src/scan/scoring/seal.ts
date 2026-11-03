@@ -172,6 +172,9 @@ export type SealInput = {
   budgetMs: number;
   startMs: number;
   trace: SealTraceEntry[];
+  /** Target identity (report-identity): sealed as `report.identity`, absent when
+   * the scan's identity pass did not run. Never scored, never fingerprinted. */
+  identity?: ContractReport['identity'];
   archetypeOverride?: string | null;
   engineRef?: string;
   env?: Record<string, string | undefined>;
@@ -297,6 +300,9 @@ export function sealScan(input: SealInput): SealOutput {
     // Derived view over the sealed rows; the key is absent (not empty) when the
     // headline was suppressed and there is no stated score to measure from.
     ...(nextBandPath ? { next_band_path: nextBandPath } : {}),
+    // Target identity (report-identity): presentation-only, excluded from the
+    // fingerprint, present only when the identity pass actually ran.
+    ...(input.identity ? { identity: input.identity } : {}),
     report_schema: '1',
   } as unknown as SealOutput['report'];
 

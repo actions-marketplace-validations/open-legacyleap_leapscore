@@ -23,6 +23,11 @@ export type {
   EnvelopeMeta,
   TraceEntry,
   ReportEnvelope,
+  ReportIdentity,
+  IdentityStatus,
+  IdentityItem,
+  IdentitySize,
+  IdentityLanguage,
 } from "@leapscore/contracts";
 export { CONTRACT_VERSION } from "@leapscore/contracts";
 

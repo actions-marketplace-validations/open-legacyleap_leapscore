@@ -1928,6 +1928,8 @@ import { resolve as resolve2, basename, dirname } from "node:path";
 
 // ../../src/scan/budget.ts
 var KILLER_TIMEOUT_MS = 24e4;
+var DETECTOR_TREE_BYTE_BUDGET = 4 * 1024 * 1024;
+var IDENTITY_READ_ALLOCATION = 2 * 1024 * 1024;
 function createBudgetController(opts = {}) {
   const timeoutMs = opts.timeoutMs ?? 1e4;
   const byteCap = opts.byteCap ?? 4 * 1024 * 1024;
@@ -3123,6 +3125,903 @@ async function classifyArchetypePerRoot(clonePath, readFile2, manifests) {
   };
 }
 __name(classifyArchetypePerRoot, "classifyArchetypePerRoot");
+
+// ../../src/scan/stackcensus.ts
+var MAX_EVIDENCE_PATHS = 20;
+var VB6_EXTS = /* @__PURE__ */ new Set([".vbp", ".frm", ".bas", ".cls", ".ctl"]);
+var DELPHI_EXTS = /* @__PURE__ */ new Set([".dpr", ".pas", ".dfm", ".dproj", ".dof"]);
+var VB6_PROJECT = /\.vbp$/i;
+var DELPHI_PROJECT = /\.(dpr|dproj|dof)$/i;
+function extOf(path) {
+  const base = path.slice(path.lastIndexOf("/") + 1);
+  const dot = base.lastIndexOf(".");
+  return dot < 0 ? "" : base.slice(dot).toLowerCase();
+}
+__name(extOf, "extOf");
+function emptyEntry(id) {
+  return { id, detected: false, project_files: [], evidence: [], file_count: 0 };
+}
+__name(emptyEntry, "emptyEntry");
+async function scanStackCensus(ctx, signal, opts = {}) {
+  let paths = [];
+  let truncated = false;
+  if (opts.paths) {
+    paths = opts.paths.filter((p) => !p.endsWith("/"));
+  } else {
+    try {
+      const walk = await walkSortedTree(ctx.clonePath);
+      paths = walk.paths.filter((p) => !p.endsWith("/"));
+    } catch {
+      truncated = true;
+    }
+  }
+  if (signal?.aborted) truncated = true;
+  paths.sort();
+  const vb6 = emptyEntry("vb6");
+  const delphi = emptyEntry("delphi");
+  for (const path of paths) {
+    const ext = extOf(path);
+    const entry = VB6_EXTS.has(ext) ? vb6 : DELPHI_EXTS.has(ext) ? delphi : null;
+    if (!entry) continue;
+    entry.file_count++;
+    if (entry.evidence.length < MAX_EVIDENCE_PATHS) entry.evidence.push(path);
+    if (VB6_PROJECT.test(path) || entry === delphi && DELPHI_PROJECT.test(path)) entry.project_files.push(path);
+  }
+  vb6.detected = vb6.file_count > 0;
+  delphi.detected = delphi.file_count > 0;
+  return { vb6, delphi, truncated };
+}
+__name(scanStackCensus, "scanStackCensus");
+var STACK_CENSUS_CACHE_KEY = "stackcensus:census";
+async function cachedStackCensus(ctx, signal, opts = {}) {
+  const cached = ctx.cache.get(STACK_CENSUS_CACHE_KEY);
+  if (cached) return cached;
+  const census = await scanStackCensus(ctx, signal, opts);
+  ctx.cache.set(STACK_CENSUS_CACHE_KEY, census);
+  return census;
+}
+__name(cachedStackCensus, "cachedStackCensus");
+
+// ../../../../packages/contracts/src/index.ts
+var CONTRACT_VERSION = 1;
+function twoSignificantFigures(value) {
+  if (!Number.isFinite(value) || value === 0) return 0;
+  const magnitude = Math.pow(10, Math.floor(Math.log10(Math.abs(value))) - 1);
+  return Math.round(value / magnitude) * magnitude;
+}
+__name(twoSignificantFigures, "twoSignificantFigures");
+function compactMagnitude(value) {
+  const abs = Math.abs(value);
+  if (abs < 1e3) return String(Math.round(abs));
+  const units = [
+    { div: 1e3, suffix: "k" },
+    { div: 1e6, suffix: "M" },
+    { div: 1e9, suffix: "B" }
+  ];
+  let index = 0;
+  for (let i = 0; i < units.length; i++) if (abs >= units[i].div) index = i;
+  let scaled = twoSignificantFigures(abs / units[index].div);
+  if (scaled >= 1e3 && index < units.length - 1) {
+    index += 1;
+    scaled = twoSignificantFigures(abs / units[index].div);
+  }
+  return `${String(Number(scaled.toFixed(2)))}${units[index].suffix}`;
+}
+__name(compactMagnitude, "compactMagnitude");
+function identityValueLabel(item) {
+  if (item.status === "unknown" || typeof item.value !== "number" || !Number.isFinite(item.value)) {
+    const reason = String(item.reason ?? "").trim();
+    return reason ? `not measured \u2014 ${reason}` : "not measured";
+  }
+  const text = compactMagnitude(item.value);
+  return item.status === "estimated" ? `~${text}` : text;
+}
+__name(identityValueLabel, "identityValueLabel");
+function normalizeRepoForSlug(raw) {
+  if (!raw) return "django/django";
+  const cleaned = raw.trim().replace(/^https?:\/\//, "").replace(/^github\.com\//i, "").replace(/\.git$/i, "");
+  const withoutQuery = cleaned.split(/[?#]/)[0];
+  const parts = withoutQuery.split("/").filter(Boolean);
+  if (parts.length < 2) return "django/django";
+  const owner = parts[0];
+  const repo = parts[1];
+  if (!owner || !repo) return "django/django";
+  return `${owner}/${repo}`;
+}
+__name(normalizeRepoForSlug, "normalizeRepoForSlug");
+function repoSlugFromNormalized(normalized) {
+  const lower = normalized.toLowerCase();
+  const [owner, repo] = lower.split("/");
+  if (!owner || !repo) return "unknown__unknown";
+  return `${owner}__${repo}`;
+}
+__name(repoSlugFromNormalized, "repoSlugFromNormalized");
+function repoSlugFromUrl(raw) {
+  return repoSlugFromNormalized(normalizeRepoForSlug(raw));
+}
+__name(repoSlugFromUrl, "repoSlugFromUrl");
+function normalizeTs(iso) {
+  return iso.replace(/:/g, "").replace(".", "-");
+}
+__name(normalizeTs, "normalizeTs");
+function buildRunId(repoSlug, engineSha7, ts) {
+  const safeEngine = engineSha7 && engineSha7.trim() ? engineSha7.trim().slice(0, 7) : "unknown";
+  return `${repoSlug}__${safeEngine}__${ts}`;
+}
+__name(buildRunId, "buildRunId");
+var TIER_THRESHOLDS = { low: 80, moderate: 53, high: 27 };
+function tierForScore(score) {
+  if (score >= TIER_THRESHOLDS.low) return "Low";
+  if (score >= TIER_THRESHOLDS.moderate) return "Moderate";
+  if (score >= TIER_THRESHOLDS.high) return "High";
+  return "Critical";
+}
+__name(tierForScore, "tierForScore");
+var GATE_CAPPED_TIER = "High";
+function gateCapForTier(tier, provenGateIds) {
+  const fired = provenGateIds.filter((id) => String(id).trim() !== "");
+  if (fired.length === 0) return { tier, capped: false, cappedByGates: [] };
+  if (tier === "Critical") return { tier, capped: false, cappedByGates: fired };
+  const capped = tier !== GATE_CAPPED_TIER;
+  return capped ? { tier: GATE_CAPPED_TIER, capped: true, uncappedTier: tier, cappedByGates: fired } : { tier, capped: false, cappedByGates: fired };
+}
+__name(gateCapForTier, "gateCapForTier");
+function tierLegacyFor(tier) {
+  if (tier === "Low") return "Healthy";
+  if (tier === "High") return "High Risk";
+  return tier;
+}
+__name(tierLegacyFor, "tierLegacyFor");
+var BAND_FLOORS = {
+  critical: 0,
+  high: TIER_THRESHOLDS.high,
+  moderate: TIER_THRESHOLDS.moderate,
+  low: TIER_THRESHOLDS.low
+};
+function bandThresholdFor(name) {
+  const key = String(name ?? "").trim().toLowerCase();
+  return Object.prototype.hasOwnProperty.call(BAND_FLOORS, key) ? BAND_FLOORS[key] : void 0;
+}
+__name(bandThresholdFor, "bandThresholdFor");
+function nextBandForTier(score, scoreTier) {
+  const normalized = String(scoreTier ?? "").trim().toLowerCase();
+  let best = null;
+  for (const [name, floor] of Object.entries(BAND_FLOORS)) {
+    if (name.toLowerCase() === normalized) continue;
+    if (floor <= score) continue;
+    if (best === null || floor < best.threshold) best = { band: tierForScore(floor), threshold: floor };
+  }
+  return best;
+}
+__name(nextBandForTier, "nextBandForTier");
+function bandPathDistance(threshold, score, _scoreTier) {
+  return Math.max(0, threshold - score);
+}
+__name(bandPathDistance, "bandPathDistance");
+function formatPp(pp) {
+  return String(Number(pp.toFixed(2)));
+}
+__name(formatPp, "formatPp");
+function gateCapStatement(cappedByGates, uncappedTier) {
+  const gates = cappedByGates.filter((id) => String(id).trim() !== "").join(", ");
+  const plural = cappedByGates.length === 1 ? "" : "s";
+  return `Proven gate${plural} ${gates || "\u2014"} cap${plural === "" ? "s" : ""} this verdict at ${GATE_CAPPED_TIER} \u2014 the score alone earned ${uncappedTier}, and the cap lifts when the gate clears.`;
+}
+__name(gateCapStatement, "gateCapStatement");
+var BAND_PALETTE = {
+  Low: "#22c55e",
+  Moderate: "#e0a00a",
+  High: "#ef4444",
+  Critical: "#9f1d2c"
+};
+function bandColorFor(tier) {
+  const key = String(tier ?? "").trim().toLowerCase();
+  for (const name of Object.keys(BAND_PALETTE)) {
+    if (name.toLowerCase() === key) return BAND_PALETTE[name];
+  }
+  return BAND_PALETTE.Critical;
+}
+__name(bandColorFor, "bandColorFor");
+function localSlugFromPath(raw) {
+  const base = raw.replace(/[/\\]+$/, "").split(/[/\\]/).filter(Boolean).pop() ?? "scan";
+  const slug = base.toLowerCase().replace(/[^a-z0-9.\-]+/g, "-").replace(/^-+|-+$/g, "");
+  return slug || "scan";
+}
+__name(localSlugFromPath, "localSlugFromPath");
+var COVERAGE_FLOOR = 0.5;
+function badgeCoverage(coverage) {
+  const count = /* @__PURE__ */ __name((v) => {
+    const n = Number(v);
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  }, "count");
+  const measured = count(coverage?.measured);
+  const estimated = count(coverage?.estimated);
+  const unknown = count(coverage?.unknown);
+  const attempted = measured + estimated + unknown;
+  if (attempted === 0) return 0;
+  return (measured + estimated) / attempted;
+}
+__name(badgeCoverage, "badgeCoverage");
+var REPORT_BASE_URL = "https://leapscore.dev/reports";
+var SITE_BASE_URL = "https://leapscore.dev";
+var METHODOLOGY_PATH = "/methodology";
+var METHODOLOGY_URL = `${SITE_BASE_URL}${METHODOLOGY_PATH}`;
+function reportPermalinkFor(runId) {
+  return `${REPORT_BASE_URL}/${encodeURIComponent(String(runId ?? ""))}`;
+}
+__name(reportPermalinkFor, "reportPermalinkFor");
+var BADGE_LABEL = "leapscore";
+var BadgeRefusalError = class extends Error {
+  static {
+    __name(this, "BadgeRefusalError");
+  }
+  constructor(message) {
+    super(message);
+    this.name = "BadgeRefusalError";
+  }
+};
+var MONTH_NAMES = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December"
+];
+function isIncompleteScanStatus(status) {
+  const s = String(status ?? "").trim().toLowerCase();
+  return s !== "" && s !== "complete";
+}
+__name(isIncompleteScanStatus, "isIncompleteScanStatus");
+function badgeMonth(scannedAt) {
+  const date = new Date(scannedAt);
+  if (Number.isNaN(date.getTime())) {
+    throw new BadgeRefusalError(
+      `refusing to mint a badge: report.snapshot.scanned_at is not a parseable timestamp (got ${JSON.stringify(scannedAt)})`
+    );
+  }
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+__name(badgeMonth, "badgeMonth");
+function monthName(month) {
+  const index = Number(month.slice(5, 7)) - 1;
+  const name = MONTH_NAMES[index];
+  return name ? `${name} ${month.slice(0, 4)}` : month;
+}
+__name(monthName, "monthName");
+function badgeViewModel(envelope) {
+  if (isDeltaDocument(envelope)) {
+    throw new BadgeRefusalError(
+      "refusing to mint a badge from a run-diff delta document: a delta is not a sealed envelope and states no sealed score \u2014 pass the report.json envelope it was derived from"
+    );
+  }
+  const env = envelope;
+  const report = env?.report;
+  const meta = env?.meta;
+  if (!report || typeof report !== "object" || !meta || typeof meta !== "object") {
+    throw new BadgeRefusalError(
+      "refusing to mint a badge: not a sealed report envelope (missing meta or report)"
+    );
+  }
+  if (report.sample === true) {
+    throw new BadgeRefusalError(
+      "refusing to mint a badge from a sample fixture (report.sample is true): an authored fixture has no measured run to cite \u2014 scan the repository to seal a real envelope"
+    );
+  }
+  const runId = typeof meta.runId === "string" ? meta.runId.trim() : "";
+  if (!runId) {
+    throw new BadgeRefusalError("refusing to mint a badge: sealed envelope has no meta.runId to cite");
+  }
+  const month = badgeMonth(String(report.snapshot?.scanned_at ?? ""));
+  const ratio = badgeCoverage(report.coverage);
+  const attempted = (report.coverage?.measured ?? 0) + (report.coverage?.estimated ?? 0) + (report.coverage?.unknown ?? 0);
+  const coveragePct = Math.round(ratio * 100);
+  const suppressed = report.headline?.suppressed === true;
+  const incomplete = isIncompleteScanStatus(report.status);
+  const tier = typeof report.headline?.tier === "string" ? report.headline.tier.trim() : "";
+  const score = Number(report.headline?.score);
+  const displayScore = Number.isFinite(score) ? Math.floor(score) : 0;
+  const band = !suppressed && attempted > 0 && tier !== "" ? tier : null;
+  let state;
+  let claim;
+  let qualifier;
+  if (attempted === 0) {
+    state = "not-scanned";
+    claim = "not scanned";
+    qualifier = month;
+  } else if (suppressed) {
+    state = "suppressed";
+    claim = "unscored";
+    qualifier = `${coveragePct}% \xB7 ${month}${incomplete ? " \xB7 incomplete" : ""}`;
+  } else {
+    state = incomplete ? "incomplete" : "scored";
+    claim = `${displayScore} ${band ?? ""}`.trim();
+    qualifier = `${coveragePct}% \xB7 ${month}${incomplete ? " \xB7 incomplete" : ""}`;
+  }
+  const value = `${claim} \xB7 ${qualifier}`;
+  const accessibleName = state === "not-scanned" ? `LeapScore badge: not scanned, measured ${monthName(month)}.` : state === "suppressed" ? `LeapScore badge: unscored \u2014 insufficient signal, ${coveragePct}% gradeable, measured ${monthName(month)}.${incomplete ? " Scan incomplete." : ""}` : `LeapScore badge: score ${displayScore}, band ${band}, ${coveragePct}% gradeable, measured ${monthName(month)}.${incomplete ? " Scan incomplete." : ""}`;
+  return {
+    state,
+    label: BADGE_LABEL,
+    value,
+    claim,
+    qualifier,
+    accessibleName,
+    permalink: reportPermalinkFor(runId),
+    band
+  };
+}
+__name(badgeViewModel, "badgeViewModel");
+var POSITIONING_LINE = "LeapScore sees the structure. The assessment understands what the code does.";
+var ASSESSMENT_BASE_URL = "https://leapscore.dev/assessment";
+var ASSESSMENT_CAMPAIGN = "cli-scan-v1";
+var BAND_CTA = {
+  Low: "Keep this scan in CI to catch drift early \u2014 a $0 Assessment benchmarks you against peers.",
+  Moderate: "Risk is concentrated in a few areas \u2014 a $0 Assessment clarifies what to fix first.",
+  High: "Significant modernisation risk \u2014 book a $0 Assessment to scope the fix.",
+  Critical: "Significant modernisation risk \u2014 book a $0 Assessment to scope the fix."
+};
+function assessmentUrlForBand(tier) {
+  const band = tier.toLowerCase();
+  return `${ASSESSMENT_BASE_URL}?utm_campaign=${ASSESSMENT_CAMPAIGN}&band=${band}`;
+}
+__name(assessmentUrlForBand, "assessmentUrlForBand");
+function assessmentCtaForBand(tier) {
+  return BAND_CTA[tier] ?? BAND_CTA.Moderate;
+}
+__name(assessmentCtaForBand, "assessmentCtaForBand");
+var BAND_PATH_CLASS_META = {
+  sprint: { label: "Sprint", effort: "\u26A1 \u226430 min" },
+  quarter: { label: "Quarter", effort: "\u{1F536} 2\u20134 h" },
+  structural: { label: "Structural", effort: "\u{1F537} 1\u20132 days" }
+};
+function bandPathBlock(path, opts) {
+  const unreached = path.unreached_rows > 0 ? `${path.unreached_rows} row${path.unreached_rows === 1 ? "" : "s"} could not be reached by this path (unknown or not implemented).` : null;
+  const assumption = "Assumes applicability is unchanged \u2014 a fix that adds or removes a plane can move the denominators.";
+  const heading = "Path to the next band";
+  if (path.terminal) {
+    return {
+      heading,
+      statement: `Already at the highest band (${opts.tier}) \u2014 no next band to reach.`,
+      classes: [],
+      shortfall: null,
+      unreached,
+      assumption
+    };
+  }
+  const destination = path.destination ?? "";
+  const needed = path.points_needed ?? 0;
+  const classes = path.classes.map((c) => {
+    const meta = BAND_PATH_CLASS_META[c.class];
+    const arrival = c.arrival === "alone" ? `${meta.label} alone reaches ${destination}` : c.arrival === "combined" ? `${meta.label} crosses only with the classes before it` : `${meta.label} stays short of ${destination}`;
+    return {
+      label: meta.label,
+      effort: meta.effort,
+      total: `${formatPp(c.pp)}pp`,
+      cumulative: `${formatPp(c.cumulative_pp)}pp`,
+      arrival,
+      steps: c.steps.map((s) => ({
+        row: s.row,
+        name: s.name,
+        pp: `+${formatPp(s.recoverable_pp)}pp`,
+        effort: s.effort,
+        ...s.quick_win ? { quick_win: s.quick_win } : {}
+      }))
+    };
+  });
+  const last = path.classes[path.classes.length - 1];
+  const reaches = last !== void 0 && last.cumulative_pp >= needed;
+  const shortfall = reaches ? null : `No combination of graded deductions reaches ${destination} \u2014 ${formatPp(needed - (last?.cumulative_pp ?? 0))}pp short${path.unreached_rows > 0 ? `, and ${path.unreached_rows} row${path.unreached_rows === 1 ? "" : "s"} this path could not reach would have to be graded first` : ""}.`;
+  return {
+    heading,
+    statement: `Reach ${destination} \u2014 ${formatPp(needed)}pp needed (band floor ${path.threshold}, sealed ${opts.score}).`,
+    classes,
+    shortfall,
+    unreached,
+    assumption
+  };
+}
+__name(bandPathBlock, "bandPathBlock");
+function formatBandPathClause(path, tier) {
+  if (path.terminal) return `next:none (at ${tier})`;
+  const head = `next:${path.destination} +${formatPp(path.points_needed ?? 0)}pp`;
+  const crossing = path.classes.find((c) => c.arrival !== "not-reached");
+  if (!crossing) return `${head} unreachable`;
+  if (crossing.arrival === "alone") return `${head} via ${crossing.class}`;
+  const chain = path.classes.filter((c) => c.cumulative_pp <= crossing.cumulative_pp).map((c) => c.class);
+  return `${head} via ${chain.join("+")}`;
+}
+__name(formatBandPathClause, "formatBandPathClause");
+var DELTA_DOCUMENT = "run-delta";
+var DELTA_SCHEMA_VERSION = 1;
+function isDeltaDocument(value) {
+  if (!value || typeof value !== "object") return false;
+  const doc = value;
+  return doc.document === DELTA_DOCUMENT && typeof doc.delta_schema === "number" && !!doc.baseline && typeof doc.baseline === "object" && !!doc.current && typeof doc.current === "object" && !!doc.verdict && typeof doc.verdict === "object";
+}
+__name(isDeltaDocument, "isDeltaDocument");
+function resolveRequestedIndicators(input2) {
+  const recorded = input2.meta?.requested_indicators;
+  if (Array.isArray(recorded)) {
+    const ids = [...new Set(recorded.map((id) => String(id)))].sort();
+    return { ok: true, indicators: ids, source: "recorded" };
+  }
+  const table = input2.report?.full_table;
+  if (Array.isArray(table) && table.length > 0) {
+    const ids = [
+      ...new Set(
+        table.filter((r) => r?.status !== "not_implemented").map((r) => String(r?.id ?? "")).filter((id) => id !== "")
+      )
+    ].sort();
+    return { ok: true, indicators: ids, source: "reconstructed" };
+  }
+  return {
+    ok: false,
+    reason: "missing-comparability-inputs",
+    detail: "no requested_indicators on meta and no full table to reconstruct from \u2014 request the set explicitly by re-sealing rather than assuming a comparison"
+  };
+}
+__name(resolveRequestedIndicators, "resolveRequestedIndicators");
+function resolveEngineSha7(opts = {}) {
+  const env = opts.env ?? {};
+  const cands = [env.LEAPSCORE_SHA, opts.engineRef, env.LEAPSCORE_ENGINE_REF, env.VERCEL_GIT_COMMIT_SHA];
+  for (const c of cands) {
+    if (c && String(c).trim()) return String(c).trim().slice(0, 7);
+  }
+  if (opts.execImpl) {
+    try {
+      const out = opts.execImpl("git rev-parse --short HEAD");
+      if (out && out.trim()) return out.trim().slice(0, 7);
+    } catch {
+    }
+  }
+  return "unknown";
+}
+__name(resolveEngineSha7, "resolveEngineSha7");
+var UnsupportedContractVersionError = class extends Error {
+  constructor(found, supported) {
+    super(`unsupported contract version ${found} (supports <= ${supported})`);
+    this.found = found;
+    this.supported = supported;
+    this.name = "UnsupportedContractVersionError";
+  }
+  static {
+    __name(this, "UnsupportedContractVersionError");
+  }
+};
+function assertContractVersion(envelope) {
+  const v = envelope.contractVersion ?? envelope.meta?.contractVersion ?? CONTRACT_VERSION;
+  if (v > CONTRACT_VERSION) throw new UnsupportedContractVersionError(v, CONTRACT_VERSION);
+}
+__name(assertContractVersion, "assertContractVersion");
+
+// ../../src/scan/identity.ts
+var SOURCE_SCOPE_ID = "source-v1";
+var SOURCE_SCOPE_EXTENSIONS = [
+  // SOURCE_EXT — JS/TS family and the languages the scanner parses
+  ".js",
+  ".jsx",
+  ".mjs",
+  ".cjs",
+  ".ts",
+  ".tsx",
+  ".mts",
+  ".cts",
+  ".py",
+  ".go",
+  ".java",
+  ".kt",
+  ".scala",
+  ".rb",
+  ".php",
+  ".rs",
+  ".cs",
+  ".vb",
+  // stack census — VB6 / Delphi
+  ".vbp",
+  ".frm",
+  ".bas",
+  ".cls",
+  ".ctl",
+  ".dpr",
+  ".pas",
+  ".dfm",
+  ".dproj",
+  ".dof"
+];
+var SOURCE_SCOPE_EXCLUDED_DIRS = [
+  "vendor",
+  "third_party",
+  "third-party",
+  "bower_components",
+  "Pods",
+  "node_modules",
+  "dist",
+  "build"
+];
+var SOURCE_EXT_SET = new Set(SOURCE_SCOPE_EXTENSIONS.map((e) => e.toLowerCase()));
+var GENERATED_FILE_PATTERNS = [
+  /\.min\.[^./]+$/i,
+  /\.bundle\.[^./]+$/i,
+  /-min\.[^./]+$/i,
+  /\.generated\.[^./]+$/i,
+  /_generated\.[^./]+$/i,
+  /\.pb\.go$/i,
+  /\.designer\.cs$/i,
+  /\.g\.dart$/i
+];
+function extensionOf(path) {
+  const base = path.slice(path.lastIndexOf("/") + 1);
+  const dot = base.lastIndexOf(".");
+  return dot <= 0 ? "" : base.slice(dot).toLowerCase();
+}
+__name(extensionOf, "extensionOf");
+function hasExcludedDir(path) {
+  const segments = path.split("/");
+  for (let i = 0; i < segments.length - 1; i++) {
+    if (SOURCE_SCOPE_EXCLUDED_DIRS.includes(segments[i])) return true;
+  }
+  return false;
+}
+__name(hasExcludedDir, "hasExcludedDir");
+function isInSourceScope(path) {
+  if (!path || path.endsWith("/")) return false;
+  if (!SOURCE_EXT_SET.has(extensionOf(path))) return false;
+  if (hasExcludedDir(path)) return false;
+  const base = path.slice(path.lastIndexOf("/") + 1);
+  if (GENERATED_FILE_PATTERNS.some((rx) => rx.test(base))) return false;
+  return true;
+}
+__name(isInSourceScope, "isInSourceScope");
+var LANGUAGE_BY_EXTENSION = {
+  ".js": "JavaScript",
+  ".jsx": "JavaScript",
+  ".mjs": "JavaScript",
+  ".cjs": "JavaScript",
+  ".ts": "TypeScript",
+  ".tsx": "TypeScript",
+  ".mts": "TypeScript",
+  ".cts": "TypeScript",
+  ".py": "Python",
+  ".go": "Go",
+  ".java": "Java",
+  ".kt": "Kotlin",
+  ".scala": "Scala",
+  ".rb": "Ruby",
+  ".php": "PHP",
+  ".rs": "Rust",
+  ".cs": "C#",
+  ".vb": "Visual Basic",
+  ".vbp": "Visual Basic 6",
+  ".frm": "Visual Basic 6",
+  ".bas": "Visual Basic 6",
+  ".cls": "Visual Basic 6",
+  ".ctl": "Visual Basic 6",
+  ".dpr": "Delphi",
+  ".pas": "Delphi",
+  ".dfm": "Delphi",
+  ".dproj": "Delphi",
+  ".dof": "Delphi"
+};
+var FRAMEWORK_SIGNATURES = [
+  { name: "React", tokens: ["react", "react-dom"] },
+  { name: "Next.js", tokens: ["next"] },
+  { name: "Vue", tokens: ["vue", "nuxt"] },
+  { name: "Svelte", tokens: ["svelte", "sveltekit", "@sveltejs/kit"] },
+  { name: "Angular", tokens: ["@angular/core"] },
+  { name: "Express", tokens: ["express"] },
+  { name: "Fastify", tokens: ["fastify"] },
+  { name: "Koa", tokens: ["koa"] },
+  { name: "NestJS", tokens: ["@nestjs/core"] },
+  { name: "Django", tokens: ["django"] },
+  { name: "Flask", tokens: ["flask"] },
+  { name: "FastAPI", tokens: ["fastapi"] },
+  { name: "Spring", tokens: ["spring-boot", "org.springframework"] },
+  { name: "Rails", tokens: ["rails"] },
+  { name: "Laravel", tokens: ["laravel/framework"] },
+  { name: "Gin", tokens: ["gin-gonic/gin"] },
+  { name: "Actix", tokens: ["actix-web"] },
+  { name: "Axum", tokens: ["axum"] },
+  { name: "ASP.NET", tokens: ["microsoft.net.sdk.web", "microsoft.aspnetcore"] },
+  { name: "Entity Framework", tokens: ["microsoft.entityframeworkcore", "entityframework"] },
+  { name: "Hibernate", tokens: ["hibernate"] }
+];
+function manifestHasToken(text, token) {
+  const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(^|[^a-z0-9_@.\\-/])${escaped}([^a-z0-9_@.\\-/]|$)`, "i").test(text);
+}
+__name(manifestHasToken, "manifestHasToken");
+var IDENTITY_SAMPLE_K = 40;
+var IDENTITY_MAX_FILE_BYTES = 1024 * 1024;
+var IDENTITY_MAX_MANIFEST_READS = 12;
+var IDENTITY_MAX_MANIFEST_BYTES = 256 * 1024;
+function extensionHistogram(paths) {
+  const out = /* @__PURE__ */ new Map();
+  for (const path of paths) {
+    const ext = extensionOf(path);
+    if (!ext) continue;
+    out.set(ext, (out.get(ext) ?? 0) + 1);
+  }
+  return out;
+}
+__name(extensionHistogram, "extensionHistogram");
+function sourceFilesOf(paths) {
+  return paths.filter((p) => !p.endsWith("/") && isInSourceScope(p));
+}
+__name(sourceFilesOf, "sourceFilesOf");
+function languageShares(sourcePaths) {
+  const counts = /* @__PURE__ */ new Map();
+  for (const path of sourcePaths) {
+    const name = LANGUAGE_BY_EXTENSION[extensionOf(path)] ?? "Other";
+    counts.set(name, (counts.get(name) ?? 0) + 1);
+  }
+  const total = sourcePaths.length;
+  if (total === 0) return { languages: [] };
+  const languages = [...counts.entries()].map(([name, files]) => ({ name, files, share: Math.round(files / total * 1e4) / 1e4 })).sort((a, b) => b.files - a.files || a.name.localeCompare(b.name));
+  const max = languages[0]?.files ?? 0;
+  const primary = languages.filter((l) => l.files === max).map((l) => l.name).sort((a, b) => a.localeCompare(b))[0];
+  return { languages, primary };
+}
+__name(languageShares, "languageShares");
+function ecosystemsOf(manifests) {
+  return [...new Set(manifests.map((m) => String(m.ecosystem)))].sort((a, b) => a.localeCompare(b));
+}
+__name(ecosystemsOf, "ecosystemsOf");
+async function detectFrameworks(manifests, readFile2) {
+  const found = /* @__PURE__ */ new Set();
+  const unique = /* @__PURE__ */ new Map();
+  for (const m of manifests) {
+    const path = m.root === "." ? m.manifest : `${m.root}/${m.manifest}`;
+    unique.set(path, path);
+  }
+  const paths = [...unique.keys()].sort((a, b) => a.localeCompare(b)).slice(0, IDENTITY_MAX_MANIFEST_READS);
+  for (const path of paths) {
+    let text;
+    try {
+      const buf = await readFile2(path);
+      if (!buf) continue;
+      text = buf.subarray(0, IDENTITY_MAX_MANIFEST_BYTES).toString("utf8");
+    } catch {
+      continue;
+    }
+    for (const sig of FRAMEWORK_SIGNATURES) {
+      if (found.has(sig.name)) continue;
+      if (sig.tokens.some((token) => manifestHasToken(text, token))) found.add(sig.name);
+    }
+  }
+  return [...found].sort((a, b) => a.localeCompare(b));
+}
+__name(detectFrameworks, "detectFrameworks");
+function strideSample(items, k) {
+  if (items.length <= k) return [...items];
+  const out = [];
+  for (let i = 0; i < k; i++) {
+    out.push(items[Math.floor(i * items.length / k)]);
+  }
+  return out;
+}
+__name(strideSample, "strideSample");
+function newlineCount(buf) {
+  let count = 0;
+  for (let i = 0; i < buf.length; i++) if (buf[i] === 10) count++;
+  return count;
+}
+__name(newlineCount, "newlineCount");
+async function deriveLineMagnitude(input2) {
+  const scope = SOURCE_SCOPE_ID;
+  const filesInScope = input2.sourcePaths.length;
+  const k = input2.readAll ? filesInScope : Math.max(1, input2.sampleSize ?? IDENTITY_SAMPLE_K);
+  const maxFileBytes = input2.maxFileBytes ?? IDENTITY_MAX_FILE_BYTES;
+  if (filesInScope === 0) {
+    return {
+      status: "unknown",
+      reason: "empty scope: no file matches the source-v1 inclusion rule",
+      method: "read-all",
+      covered: { files_read: 0, files_in_scope: 0 },
+      scope
+    };
+  }
+  const sampling = filesInScope > k;
+  const method = sampling ? "stride-sample" : "read-all";
+  const sample = strideSample(input2.sourcePaths, k);
+  const sampledByExt = /* @__PURE__ */ new Map();
+  let sampledLines = 0;
+  let filesRead = 0;
+  for (const path of sample) {
+    if (input2.signal?.aborted) {
+      return {
+        status: "unknown",
+        reason: "scan aborted during the identity read",
+        method,
+        covered: { files_read: filesRead, files_in_scope: filesInScope },
+        scope
+      };
+    }
+    let buf;
+    try {
+      buf = await input2.readFile(path);
+    } catch (e) {
+      const detail = e instanceof Error ? e.message : String(e);
+      const cap = e?.name === "QuotaExceededError" || /bytecap|read budget/i.test(detail);
+      return {
+        status: "unknown",
+        reason: cap ? `identity read allocation exhausted before ${path}` : `read failed at ${path}: ${detail}`,
+        method,
+        covered: { files_read: filesRead, files_in_scope: filesInScope },
+        scope
+      };
+    }
+    if (!buf) {
+      return {
+        status: "unknown",
+        reason: `unreadable source file: ${path}`,
+        method,
+        covered: { files_read: filesRead, files_in_scope: filesInScope },
+        scope
+      };
+    }
+    if (buf.length > maxFileBytes) {
+      return {
+        status: "unknown",
+        reason: `read incomplete: ${path} exceeds the per-file read cap (${maxFileBytes} bytes)`,
+        method,
+        covered: { files_read: filesRead, files_in_scope: filesInScope },
+        scope
+      };
+    }
+    const lines = newlineCount(buf);
+    filesRead++;
+    sampledLines += lines;
+    const ext = extensionOf(path);
+    const slot = sampledByExt.get(ext) ?? { files: 0, lines: 0 };
+    slot.files += 1;
+    slot.lines += lines;
+    sampledByExt.set(ext, slot);
+  }
+  if (!sampling) {
+    return {
+      status: "measured",
+      value: sampledLines,
+      method,
+      covered: { files_read: filesRead, files_in_scope: filesInScope },
+      scope
+    };
+  }
+  const treeByExt = extensionHistogram(input2.sourcePaths);
+  const globalMean = filesRead > 0 ? sampledLines / filesRead : 0;
+  let extrapolated = 0;
+  for (const [ext, count] of treeByExt) {
+    const slot = sampledByExt.get(ext);
+    const mean = slot && slot.files > 0 ? slot.lines / slot.files : globalMean;
+    extrapolated += mean * count;
+  }
+  return {
+    status: "estimated",
+    // Stored precision follows status (design D6): nobody quotes false precision
+    // out of the JSON.
+    value: twoSignificantFigures(extrapolated),
+    method,
+    covered: { files_read: filesRead, files_in_scope: filesInScope },
+    scope
+  };
+}
+__name(deriveLineMagnitude, "deriveLineMagnitude");
+function planesOf(inventory) {
+  if (!inventory) return void 0;
+  const out = {};
+  for (const key of Object.keys(inventory)) {
+    if (key === "evidence") continue;
+    const value = inventory[key];
+    if (typeof value === "boolean") out[key] = value;
+  }
+  return Object.keys(out).length > 0 ? out : void 0;
+}
+__name(planesOf, "planesOf");
+function planeEvidenceOf(inventory) {
+  const evidence = inventory?.evidence;
+  if (!evidence || typeof evidence !== "object") return void 0;
+  const out = {};
+  for (const [key, value] of Object.entries(evidence)) {
+    if (!Array.isArray(value)) continue;
+    out[key] = value.map((v) => String(v));
+  }
+  return Object.keys(out).length > 0 ? out : void 0;
+}
+__name(planeEvidenceOf, "planeEvidenceOf");
+function degradedIdentity(subject, reason) {
+  return {
+    subject,
+    shape: { status: "unknown", archetype: "unknown", reason },
+    size: { status: "unknown", reason, lines: { status: "unknown", reason, scope: SOURCE_SCOPE_ID } },
+    stack: { status: "unknown", languages: [], ecosystems: [], frameworks: [], reason }
+  };
+}
+__name(degradedIdentity, "degradedIdentity");
+async function deriveIdentity(input2) {
+  try {
+    return await deriveIdentityInner(input2);
+  } catch (e) {
+    const detail = e instanceof Error ? e.message : String(e);
+    return degradedIdentity(input2.subject, `identity derivation failed: ${detail.slice(0, 200)}`);
+  }
+}
+__name(deriveIdentity, "deriveIdentity");
+async function deriveIdentityInner(input2) {
+  const allPaths = input2.walk.paths;
+  const filePaths = allPaths.filter((p) => !p.endsWith("/"));
+  const directoryCount = allPaths.length - filePaths.length;
+  const sourcePaths = sourceFilesOf(filePaths);
+  const { languages, primary } = languageShares(sourcePaths);
+  let frameworks = [];
+  try {
+    frameworks = await detectFrameworks(input2.manifests, input2.readFile);
+  } catch {
+    frameworks = [];
+  }
+  const lines = await deriveLineMagnitude({
+    sourcePaths,
+    readFile: input2.readFile,
+    signal: input2.signal,
+    readAll: input2.readAll,
+    sampleSize: input2.sampleSize,
+    maxFileBytes: input2.maxFileBytes
+  });
+  const size = {
+    status: "measured",
+    files: filePaths.length,
+    directories: directoryCount,
+    lines
+  };
+  const archetype = input2.archetype;
+  const shape = archetype ? {
+    status: "measured",
+    archetype: String(archetype.archetype),
+    ...archetype.confidence ? { confidence: String(archetype.confidence) } : {},
+    ...planesOf(archetype.planeInventory) ? { planes: planesOf(archetype.planeInventory) } : {},
+    ...planeEvidenceOf(archetype.planeInventory) ? { plane_evidence: planeEvidenceOf(archetype.planeInventory) } : {},
+    ...archetype.perRoot && archetype.perRoot.length > 0 ? {
+      per_root: archetype.perRoot.map((entry) => ({
+        root: String(entry.root),
+        archetype: String(entry.archetype),
+        ...entry.confidence ? { confidence: String(entry.confidence) } : {},
+        ...planesOf(entry.planeInventory) ? { planes: planesOf(entry.planeInventory) } : {}
+      }))
+    } : {}
+  } : {
+    status: "unknown",
+    archetype: "unknown",
+    reason: "archetype classification did not run for this scan"
+  };
+  const census = input2.census;
+  const legacyStacks = census ? [
+    { id: census.vb6.id, detected: census.vb6.detected, files: census.vb6.file_count },
+    { id: census.delphi.id, detected: census.delphi.detected, files: census.delphi.file_count }
+  ] : void 0;
+  return {
+    subject: {
+      repo: String(input2.subject.repo),
+      commit: String(input2.subject.commit ?? "unknown"),
+      scanned_at: String(input2.subject.scanned_at)
+    },
+    shape,
+    size,
+    stack: {
+      status: "measured",
+      languages,
+      ...primary ? { primary_language: primary } : {},
+      ecosystems: ecosystemsOf(input2.manifests),
+      frameworks,
+      ...legacyStacks ? { legacy_stacks: legacyStacks } : {}
+    }
+  };
+}
+__name(deriveIdentityInner, "deriveIdentityInner");
 
 // ../../src/identity.ts
 var ENGINE_VERSION = true ? "unofficial-build" : UNOFFICIAL_ENGINE_VERSION;
@@ -4718,58 +5617,6 @@ function advisoryAgeDays(published, scanMs) {
   return Math.round((scanMs - t) / DAY_MS);
 }
 __name(advisoryAgeDays, "advisoryAgeDays");
-
-// ../../src/scan/stackcensus.ts
-var MAX_EVIDENCE_PATHS = 20;
-var VB6_EXTS = /* @__PURE__ */ new Set([".vbp", ".frm", ".bas", ".cls", ".ctl"]);
-var DELPHI_EXTS = /* @__PURE__ */ new Set([".dpr", ".pas", ".dfm", ".dproj", ".dof"]);
-var VB6_PROJECT = /\.vbp$/i;
-var DELPHI_PROJECT = /\.(dpr|dproj|dof)$/i;
-function extOf(path) {
-  const base = path.slice(path.lastIndexOf("/") + 1);
-  const dot = base.lastIndexOf(".");
-  return dot < 0 ? "" : base.slice(dot).toLowerCase();
-}
-__name(extOf, "extOf");
-function emptyEntry(id) {
-  return { id, detected: false, project_files: [], evidence: [], file_count: 0 };
-}
-__name(emptyEntry, "emptyEntry");
-async function scanStackCensus(ctx, signal) {
-  let paths = [];
-  let truncated = false;
-  try {
-    const walk = await walkSortedTree(ctx.clonePath);
-    paths = walk.paths.filter((p) => !p.endsWith("/"));
-  } catch {
-    truncated = true;
-  }
-  if (signal?.aborted) truncated = true;
-  paths.sort();
-  const vb6 = emptyEntry("vb6");
-  const delphi = emptyEntry("delphi");
-  for (const path of paths) {
-    const ext = extOf(path);
-    const entry = VB6_EXTS.has(ext) ? vb6 : DELPHI_EXTS.has(ext) ? delphi : null;
-    if (!entry) continue;
-    entry.file_count++;
-    if (entry.evidence.length < MAX_EVIDENCE_PATHS) entry.evidence.push(path);
-    if (VB6_PROJECT.test(path) || entry === delphi && DELPHI_PROJECT.test(path)) entry.project_files.push(path);
-  }
-  vb6.detected = vb6.file_count > 0;
-  delphi.detected = delphi.file_count > 0;
-  return { vb6, delphi, truncated };
-}
-__name(scanStackCensus, "scanStackCensus");
-var STACK_CENSUS_CACHE_KEY = "stackcensus:census";
-async function cachedStackCensus(ctx, signal) {
-  const cached = ctx.cache.get(STACK_CENSUS_CACHE_KEY);
-  if (cached) return cached;
-  const census = await scanStackCensus(ctx, signal);
-  ctx.cache.set(STACK_CENSUS_CACHE_KEY, census);
-  return census;
-}
-__name(cachedStackCensus, "cachedStackCensus");
 
 // ../../src/scan/detectors/ecos01.ts
 var WHAT_IT_TAKES = "declare a runtime version pin (.nvmrc / .python-version / .tool-versions / package.json engines / pyproject requires-python / Dockerfile FROM / CI matrix / .NET TargetFramework(Version) or global.json SDK / .vbp / Delphi project version / build.gradle Java level) so the EOL snapshot can resolve it";
@@ -7642,6 +8489,7 @@ async function* runUnifiedScan(repoUrl, opts = {}) {
   const totalCost = ids.reduce((a, id) => a + (BUDGET_COST[INDICATOR_BUDGET_CLASS[id] ?? "fast"] ?? 5e3), 0) + (ids.some((id) => INDICATOR_BUDGET_CLASS[id] === "slow-dissolvable") ? 3e4 : 5e3);
   const budget = createBudgetControllerForIndicators(ids, { withCloneBase: ids.some((id) => INDICATOR_BUDGET_CLASS[id] === "slow-dissolvable"), killerMs: opts.killerMs });
   const start = Date.now();
+  const scannedAt = (/* @__PURE__ */ new Date()).toISOString();
   const signal = budget.signal;
   const token = opts.token ?? process.env.GH_TOKEN ?? process.env.GITHUB_TOKEN;
   const gh = createGhClient({ token });
@@ -7749,10 +8597,11 @@ async function* runUnifiedScan(repoUrl, opts = {}) {
     const elapsedMs = Date.now() - start;
     yield { type: "trace", ts: elapsedMs, elapsedMs, label: `Budget exceeded \u2014 sealing with ${ghFacts.length}/${ids.length} detectors`, phase: "budget", status: "error", errorKind: "cap" };
     budget.cancel();
-    yield { type: "done", facts: allFacts2, snapshot: { repo: normalized, scanned_at: (/* @__PURE__ */ new Date()).toISOString(), engine_version: ENGINE_VERSION, rubric_version: "docs/rubric@tranche-a", scanned_commit: "unknown" }, id: scanId };
+    yield { type: "done", facts: allFacts2, snapshot: { repo: normalized, scanned_at: scannedAt, engine_version: ENGINE_VERSION, rubric_version: "docs/rubric@tranche-a", scanned_commit: "unknown" }, id: scanId };
     return;
   }
   let archetypeResult = null;
+  let identity;
   const needsClone = ids.some((id) => phase2Ids.includes(id));
   let cloneFacts = [];
   if (needsClone && !signal.aborted) {
@@ -7782,9 +8631,10 @@ async function* runUnifiedScan(repoUrl, opts = {}) {
         } catch (archE) {
           job._archMeta = { error: archE instanceof Error ? archE.message : String(archE) };
         }
+        let treeWalk = null;
         try {
-          const walk = await walkSortedTree(clone.clonePath);
-          budget.setSampleN(computeSampleN(walk.fileCount));
+          treeWalk = await walkSortedTree(clone.clonePath);
+          budget.setSampleN(computeSampleN(treeWalk.fileCount));
         } catch {
         }
         const ctx = {
@@ -7798,6 +8648,31 @@ async function* runUnifiedScan(repoUrl, opts = {}) {
           toolVersions: buildToolVersions(),
           readFile: clone.readFile
         };
+        if (treeWalk) {
+          const identityStart = Date.now();
+          const subject = { repo: normalized, commit: clone.commitSha, scanned_at: scannedAt };
+          try {
+            const census = await cachedStackCensus(ctx, sig, { paths: treeWalk.paths });
+            identity = await deriveIdentity({
+              walk: treeWalk,
+              manifests: ctx.manifests,
+              readFile: clone.partitionedReadFile(IDENTITY_READ_ALLOCATION),
+              archetype: archRes,
+              census,
+              subject,
+              signal: sig
+            });
+          } catch (identityError) {
+            const detail = identityError instanceof Error ? identityError.message : String(identityError);
+            identity = degradedIdentity(subject, `identity pass failed: ${detail.slice(0, 200)}`);
+          }
+          job._identityMeta = { identity, durationMs: Date.now() - identityStart };
+        } else {
+          identity = degradedIdentity(
+            { repo: normalized, commit: clone.commitSha, scanned_at: scannedAt },
+            "tree walk did not complete \u2014 identity could not be derived"
+          );
+        }
         let reqPhase2Ids = phase2Ids.filter((id) => ids.includes(id));
         let reqDetectors = phase2Detectors.filter((_, i) => ids.includes(phase2Ids[i]));
         if (archRes) {
@@ -7825,7 +8700,7 @@ async function* runUnifiedScan(repoUrl, opts = {}) {
           }
         }
         const starts = reqDetectors.map(() => Date.now());
-        const perDetectorCap = partitionByteCap(4 * 1024 * 1024, Math.max(1, reqDetectors.length));
+        const perDetectorCap = partitionByteCap(DETECTOR_TREE_BYTE_BUDGET, Math.max(1, reqDetectors.length));
         const settled = await Promise.all(reqDetectors.map((fn, idx) => {
           const s = starts[idx];
           const dctx = { ...ctx, readFile: clone.partitionedReadFile(perDetectorCap) };
@@ -7887,6 +8762,14 @@ async function* runUnifiedScan(repoUrl, opts = {}) {
             archetypeResult = archMeta;
           }
         }
+        const identityMeta = job._identityMeta;
+        if (identityMeta?.identity) {
+          identity = identityMeta.identity;
+          const elapsedMs = Date.now() - start;
+          const lineItem = identity.size.lines;
+          const lineLabel = lineItem ? (lineItem.status === "estimated" ? "~" : "") + String(lineItem.value ?? "unknown") : "unknown";
+          yield { type: "trace", ts: elapsedMs, elapsedMs, label: `Identity \u2014 ${identity.size.files ?? 0} files \xB7 ${lineLabel} lines \xB7 ${identity.stack.languages.length} languages`, phase: "archetype", durationMs: identityMeta.durationMs };
+        }
         const skipped = job._skipped;
         if (skipped && skipped.length) {
           const elapsedMs = Date.now() - start;
@@ -7944,7 +8827,7 @@ async function* runUnifiedScan(repoUrl, opts = {}) {
     const status = unknownCount === 0 ? "complete" : "degraded";
     yield { type: "trace", ts: elapsedMs, elapsedMs, label: `Seal \u2014 ${status} \xB7 ${allFacts.filter((f) => !f.error).length}/${ids.length} measured`, phase: "seal", status };
   }
-  const snapshot = { repo: normalized, scanned_at: (/* @__PURE__ */ new Date()).toISOString(), engine_version: ENGINE_VERSION, rubric_version: "docs/rubric@tranche-a", scanned_commit };
+  const snapshot = { repo: normalized, scanned_at: scannedAt, engine_version: ENGINE_VERSION, rubric_version: "docs/rubric@tranche-a", scanned_commit };
   if (archetypeResult) {
     snapshot.archetype = archetypeResult.archetype;
     snapshot.archetype_confidence = archetypeResult.confidence;
@@ -7957,7 +8840,7 @@ async function* runUnifiedScan(repoUrl, opts = {}) {
     snapshot.planeInventory = { has_server: false, has_data: false, has_deploy: false, has_client: false, has_test: false, evidence: { has_server: [], has_data: [], has_deploy: [], has_client: [], has_test: [] } };
     snapshot.archetype_evidence = ["no clone \u2014 GH-only scan"];
   }
-  yield { type: "done", facts: allFacts, snapshot, id: scanId };
+  yield { type: "done", facts: allFacts, snapshot, id: scanId, identity };
 }
 __name(runUnifiedScan, "runUnifiedScan");
 
@@ -7966,392 +8849,6 @@ import { stat as stat4, readFile as fsReadFile2 } from "node:fs/promises";
 import { execFile as execFile3 } from "node:child_process";
 import { promisify as promisify3 } from "node:util";
 import { join as join14, resolve } from "node:path";
-
-// ../../../../packages/contracts/src/index.ts
-var CONTRACT_VERSION = 1;
-function normalizeRepoForSlug(raw) {
-  if (!raw) return "django/django";
-  const cleaned = raw.trim().replace(/^https?:\/\//, "").replace(/^github\.com\//i, "").replace(/\.git$/i, "");
-  const withoutQuery = cleaned.split(/[?#]/)[0];
-  const parts = withoutQuery.split("/").filter(Boolean);
-  if (parts.length < 2) return "django/django";
-  const owner = parts[0];
-  const repo = parts[1];
-  if (!owner || !repo) return "django/django";
-  return `${owner}/${repo}`;
-}
-__name(normalizeRepoForSlug, "normalizeRepoForSlug");
-function repoSlugFromNormalized(normalized) {
-  const lower = normalized.toLowerCase();
-  const [owner, repo] = lower.split("/");
-  if (!owner || !repo) return "unknown__unknown";
-  return `${owner}__${repo}`;
-}
-__name(repoSlugFromNormalized, "repoSlugFromNormalized");
-function repoSlugFromUrl(raw) {
-  return repoSlugFromNormalized(normalizeRepoForSlug(raw));
-}
-__name(repoSlugFromUrl, "repoSlugFromUrl");
-function normalizeTs(iso) {
-  return iso.replace(/:/g, "").replace(".", "-");
-}
-__name(normalizeTs, "normalizeTs");
-function buildRunId(repoSlug, engineSha7, ts) {
-  const safeEngine = engineSha7 && engineSha7.trim() ? engineSha7.trim().slice(0, 7) : "unknown";
-  return `${repoSlug}__${safeEngine}__${ts}`;
-}
-__name(buildRunId, "buildRunId");
-var TIER_THRESHOLDS = { low: 80, moderate: 53, high: 27 };
-function tierForScore(score) {
-  if (score >= TIER_THRESHOLDS.low) return "Low";
-  if (score >= TIER_THRESHOLDS.moderate) return "Moderate";
-  if (score >= TIER_THRESHOLDS.high) return "High";
-  return "Critical";
-}
-__name(tierForScore, "tierForScore");
-var GATE_CAPPED_TIER = "High";
-function gateCapForTier(tier, provenGateIds) {
-  const fired = provenGateIds.filter((id) => String(id).trim() !== "");
-  if (fired.length === 0) return { tier, capped: false, cappedByGates: [] };
-  if (tier === "Critical") return { tier, capped: false, cappedByGates: fired };
-  const capped = tier !== GATE_CAPPED_TIER;
-  return capped ? { tier: GATE_CAPPED_TIER, capped: true, uncappedTier: tier, cappedByGates: fired } : { tier, capped: false, cappedByGates: fired };
-}
-__name(gateCapForTier, "gateCapForTier");
-function tierLegacyFor(tier) {
-  if (tier === "Low") return "Healthy";
-  if (tier === "High") return "High Risk";
-  return tier;
-}
-__name(tierLegacyFor, "tierLegacyFor");
-var BAND_FLOORS = {
-  critical: 0,
-  high: TIER_THRESHOLDS.high,
-  moderate: TIER_THRESHOLDS.moderate,
-  low: TIER_THRESHOLDS.low
-};
-function bandThresholdFor(name) {
-  const key = String(name ?? "").trim().toLowerCase();
-  return Object.prototype.hasOwnProperty.call(BAND_FLOORS, key) ? BAND_FLOORS[key] : void 0;
-}
-__name(bandThresholdFor, "bandThresholdFor");
-function nextBandForTier(score, scoreTier) {
-  const normalized = String(scoreTier ?? "").trim().toLowerCase();
-  let best = null;
-  for (const [name, floor] of Object.entries(BAND_FLOORS)) {
-    if (name.toLowerCase() === normalized) continue;
-    if (floor <= score) continue;
-    if (best === null || floor < best.threshold) best = { band: tierForScore(floor), threshold: floor };
-  }
-  return best;
-}
-__name(nextBandForTier, "nextBandForTier");
-function bandPathDistance(threshold, score, _scoreTier) {
-  return Math.max(0, threshold - score);
-}
-__name(bandPathDistance, "bandPathDistance");
-function formatPp(pp) {
-  return String(Number(pp.toFixed(2)));
-}
-__name(formatPp, "formatPp");
-function gateCapStatement(cappedByGates, uncappedTier) {
-  const gates = cappedByGates.filter((id) => String(id).trim() !== "").join(", ");
-  const plural = cappedByGates.length === 1 ? "" : "s";
-  return `Proven gate${plural} ${gates || "\u2014"} cap${plural === "" ? "s" : ""} this verdict at ${GATE_CAPPED_TIER} \u2014 the score alone earned ${uncappedTier}, and the cap lifts when the gate clears.`;
-}
-__name(gateCapStatement, "gateCapStatement");
-var BAND_PALETTE = {
-  Low: "#22c55e",
-  Moderate: "#e0a00a",
-  High: "#ef4444",
-  Critical: "#9f1d2c"
-};
-function bandColorFor(tier) {
-  const key = String(tier ?? "").trim().toLowerCase();
-  for (const name of Object.keys(BAND_PALETTE)) {
-    if (name.toLowerCase() === key) return BAND_PALETTE[name];
-  }
-  return BAND_PALETTE.Critical;
-}
-__name(bandColorFor, "bandColorFor");
-function localSlugFromPath(raw) {
-  const base = raw.replace(/[/\\]+$/, "").split(/[/\\]/).filter(Boolean).pop() ?? "scan";
-  const slug = base.toLowerCase().replace(/[^a-z0-9.\-]+/g, "-").replace(/^-+|-+$/g, "");
-  return slug || "scan";
-}
-__name(localSlugFromPath, "localSlugFromPath");
-var COVERAGE_FLOOR = 0.5;
-function badgeCoverage(coverage) {
-  const count = /* @__PURE__ */ __name((v) => {
-    const n = Number(v);
-    return Number.isFinite(n) && n > 0 ? n : 0;
-  }, "count");
-  const measured = count(coverage?.measured);
-  const estimated = count(coverage?.estimated);
-  const unknown = count(coverage?.unknown);
-  const attempted = measured + estimated + unknown;
-  if (attempted === 0) return 0;
-  return (measured + estimated) / attempted;
-}
-__name(badgeCoverage, "badgeCoverage");
-var REPORT_BASE_URL = "https://leapscore.dev/reports";
-var SITE_BASE_URL = "https://leapscore.dev";
-var METHODOLOGY_PATH = "/methodology";
-var METHODOLOGY_URL = `${SITE_BASE_URL}${METHODOLOGY_PATH}`;
-function reportPermalinkFor(runId) {
-  return `${REPORT_BASE_URL}/${encodeURIComponent(String(runId ?? ""))}`;
-}
-__name(reportPermalinkFor, "reportPermalinkFor");
-var BADGE_LABEL = "leapscore";
-var BadgeRefusalError = class extends Error {
-  static {
-    __name(this, "BadgeRefusalError");
-  }
-  constructor(message) {
-    super(message);
-    this.name = "BadgeRefusalError";
-  }
-};
-var MONTH_NAMES = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December"
-];
-function isIncompleteScanStatus(status) {
-  const s = String(status ?? "").trim().toLowerCase();
-  return s !== "" && s !== "complete";
-}
-__name(isIncompleteScanStatus, "isIncompleteScanStatus");
-function badgeMonth(scannedAt) {
-  const date = new Date(scannedAt);
-  if (Number.isNaN(date.getTime())) {
-    throw new BadgeRefusalError(
-      `refusing to mint a badge: report.snapshot.scanned_at is not a parseable timestamp (got ${JSON.stringify(scannedAt)})`
-    );
-  }
-  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
-}
-__name(badgeMonth, "badgeMonth");
-function monthName(month) {
-  const index = Number(month.slice(5, 7)) - 1;
-  const name = MONTH_NAMES[index];
-  return name ? `${name} ${month.slice(0, 4)}` : month;
-}
-__name(monthName, "monthName");
-function badgeViewModel(envelope) {
-  if (isDeltaDocument(envelope)) {
-    throw new BadgeRefusalError(
-      "refusing to mint a badge from a run-diff delta document: a delta is not a sealed envelope and states no sealed score \u2014 pass the report.json envelope it was derived from"
-    );
-  }
-  const env = envelope;
-  const report = env?.report;
-  const meta = env?.meta;
-  if (!report || typeof report !== "object" || !meta || typeof meta !== "object") {
-    throw new BadgeRefusalError(
-      "refusing to mint a badge: not a sealed report envelope (missing meta or report)"
-    );
-  }
-  if (report.sample === true) {
-    throw new BadgeRefusalError(
-      "refusing to mint a badge from a sample fixture (report.sample is true): an authored fixture has no measured run to cite \u2014 scan the repository to seal a real envelope"
-    );
-  }
-  const runId = typeof meta.runId === "string" ? meta.runId.trim() : "";
-  if (!runId) {
-    throw new BadgeRefusalError("refusing to mint a badge: sealed envelope has no meta.runId to cite");
-  }
-  const month = badgeMonth(String(report.snapshot?.scanned_at ?? ""));
-  const ratio = badgeCoverage(report.coverage);
-  const attempted = (report.coverage?.measured ?? 0) + (report.coverage?.estimated ?? 0) + (report.coverage?.unknown ?? 0);
-  const coveragePct = Math.round(ratio * 100);
-  const suppressed = report.headline?.suppressed === true;
-  const incomplete = isIncompleteScanStatus(report.status);
-  const tier = typeof report.headline?.tier === "string" ? report.headline.tier.trim() : "";
-  const score = Number(report.headline?.score);
-  const displayScore = Number.isFinite(score) ? Math.floor(score) : 0;
-  const band = !suppressed && attempted > 0 && tier !== "" ? tier : null;
-  let state;
-  let claim;
-  let qualifier;
-  if (attempted === 0) {
-    state = "not-scanned";
-    claim = "not scanned";
-    qualifier = month;
-  } else if (suppressed) {
-    state = "suppressed";
-    claim = "unscored";
-    qualifier = `${coveragePct}% \xB7 ${month}${incomplete ? " \xB7 incomplete" : ""}`;
-  } else {
-    state = incomplete ? "incomplete" : "scored";
-    claim = `${displayScore} ${band ?? ""}`.trim();
-    qualifier = `${coveragePct}% \xB7 ${month}${incomplete ? " \xB7 incomplete" : ""}`;
-  }
-  const value = `${claim} \xB7 ${qualifier}`;
-  const accessibleName = state === "not-scanned" ? `LeapScore badge: not scanned, measured ${monthName(month)}.` : state === "suppressed" ? `LeapScore badge: unscored \u2014 insufficient signal, ${coveragePct}% gradeable, measured ${monthName(month)}.${incomplete ? " Scan incomplete." : ""}` : `LeapScore badge: score ${displayScore}, band ${band}, ${coveragePct}% gradeable, measured ${monthName(month)}.${incomplete ? " Scan incomplete." : ""}`;
-  return {
-    state,
-    label: BADGE_LABEL,
-    value,
-    claim,
-    qualifier,
-    accessibleName,
-    permalink: reportPermalinkFor(runId),
-    band
-  };
-}
-__name(badgeViewModel, "badgeViewModel");
-var POSITIONING_LINE = "LeapScore sees the structure. The assessment understands what the code does.";
-var ASSESSMENT_BASE_URL = "https://leapscore.dev/assessment";
-var ASSESSMENT_CAMPAIGN = "cli-scan-v1";
-var BAND_CTA = {
-  Low: "Keep this scan in CI to catch drift early \u2014 a $0 Assessment benchmarks you against peers.",
-  Moderate: "Risk is concentrated in a few areas \u2014 a $0 Assessment clarifies what to fix first.",
-  High: "Significant modernisation risk \u2014 book a $0 Assessment to scope the fix.",
-  Critical: "Significant modernisation risk \u2014 book a $0 Assessment to scope the fix."
-};
-function assessmentUrlForBand(tier) {
-  const band = tier.toLowerCase();
-  return `${ASSESSMENT_BASE_URL}?utm_campaign=${ASSESSMENT_CAMPAIGN}&band=${band}`;
-}
-__name(assessmentUrlForBand, "assessmentUrlForBand");
-function assessmentCtaForBand(tier) {
-  return BAND_CTA[tier] ?? BAND_CTA.Moderate;
-}
-__name(assessmentCtaForBand, "assessmentCtaForBand");
-var BAND_PATH_CLASS_META = {
-  sprint: { label: "Sprint", effort: "\u26A1 \u226430 min" },
-  quarter: { label: "Quarter", effort: "\u{1F536} 2\u20134 h" },
-  structural: { label: "Structural", effort: "\u{1F537} 1\u20132 days" }
-};
-function bandPathBlock(path, opts) {
-  const unreached = path.unreached_rows > 0 ? `${path.unreached_rows} row${path.unreached_rows === 1 ? "" : "s"} could not be reached by this path (unknown or not implemented).` : null;
-  const assumption = "Assumes applicability is unchanged \u2014 a fix that adds or removes a plane can move the denominators.";
-  const heading = "Path to the next band";
-  if (path.terminal) {
-    return {
-      heading,
-      statement: `Already at the highest band (${opts.tier}) \u2014 no next band to reach.`,
-      classes: [],
-      shortfall: null,
-      unreached,
-      assumption
-    };
-  }
-  const destination = path.destination ?? "";
-  const needed = path.points_needed ?? 0;
-  const classes = path.classes.map((c) => {
-    const meta = BAND_PATH_CLASS_META[c.class];
-    const arrival = c.arrival === "alone" ? `${meta.label} alone reaches ${destination}` : c.arrival === "combined" ? `${meta.label} crosses only with the classes before it` : `${meta.label} stays short of ${destination}`;
-    return {
-      label: meta.label,
-      effort: meta.effort,
-      total: `${formatPp(c.pp)}pp`,
-      cumulative: `${formatPp(c.cumulative_pp)}pp`,
-      arrival,
-      steps: c.steps.map((s) => ({
-        row: s.row,
-        name: s.name,
-        pp: `+${formatPp(s.recoverable_pp)}pp`,
-        effort: s.effort,
-        ...s.quick_win ? { quick_win: s.quick_win } : {}
-      }))
-    };
-  });
-  const last = path.classes[path.classes.length - 1];
-  const reaches = last !== void 0 && last.cumulative_pp >= needed;
-  const shortfall = reaches ? null : `No combination of graded deductions reaches ${destination} \u2014 ${formatPp(needed - (last?.cumulative_pp ?? 0))}pp short${path.unreached_rows > 0 ? `, and ${path.unreached_rows} row${path.unreached_rows === 1 ? "" : "s"} this path could not reach would have to be graded first` : ""}.`;
-  return {
-    heading,
-    statement: `Reach ${destination} \u2014 ${formatPp(needed)}pp needed (band floor ${path.threshold}, sealed ${opts.score}).`,
-    classes,
-    shortfall,
-    unreached,
-    assumption
-  };
-}
-__name(bandPathBlock, "bandPathBlock");
-function formatBandPathClause(path, tier) {
-  if (path.terminal) return `next:none (at ${tier})`;
-  const head = `next:${path.destination} +${formatPp(path.points_needed ?? 0)}pp`;
-  const crossing = path.classes.find((c) => c.arrival !== "not-reached");
-  if (!crossing) return `${head} unreachable`;
-  if (crossing.arrival === "alone") return `${head} via ${crossing.class}`;
-  const chain = path.classes.filter((c) => c.cumulative_pp <= crossing.cumulative_pp).map((c) => c.class);
-  return `${head} via ${chain.join("+")}`;
-}
-__name(formatBandPathClause, "formatBandPathClause");
-var DELTA_DOCUMENT = "run-delta";
-var DELTA_SCHEMA_VERSION = 1;
-function isDeltaDocument(value) {
-  if (!value || typeof value !== "object") return false;
-  const doc = value;
-  return doc.document === DELTA_DOCUMENT && typeof doc.delta_schema === "number" && !!doc.baseline && typeof doc.baseline === "object" && !!doc.current && typeof doc.current === "object" && !!doc.verdict && typeof doc.verdict === "object";
-}
-__name(isDeltaDocument, "isDeltaDocument");
-function resolveRequestedIndicators(input2) {
-  const recorded = input2.meta?.requested_indicators;
-  if (Array.isArray(recorded)) {
-    const ids = [...new Set(recorded.map((id) => String(id)))].sort();
-    return { ok: true, indicators: ids, source: "recorded" };
-  }
-  const table = input2.report?.full_table;
-  if (Array.isArray(table) && table.length > 0) {
-    const ids = [
-      ...new Set(
-        table.filter((r) => r?.status !== "not_implemented").map((r) => String(r?.id ?? "")).filter((id) => id !== "")
-      )
-    ].sort();
-    return { ok: true, indicators: ids, source: "reconstructed" };
-  }
-  return {
-    ok: false,
-    reason: "missing-comparability-inputs",
-    detail: "no requested_indicators on meta and no full table to reconstruct from \u2014 request the set explicitly by re-sealing rather than assuming a comparison"
-  };
-}
-__name(resolveRequestedIndicators, "resolveRequestedIndicators");
-function resolveEngineSha7(opts = {}) {
-  const env = opts.env ?? {};
-  const cands = [env.LEAPSCORE_SHA, opts.engineRef, env.LEAPSCORE_ENGINE_REF, env.VERCEL_GIT_COMMIT_SHA];
-  for (const c of cands) {
-    if (c && String(c).trim()) return String(c).trim().slice(0, 7);
-  }
-  if (opts.execImpl) {
-    try {
-      const out = opts.execImpl("git rev-parse --short HEAD");
-      if (out && out.trim()) return out.trim().slice(0, 7);
-    } catch {
-    }
-  }
-  return "unknown";
-}
-__name(resolveEngineSha7, "resolveEngineSha7");
-var UnsupportedContractVersionError = class extends Error {
-  constructor(found, supported) {
-    super(`unsupported contract version ${found} (supports <= ${supported})`);
-    this.found = found;
-    this.supported = supported;
-    this.name = "UnsupportedContractVersionError";
-  }
-  static {
-    __name(this, "UnsupportedContractVersionError");
-  }
-};
-function assertContractVersion(envelope) {
-  const v = envelope.contractVersion ?? envelope.meta?.contractVersion ?? CONTRACT_VERSION;
-  if (v > CONTRACT_VERSION) throw new UnsupportedContractVersionError(v, CONTRACT_VERSION);
-}
-__name(assertContractVersion, "assertContractVersion");
 
 // ../../src/scan/offline.ts
 var STRICT_OFFLINE_MESSAGE = "strict offline mode: network attempt aborted \u2014 detectors must use vendored snapshots and emit unknown with a re-run hint where live data would be needed";
@@ -8516,6 +9013,7 @@ async function* runLocalScan(targetPath, opts = {}) {
   const totalCost = ids.reduce((a, id) => a + (BUDGET_COST[INDICATOR_BUDGET_CLASS[id] ?? "fast"] ?? 5e3), 0) + 3e4;
   const budget = createBudgetControllerForIndicators(ids, { withCloneBase: true, byteCap: opts.byteCap, killerMs: opts.killerMs });
   const start = Date.now();
+  const scannedAt = (/* @__PURE__ */ new Date()).toISOString();
   const signal = budget.signal;
   const scanId = `ls_${Date.now().toString(36)}`;
   const fetchImpl = opts.strict ? createStrictFetch() : opts.fetchImpl ?? fetch;
@@ -8528,12 +9026,13 @@ async function* runLocalScan(targetPath, opts = {}) {
   const readFile2 = bindLocalReadFile(absPath, { byteCap: opts.byteCap, signal });
   const commitSha = opts.scannedCommitOverride ?? await resolveLocalCommit(absPath);
   let sampleN;
+  let treeWalk = null;
   try {
-    const walk = await walkSortedTree(absPath);
-    sampleN = computeSampleN(walk.fileCount);
+    treeWalk = await walkSortedTree(absPath);
+    sampleN = computeSampleN(treeWalk.fileCount);
     budget.setSampleN(sampleN);
     const elapsedMs = Date.now() - start;
-    yield { type: "trace", ts: elapsedMs, elapsedMs, label: `Tree walk \u2014 ${walk.fileCount} files, sampleN ${sampleN ?? "full"} (canonical sorted order)`, phase: "budget" };
+    yield { type: "trace", ts: elapsedMs, elapsedMs, label: `Tree walk \u2014 ${treeWalk.fileCount} files, sampleN ${sampleN ?? "full"} (canonical sorted order)`, phase: "budget" };
   } catch {
   }
   let manifests = [];
@@ -8576,6 +9075,38 @@ async function* runLocalScan(targetPath, opts = {}) {
     // abandonment) reference the scan start, not each detector's wall clock.
     scanMs: start
   };
+  let identity;
+  if (treeWalk) {
+    const identityStart = Date.now();
+    const subject = { repo: absPath, commit: commitSha, scanned_at: scannedAt };
+    try {
+      const census = await cachedStackCensus(ctx, signal, { paths: treeWalk.paths });
+      identity = await deriveIdentity({
+        walk: treeWalk,
+        manifests: ctx.manifests,
+        readFile: bindLocalReadFile(absPath, { byteCap: IDENTITY_READ_ALLOCATION, signal }),
+        archetype: archetypeResult,
+        census,
+        subject,
+        signal,
+        // Local lane reads every in-scope file (report-identity D5): coverage is
+        // complete, so the magnitude is measured rather than extrapolated.
+        readAll: true
+      });
+    } catch (identityError) {
+      const detail = identityError instanceof Error ? identityError.message : String(identityError);
+      identity = degradedIdentity(subject, `identity pass failed: ${detail.slice(0, 200)}`);
+    }
+    const elapsedMs = Date.now() - start;
+    const lineItem = identity.size.lines;
+    const lineLabel = lineItem ? `${lineItem.status === "estimated" ? "~" : ""}${lineItem.value ?? "unknown"}` : "unknown";
+    yield { type: "trace", ts: elapsedMs, elapsedMs, label: `Identity \u2014 ${identity.size.files ?? 0} files \xB7 ${lineLabel} lines \xB7 ${identity.stack.languages.length} languages`, phase: "archetype", durationMs: Date.now() - identityStart };
+  } else {
+    identity = degradedIdentity(
+      { repo: absPath, commit: commitSha, scanned_at: scannedAt },
+      "tree walk did not complete \u2014 identity could not be derived"
+    );
+  }
   let reqIds = ids;
   let reqDetectors = LOCAL_DETECTORS.filter((_, i) => ids.includes(LOCAL_IDS[i]));
   if (archetypeResult) {
@@ -8682,7 +9213,7 @@ async function* runLocalScan(targetPath, opts = {}) {
   }
   const snapshot = {
     repo: absPath,
-    scanned_at: (/* @__PURE__ */ new Date()).toISOString(),
+    scanned_at: scannedAt,
     engine_version: ENGINE_VERSION,
     rubric_version: "docs/rubric@tranche-a",
     scanned_commit: commitSha,
@@ -8704,7 +9235,7 @@ async function* runLocalScan(targetPath, opts = {}) {
     snapshot.planeInventory = { has_server: false, has_data: false, has_deploy: false, has_client: false, has_test: false, evidence: { has_server: [], has_data: [], has_deploy: [], has_client: [], has_test: [] } };
     snapshot.archetype_evidence = ["local scan \u2014 archetype unavailable"];
   }
-  yield { type: "done", facts, snapshot, id: scanId, strict: !!opts.strict };
+  yield { type: "done", facts, snapshot, id: scanId, strict: !!opts.strict, identity };
 }
 __name(runLocalScan, "runLocalScan");
 
@@ -10027,6 +10558,9 @@ function sealScan(input2) {
     // Derived view over the sealed rows; the key is absent (not empty) when the
     // headline was suppressed and there is no stated score to measure from.
     ...nextBandPath ? { next_band_path: nextBandPath } : {},
+    // Target identity (report-identity): presentation-only, excluded from the
+    // fingerprint, present only when the identity pass actually ran.
+    ...input2.identity ? { identity: input2.identity } : {},
     report_schema: "1"
   };
   const trace = [...input2.trace];
@@ -10091,6 +10625,28 @@ function esc(s) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 __name(esc, "esc");
+function identitySummaryLine(identity) {
+  const bits = [];
+  if (identity.subject.repo) bits.push(identity.subject.repo);
+  const commit = identity.subject.commit && identity.subject.commit !== "unknown" ? identity.subject.commit.slice(0, 7) : "unknown";
+  bits.push(`commit ${commit}`);
+  if (typeof identity.size.files === "number") bits.push(`${identity.size.files} files`);
+  if (typeof identity.size.directories === "number") bits.push(`${identity.size.directories} dirs`);
+  const lines = identity.size.lines;
+  if (lines) {
+    bits.push(`${identityValueLabel(lines)} lines${lines.scope ? ` (${lines.scope})` : ""}`);
+  }
+  const primary = identity.stack.primary_language;
+  if (primary) bits.push(`primary ${primary}`);
+  if (identity.stack.ecosystems.length) bits.push(identity.stack.ecosystems.join(" + "));
+  if (identity.stack.frameworks.length) bits.push(identity.stack.frameworks.join(" + "));
+  const legacy = (identity.stack.legacy_stacks ?? []).filter((s) => s.detected).map((s) => s.id);
+  if (legacy.length) bits.push(legacy.join(" + "));
+  const archetype = identity.shape.archetype;
+  if (archetype && archetype !== "unknown") bits.push(`archetype ${archetype}`);
+  return bits.join(" \xB7 ");
+}
+__name(identitySummaryLine, "identitySummaryLine");
 function renderPathHtml(path, tier, score) {
   const block = bandPathBlock(path, { tier, score });
   const classes = block.classes.map((c) => {
@@ -10140,6 +10696,8 @@ function renderHtml(r) {
   const gates = r.gates.map((g) => `<li><strong>${esc(g.id)}</strong> ${esc(g.name)} \u2014 ${esc(g.status)}: ${esc(g.note)}</li>`).join("\n");
   const capNotice = r.gateCapped && r.uncappedTier ? `<p class="gatecap"><strong>Verdict capped at ${esc(r.tier)}.</strong> ${esc(gateCapStatement(r.cappedByGates ?? [], r.uncappedTier))}</p>
 ` : "";
+  const identityLine = r.identity ? `<p class="identity">${esc(identitySummaryLine(r.identity))}</p>
+` : "";
   const cats = r.categories.map((c) => `<li>${esc(c.id)} \u2014 ${esc(c.name)}: ${c.category_score == null ? "n/a" : `${Math.round(c.category_score)}`} (weight ${c.weight}%)</li>`).join("\n");
   return `<!DOCTYPE html>
 <html lang="en">
@@ -10151,11 +10709,12 @@ function renderHtml(r) {
 body{font-family:system-ui,-apple-system,sans-serif;max-width:760px;margin:2rem auto;padding:0 1rem;color:#111;line-height:1.5}
 .score{font-size:2.5rem;font-weight:700}.band{display:inline-block;padding:.2rem .6rem;border-radius:999px;background:#111;color:#fff;font-weight:600}
 .meta{color:#555;font-size:.9rem}.cta{border:1px solid #111;padding:1rem;border-radius:.5rem;margin:1.5rem 0}
+.identity{color:#333;font-size:.95rem;font-family:ui-monospace,monospace;margin:0 0 .5rem}
 h2{margin-top:2rem}ul{padding-left:1.2rem}
 </style>
 </head>
 <body>
-${headline}
+${identityLine}${headline}
 <p class="meta">${esc(r.repo)} \xB7 commit ${esc(commitShort)} \xB7 ${esc(r.scannedAt)} \xB7 ${esc(r.runId)} \xB7 ${esc(r.status)} \xB7 coverage ${r.coverage.measured}m/${r.coverage.estimated}e/${r.coverage.unknown}u${r.fingerprint ? ` \xB7 fingerprint ${esc(r.fingerprint.slice(0, 12))}` : ""}</p>
 ${capNotice}<h2>Top risks</h2>
 <ul>${risks || "<li>No deductions \u2014 clean scan.</li>"}</ul>
@@ -10177,6 +10736,10 @@ function renderMarkdown(r) {
   const cta = assessmentCtaForBand(r.tier);
   const commitShort = r.repoSha && r.repoSha !== "unknown" ? r.repoSha.slice(0, 7) : "unknown";
   const lines = [];
+  if (r.identity) {
+    lines.push(identitySummaryLine(r.identity));
+    lines.push(``);
+  }
   lines.push(r.suppressed ? `# LeapScore: insufficient signal \u2014 ${r.repo}` : `# LeapScore: ${r.score}/${r.tier} \u2014 ${r.repo}`);
   lines.push(``);
   lines.push(`commit ${commitShort} \xB7 ${r.scannedAt} \xB7 \`${r.runId}\` \xB7 ${r.status} \xB7 coverage ${r.coverage.measured}m/${r.coverage.estimated}e/${r.coverage.unknown}u${r.fingerprint ? ` \xB7 fingerprint \`${r.fingerprint.slice(0, 12)}\`` : ""}`);
@@ -11234,6 +11797,7 @@ async function runLocalMain(targetPath, o) {
   let budgetMs = 0;
   let facts = [];
   let snapshot = null;
+  let identity;
   let scanId;
   try {
     const killerEnv = o.env.LEAPSCORE_KILLER_MS ?? "";
@@ -11267,6 +11831,7 @@ async function runLocalMain(targetPath, o) {
       } else if (evt.type === "done") {
         facts = evt.facts ?? [];
         snapshot = evt.snapshot;
+        identity = evt.identity;
         scanId = evt.id;
         break;
       }
@@ -11286,6 +11851,7 @@ async function runLocalMain(targetPath, o) {
     budgetMs,
     startMs: o.startMs,
     trace: o.trace,
+    identity,
     engineRef: o.engineRef,
     env: o.env,
     // 2.3: engine identity from release metadata (--engine-ref / LEAPSCORE_SHA),
@@ -11310,6 +11876,7 @@ async function runRemoteMain(repo, o) {
   let budgetMs = 0;
   let facts = [];
   let snapshot = null;
+  let identity;
   let scanId;
   try {
     const killerEnv = o.env.LEAPSCORE_KILLER_MS ?? "";
@@ -11343,6 +11910,7 @@ async function runRemoteMain(repo, o) {
       } else if (evt.type === "done") {
         facts = evt.facts ?? [];
         snapshot = evt.snapshot ?? null;
+        identity = evt.identity;
         scanId = evt.id;
         break;
       }
@@ -11362,6 +11930,7 @@ async function runRemoteMain(repo, o) {
     budgetMs,
     startMs: o.startMs,
     trace: o.trace,
+    identity,
     engineRef: o.engineRef,
     env: o.env,
     // 2.3: engine identity from release metadata (--engine-ref / LEAPSCORE_SHA),
@@ -11396,6 +11965,7 @@ async function writeReportsAndExit(sealed, o) {
     gates: report.gates ?? [],
     topBlockers: report.top_blockers ?? [],
     nextBandPath: report.next_band_path,
+    identity: report.identity,
     gateCapped: report.headline.gate_capped === true,
     uncappedTier: report.headline.uncapped_tier,
     cappedByGates: report.headline.capped_by_gates,

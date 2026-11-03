@@ -1,5 +1,5 @@
 /** engine/orchestrator.ts — unified budgeted scan (GH-API + clone under one deadline) */
-import { createBudgetControllerForIndicators, budgetForIndicators, BUDGET_COST, INDICATOR_BUDGET_CLASS, computeSampleN, partitionByteCap, isKillerTrip } from './budget';
+import { createBudgetControllerForIndicators, budgetForIndicators, BUDGET_COST, INDICATOR_BUDGET_CLASS, computeSampleN, partitionByteCap, isKillerTrip, DETECTOR_TREE_BYTE_BUDGET, IDENTITY_READ_ALLOCATION } from './budget';
 import { walkSortedTree } from './tree';
 import { buildToolVersions, toolVersion } from './detectors/common';
 import { createGhClient, GhRateLimitError } from './gh';
@@ -10,6 +10,9 @@ import { createQueue } from './queue';
 import type { FactRecord } from './facts';
 import { validateFact } from './facts';
 import { classifyArchetype, classifyArchetypePerRoot } from './archetype';
+import { cachedStackCensus } from './stackcensus';
+import { degradedIdentity, deriveIdentity } from './identity';
+import type { ReportIdentity } from '@leapscore/contracts';
 import { ENGINE_VERSION } from '../identity';
 import { detectVel06 } from './detectors/vel06';
 import { detectVel09 } from './detectors/vel09';
@@ -82,12 +85,15 @@ function errorKindForFact(f: FactRecord): "cap" | "crash" | "rate-limit" | undef
 }
 
 /** Unified scan: single budget covering GH + clone detectors, streaming meta/progress/trace/done */
-export async function* runUnifiedScan(repoUrl: string, opts: { token?: string; indicatorIds?: string[]; killerMs?: number } = {}): AsyncGenerator<{ type: string; budgetMs?: number; breakdown?: Record<string, number>; indicatorCount?: number; pct?: number; elapsedMs?: number; remainingMs?: number; completedIds?: string[]; completedCost?: number; totalCost?: number; facts?: FactRecord[]; snapshot?: unknown; id?: string; error?: string; reason?: string; detail?: string; milestone?: string; ts?: number; label?: string; phase?: string; detectorId?: string; durationMs?: number; status?: string; errorKind?: string }> {
+export async function* runUnifiedScan(repoUrl: string, opts: { token?: string; indicatorIds?: string[]; killerMs?: number } = {}): AsyncGenerator<{ type: string; budgetMs?: number; breakdown?: Record<string, number>; indicatorCount?: number; pct?: number; elapsedMs?: number; remainingMs?: number; completedIds?: string[]; completedCost?: number; totalCost?: number; facts?: FactRecord[]; snapshot?: unknown; identity?: ReportIdentity; id?: string; error?: string; reason?: string; detail?: string; milestone?: string; ts?: number; label?: string; phase?: string; detectorId?: string; durationMs?: number; status?: string; errorKind?: string }> {
   const ids = opts.indicatorIds ?? EXPANDED_IDS;
   const { budgetMs, breakdown, indicatorCount } = getUnifiedBudget(ids);
   const totalCost = ids.reduce((a, id) => a + (BUDGET_COST[INDICATOR_BUDGET_CLASS[id] ?? 'fast'] ?? 5000), 0) + (ids.some(id => INDICATOR_BUDGET_CLASS[id] === 'slow-dissolvable') ? 30000 : 5000);
   const budget = createBudgetControllerForIndicators(ids, { withCloneBase: ids.some(id => INDICATOR_BUDGET_CLASS[id] === 'slow-dissolvable'), killerMs: opts.killerMs });
   const start = Date.now();
+  // One scan instant, shared by the snapshot and the identity subject, so the two
+  // statements of "when" cannot disagree.
+  const scannedAt = new Date().toISOString();
   const signal = budget.signal;
 
   // Ingest + GH setup
@@ -207,12 +213,15 @@ export async function* runUnifiedScan(repoUrl: string, opts: { token?: string; i
     const elapsedMs = Date.now() - start;
     yield { type: 'trace', ts: elapsedMs, elapsedMs, label: `Budget exceeded — sealing with ${ghFacts.length}/${ids.length} detectors`, phase: 'budget', status: 'error', errorKind: 'cap' };
     budget.cancel();
-    yield { type: 'done', facts: allFacts, snapshot: { repo: normalized, scanned_at: new Date().toISOString(), engine_version: ENGINE_VERSION, rubric_version: 'docs/rubric@tranche-a', scanned_commit: 'unknown' }, id: scanId };
+    yield { type: 'done', facts: allFacts, snapshot: { repo: normalized, scanned_at: scannedAt, engine_version: ENGINE_VERSION, rubric_version: 'docs/rubric@tranche-a', scanned_commit: 'unknown' }, id: scanId };
     return;
   }
 
   // Archetype sniff placeholder — will be filled after clone/sniff
   let archetypeResult: Awaited<ReturnType<typeof classifyArchetype>> | null = null;
+  // Target identity (report-identity): sealed as `report.identity`; absent when
+  // the pass could not run (no clone ⇒ no tree to describe).
+  let identity: ReportIdentity | undefined;
 
   // Clone phase — only if any clone-dependent ids requested; otherwise skip
   const needsClone = ids.some(id => phase2Ids.includes(id));
@@ -250,9 +259,12 @@ export async function* runUnifiedScan(repoUrl: string, opts: { token?: string; i
           (job as unknown as { _archMeta?: unknown })._archMeta = { error: archE instanceof Error ? archE.message : String(archE) };
         }
         // Deterministic bounding (1.2): canonical sorted walk → sampleN before fan-out.
+        // The same walk list feeds the identity pass and the legacy census (D9), so
+        // identity adds no traversal of its own.
+        let treeWalk: Awaited<ReturnType<typeof walkSortedTree>> | null = null;
         try {
-          const walk = await walkSortedTree(clone.clonePath);
-          budget.setSampleN(computeSampleN(walk.fileCount));
+          treeWalk = await walkSortedTree(clone.clonePath);
+          budget.setSampleN(computeSampleN(treeWalk.fileCount));
         } catch { /* walk failure: detectors fall back to full reads */ }
         const ctx: ScanContext = {
           clonePath: clone.clonePath,
@@ -264,6 +276,37 @@ export async function* runUnifiedScan(repoUrl: string, opts: { token?: string; i
           toolVersions: buildToolVersions(),
           readFile: clone.readFile,
         };
+        // Identity pass (report-identity D2): scan-driver work beside archetype
+        // classification, never a detector. It reads through its own
+        // reservation-bound reader, so its cap is an identity limit — not a
+        // detector cap — and never fails the run.
+        if (treeWalk) {
+          const identityStart = Date.now();
+          const subject = { repo: normalized, commit: clone.commitSha, scanned_at: scannedAt };
+          try {
+            const census = await cachedStackCensus(ctx, sig, { paths: treeWalk.paths });
+            identity = await deriveIdentity({
+              walk: treeWalk,
+              manifests: ctx.manifests,
+              readFile: clone.partitionedReadFile(IDENTITY_READ_ALLOCATION),
+              archetype: archRes,
+              census,
+              subject,
+              signal: sig,
+            });
+          } catch (identityError) {
+            const detail = identityError instanceof Error ? identityError.message : String(identityError);
+            identity = degradedIdentity(subject, `identity pass failed: ${detail.slice(0, 200)}`);
+          }
+          (job as unknown as { _identityMeta?: unknown })._identityMeta = { identity, durationMs: Date.now() - identityStart };
+        } else {
+          // The pass ran but had no tree to describe: state that, rather than
+          // leaving a reader to guess why the block is absent.
+          identity = degradedIdentity(
+            { repo: normalized, commit: clone.commitSha, scanned_at: scannedAt },
+            'tree walk did not complete — identity could not be derived',
+          );
+        }
         // Filter by applicability (task 2.4) — skip not_applicable detectors
         let reqPhase2Ids = phase2Ids.filter(id => ids.includes(id));
         let reqDetectors = phase2Detectors.filter((_, i) => ids.includes(phase2Ids[i]));
@@ -288,8 +331,9 @@ export async function* runUnifiedScan(repoUrl: string, opts: { token?: string; i
           } catch {}
         }
         const starts = reqDetectors.map(() => Date.now());
-        // Partitioned byte budgets (1.3): independent per-detector counters.
-        const perDetectorCap = partitionByteCap(4 * 1024 * 1024, Math.max(1, reqDetectors.length));
+        // Partitioned byte budgets (1.3): independent per-detector counters over
+        // the detector tree budget — unchanged by the identity reservation.
+        const perDetectorCap = partitionByteCap(DETECTOR_TREE_BYTE_BUDGET, Math.max(1, reqDetectors.length));
         const settled = await Promise.all(reqDetectors.map((fn, idx) => {
           const s = starts[idx];
           const dctx: ScanContext = { ...ctx, readFile: clone.partitionedReadFile(perDetectorCap) };
@@ -353,6 +397,14 @@ export async function* runUnifiedScan(repoUrl: string, opts: { token?: string; i
             // stash for snapshot
             archetypeResult = archMeta as unknown as Awaited<ReturnType<typeof classifyArchetype>>;
           }
+        }
+        const identityMeta = (job as unknown as { _identityMeta?: { identity?: ReportIdentity; durationMs?: number } })._identityMeta;
+        if (identityMeta?.identity) {
+          identity = identityMeta.identity;
+          const elapsedMs = Date.now() - start;
+          const lineItem = identity.size.lines;
+          const lineLabel = lineItem ? (lineItem.status === 'estimated' ? '~' : '') + String(lineItem.value ?? 'unknown') : 'unknown';
+          yield { type: 'trace', ts: elapsedMs, elapsedMs, label: `Identity — ${identity.size.files ?? 0} files · ${lineLabel} lines · ${identity.stack.languages.length} languages`, phase: 'archetype', durationMs: identityMeta.durationMs };
         }
         const skipped = (job as unknown as { _skipped?: string[] })._skipped;
         if (skipped && skipped.length) {
@@ -420,7 +472,7 @@ export async function* runUnifiedScan(repoUrl: string, opts: { token?: string; i
     const status = unknownCount === 0 ? 'complete' : 'degraded';
     yield { type: 'trace', ts: elapsedMs, elapsedMs, label: `Seal — ${status} · ${allFacts.filter(f => !(f as unknown as { error?: unknown }).error).length}/${ids.length} measured`, phase: 'seal', status };
   }
-  const snapshot: Record<string, unknown> = { repo: normalized, scanned_at: new Date().toISOString(), engine_version: ENGINE_VERSION, rubric_version: 'docs/rubric@tranche-a', scanned_commit };
+  const snapshot: Record<string, unknown> = { repo: normalized, scanned_at: scannedAt, engine_version: ENGINE_VERSION, rubric_version: 'docs/rubric@tranche-a', scanned_commit };
   if (archetypeResult) {
     snapshot.archetype = archetypeResult.archetype;
     snapshot.archetype_confidence = archetypeResult.confidence;
@@ -434,7 +486,7 @@ export async function* runUnifiedScan(repoUrl: string, opts: { token?: string; i
     snapshot.planeInventory = { has_server: false, has_data: false, has_deploy: false, has_client: false, has_test: false, evidence: { has_server: [], has_data: [], has_deploy: [], has_client: [], has_test: [] } };
     snapshot.archetype_evidence = ['no clone — GH-only scan'];
   }
-  yield { type: 'done', facts: allFacts, snapshot, id: scanId };
+  yield { type: 'done', facts: allFacts, snapshot, id: scanId, identity };
 }
 
 /** Back-compat: two-phase generator now delegates to unified scan but preserves legacy shape for callers that still consume phase events */

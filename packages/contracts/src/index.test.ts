@@ -38,6 +38,11 @@ import {
   REPORT_BASE_URL,
   BadgeRefusalError,
   type BadgeViewModel,
+  identityValueLabel,
+  identityStatusLabel,
+  twoSignificantFigures,
+  IDENTITY_FIELD_NAMES,
+  type IdentityItem,
 } from "./index";
 
 describe("runId grammar", () => {
@@ -582,3 +587,76 @@ describe("badge refuses fixtures and deltas at the entry point (1.4)", () => {
   });
 });
 
+
+describe("identity presentation is derived from the emitted status (report-identity)", () => {
+  it("a measured value prints rounded, with no approximation marker", () => {
+    const item: IdentityItem = { status: "measured", value: 1247 };
+    expect(identityValueLabel(item)).toBe("1.2k");
+    expect(identityValueLabel(item)).not.toContain("~");
+    expect(identityStatusLabel(item)).toBe("measured");
+  });
+
+  it("an estimated value prints the same magnitude behind the marker", () => {
+    const item: IdentityItem = { status: "estimated", value: 420000 };
+    expect(identityValueLabel(item)).toBe("~420k");
+    expect(identityStatusLabel(item)).toBe("estimated");
+  });
+
+  it("an unknown value states that it was not measured and names the reason", () => {
+    const item: IdentityItem = { status: "unknown", reason: "empty scope: no file matches source-v1" };
+    expect(identityValueLabel(item)).toBe("not measured — empty scope: no file matches source-v1");
+    expect(identityStatusLabel(item)).toBe("not measured");
+  });
+
+  it("an unknown value never degrades to a dash, a zero, or a blank", () => {
+    const item: IdentityItem = { status: "unknown" };
+    const label = identityValueLabel(item);
+    expect(label).toBe("not measured");
+    expect(label).not.toMatch(/^-$|^0$/);
+  });
+
+  it("two significant figures are the stored precision for an estimate", () => {
+    expect(twoSignificantFigures(1247)).toBe(1200);
+    expect(twoSignificantFigures(420000)).toBe(420000);
+    expect(twoSignificantFigures(58)).toBe(58);
+    expect(twoSignificantFigures(0)).toBe(0);
+  });
+
+  it("the display never claims a marker or precision the status does not carry", () => {
+    for (const value of [0, 7, 58, 999, 1000, 1247, 999999, 1_500_000, 420_000_000]) {
+      const measured = identityValueLabel({ status: "measured", value });
+      const estimated = identityValueLabel({ status: "estimated", value });
+      expect(measured.startsWith("~")).toBe(false);
+      expect(estimated).toBe(`~${measured}`);
+    }
+  });
+});
+
+describe("identity membership rule: no identity field is a graded metric", () => {
+  // Each forbidden name is an indicator's objective metric or graded surface:
+  // dependency mass (ECOS-06), test surface (TEST-03), comment density (DOCS-06),
+  // per-file line distribution (ARCH-01).
+  const FORBIDDEN = [
+    "transitive",
+    "direct_deps",
+    "test_files",
+    "test_count",
+    "comment_ratio",
+    "loc_p95",
+    "max_file_loc",
+  ];
+
+  it("declares no field name that an indicator row grades", () => {
+    const declared = IDENTITY_FIELD_NAMES.map((name) => name.toLowerCase());
+    const offenders = declared.filter((name) => FORBIDDEN.some((bad) => name.includes(bad)));
+    expect(offenders).toEqual([]);
+  });
+
+  it("catches a forbidden name when one is added", () => {
+    const withForbidden = [...IDENTITY_FIELD_NAMES, "transitive_deps"];
+    const offenders = withForbidden
+      .map((name) => name.toLowerCase())
+      .filter((name) => FORBIDDEN.some((bad) => name.includes(bad)));
+    expect(offenders).toEqual(["transitive_deps"]);
+  });
+});
