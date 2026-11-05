@@ -11,6 +11,7 @@ packages/contracts/    producer-owned single source: report envelope, runId gram
                        vocabulary + thresholds, badge model, next-band-path grammar, funnel
                        copy, network allowlist. No deps. Every producer + consumer imports it.
 apps/scanner/          PRODUCE side — the engine, colocated with its two entry points
+                       (npm package `leapscore-scan`; unscoped, published)
   src/scan/              orchestrator (unified remote) · local (path scan) · budget · clone ·
                          gh · ingest · archetype · ecosystem · stackcensus · tree · store ·
                          queue · runner · scheduler · snapshots (vendored EOL + advisories)
@@ -20,32 +21,41 @@ apps/scanner/          PRODUCE side — the engine, colocated with its two entry
                          rubric.json (compiled, generated)
   src/server.ts          GET /scan (versioned NDJSON) · GET /health — stateless
   bin/scan.ts            `leapscore-scan` CLI (local scan · --repo · gates · badge · baseline)
+  bin/leapscore-scan.mjs   the committed launcher every topology maps to
   dist/leapscore-scan.mjs  the shipped artifact: one readable ESM bundle, zero runtime deps
+  LICENSE                byte-copy of the root Apache-2.0 text (check:package-publish)
 apps/surface/          sealed envelope → GitHub issues (separate process, separate token)
 apps/site/             PRESENT side — Next.js static site: marketing, `/live` scan,
                        `/reports` + `/reports/[runId]`, `/rubric` browser, `/method`
-action/                checkout-first GitHub Action over the committed dist
+action/                checkout-first GitHub Action: src, scripts, and the committed dist
+                       (metadata lives at the repository root, `action.yml`)
+action.yml             the single Action metadata file (`uses: <owner>/<repo>@<ref>`,
+                       `runs.main: action/dist/index.js`, `using: node24`)
 docs/rubric/           the rubric in three layers: indicators/<NN-slug>/ (one file per
                        ID combining semantics + implementation, plus the category charter
                        README); model/scale.md (authored 0–3 scale + core-path rule) and
                        model/config.md (weights, bands, gates); sheets/* (generated)
+docs/releases/         release notes drafts + the release runbook (tag scheme, dry run,
+                       rollback, evidence)
 openspec/              live change specs — specs/ is current truth, changes/archive/* is history
 tooling/checks/        detector-isolation · site-boundary · surface-boundary · bin-wiring ·
-                       dist-freshness · schemas · documentation-structure
+                       dist-freshness · package-publish · schemas · documentation-structure
 tooling/scripts/       compile-rubric (canonical → rubric.json + generated rubric.ts
                        + generated sheets/*; --check is the CI gate) · refresh-snapshots ·
-                       snapshot-data
+                       snapshot-data · release-version-guard · release-gates
 tooling/lib/           rubric-catalog (the one derivation of the category table from the
                        tree; imported by the compiler and the structure check)
 ```
 
-Root `package.json` workspaces: `apps/*`, `packages/*`, `action`. Run `npm run compile:rubric` / `npm run check:rubric-consistency` / `npm run check:schemas` / `npm run check:documentation-structure` / `npm run check:diagrams` / `npm run check:detector-isolation` / `npm run check:site-boundary` / `npm run check:bin-wiring` / `npm run check:dist` from root.
+Root `package.json` workspaces: `apps/*`, `packages/*`, `action`. Run `npm run compile:rubric` / `npm run check:rubric-consistency` / `npm run check:schemas` / `npm run check:documentation-structure` / `npm run check:diagrams` / `npm run check:detector-isolation` / `npm run check:site-boundary` / `npm run check:surface-boundary` / `npm run check:bin-wiring` / `npm run check:package-publish` / `npm run check:dist` from root.
 
 ## Routine development commands
 
 - `npm install` — install workspaces and build the CLI bundle through the root `prepare` script.
 - `npm run build` — build all workspaces; `npm run build:cli` — rebuild the scanner bundle.
 - `npm test` — run workspace Vitest suites; `npm run lint` — run workspace lint/type checks.
+- `npm run release:gates` — every `check:*` command, bundle parity, and the workspace suites, in the order the release workflow runs them (locally reproducible).
+- `npm run release:guard -- vX.Y.Z` — fail unless the tag and `apps/scanner/package.json` version agree.
 - Run repository boundary checks from the root; every documented command must resolve after a clean install.
 
 ## Implementation status (read this before "planning only" notes elsewhere)
@@ -56,7 +66,8 @@ Root `package.json` workspaces: `apps/*`, `packages/*`, `action`. Run `npm run c
 - **Terminal scoring is shared:** `src/scan/scoring/seal.ts` (`sealScan`) is the single composer for both the HTTP service and the CLI — score (frozen denominator by default), gates incl. the kill-switch cap, coverage, top blockers, derived next-band path, provenance manifest, `score_fingerprint`, `runId`.
 - **Presentation:** the site never executes a scan. `/live` streams the scanner's NDJSON cross-origin; `/reports` + `/reports/[runId]` render **site-owned** history (v1 = one committed static fixture, no request-time filesystem reads). There is **no `/api/scan` and no site-side live provider** — `lib/provider.ts` is the sample seam only, and `lib/provider.live.ts` / `LiveReportProvider` no longer exist.
 - **Surfacing is a separate app:** `apps/surface` turns a sealed envelope into labeled issues, warn-only, with its own token (`SURFACE_TOKEN`) so the scanner keeps `contents:read` only.
-- **Decisions live in `openspec/`:** `openspec/changes/*` + `openspec/specs/*` carry everything built after the MVP (unified budget, deterministic scoring, measurement honesty, offline snapshots, legacy stacks, band path, baseline diff, score badge, release packaging). Superseded planning material survives only in git history.
+- **Release surface live:** the scanner publishes as the unscoped npm package `leapscore-scan` (package name = command name, so `npx leapscore-scan` needs no `-p`); `1.0.0` is the first public version and is stamped into the bundle, so the sealed `engine_version` equals the installed package version. The Action metadata is the single root `action.yml` (`runs.main: action/dist/index.js`, `using: node24`), so consumers write `uses: open-legacyleap/leapscore@v1`. `.github/workflows/release.yml` runs on `vX.Y.Z` tags: verify (every `check:*`, bundle parity, all suites, one `npm pack`) → publish (the exact tarball with OIDC provenance, the GitHub release + `SHA256SUMS`) → smoke (registry install, offline fixture scan) → move the major tag. `docs/releases/` carries the runbook and release notes.
+- **Decisions live in `openspec/`:** `openspec/changes/*` + `openspec/specs/*` carry everything built after the MVP (unified budget, deterministic scoring, measurement honesty, offline snapshots, legacy stacks, band path, baseline diff, score badge, release packaging, release publication). Superseded planning material survives only in git history.
 
 ## Live doc trees
 
@@ -103,7 +114,8 @@ Consequences: changing an indicator's thresholds/status → edit its canonical f
 - **The site carries no scan runtime** (`check:site-boundary`): the site's served graph must not reach `apps/scanner`, and must not use `node:fs`/`child_process` outside build tooling. Exemptions are declared in the check itself (`lib/reports.ts`, build scripts, tests).
 - **Only `apps/scanner/src/scan/gh.ts` may call `fetch`** (`check:detector-isolation`); detectors get data through the read-only, byte-capped `readFile` and the injected GH client.
 - **The surface app is separate from the scanner** (`check:surface-boundary`): scan and issue-write never share a process or token.
-- **Every documented command must resolve after a clean install** (`check:bin-wiring`) and the committed Action dist must be byte-identical to its sources (`check:dist`).
+- **Every documented command must resolve after a clean install** (`check:bin-wiring`) and the committed Action dist must be byte-identical to its sources (`check:dist`). `check:dist` also requires the root `action.yml` to name the committed wrapper and refuses a second metadata copy.
+- **The published package ships the repository license and names the public home** (`check:package-publish`): `apps/scanner/LICENSE` is byte-identical to the root Apache-2.0 text, `publishConfig` declares public access + provenance, and `repository`/`homepage`/`bugs` point at `open-legacyleap/leapscore`.
 - **One canonical file per indicator** (`check:rubric-consistency`, `check:schemas`, `check:documentation-structure`): exactly 102 unified files under `docs/rubric/indicators/`, category indexes link all of them, detector schemas resolve to their indicator's §7 fact schema, current specs cite only paths that exist, and no redirect-only path is reintroduced.
 
 ## Style

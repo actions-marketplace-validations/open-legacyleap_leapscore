@@ -41,7 +41,7 @@ jobs:
           node-version: 24
       - name: Scan working tree with LeapScore
         id: scan
-        uses: ./action
+        uses: ./
         with:
           path: .
           fail_under: ${{ inputs.fail_under }}

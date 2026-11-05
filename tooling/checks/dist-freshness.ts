@@ -14,7 +14,7 @@
 //
 // The rebuild is offline and token-free: a pure esbuild of committed sources through the
 // same build primitive the real build uses, so the comparison is between like and like.
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -27,8 +27,49 @@ const ARTIFACTS = ['index.js', 'leapscore-scan.mjs'];
 
 const scratch = mkdtempSync(join(tmpdir(), 'leapscore-dist-check-'));
 const scratch2 = mkdtempSync(join(tmpdir(), 'leapscore-dist-check2-'));
+const ENGINE_VERSION = (JSON.parse(readFileSync(join(ROOT, 'apps/scanner/package.json'), 'utf-8')) as { version: string }).version;
 let failed = 0;
 let wiringFailed = 0;
+
+// Action metadata is resolved from the repository root, so `uses: <owner>/<repo>@<ref>`
+// works with no path suffix (release-and-publish D3). The entry point it names must be
+// the committed wrapper this gate already byte-verifies, and no subdirectory copy may
+// exist to drift from it.
+const ROOT_METADATA = join(ROOT, 'action.yml');
+const LEGACY_METADATA = join(ACTION, 'action.yml');
+function trackedInGit(path: string): boolean {
+  const listing = spawnSync('git', ['ls-files', '--', path], { cwd: ROOT, encoding: 'utf8' });
+  return listing.status === 0 && listing.stdout.trim() !== '';
+}
+if (!existsSync(ROOT_METADATA)) {
+  wiringFailed++;
+  console.error(
+    `action.yml: missing at the repository root — a consumer's \`uses: <owner>/<repo>@<ref>\` resolves root metadata only, so the Action is not addressable.`,
+  );
+} else {
+  const metadata = readFileSync(ROOT_METADATA, 'utf-8');
+  const main = /^\s+main:\s*["']?([^"'\n]+?)["']?\s*$/m.exec(metadata)?.[1]?.trim();
+  const runtime = /^\s+using:\s*["']?([^"'\n]+?)["']?\s*$/m.exec(metadata)?.[1]?.trim();
+  if (main !== 'action/dist/index.js') {
+    wiringFailed++;
+    console.error(
+      `action.yml: runs.main is ${JSON.stringify(main ?? null)}, expected "action/dist/index.js" — the root metadata must point at the committed wrapper, or a consumer checkout runs nothing.`,
+    );
+  } else if (!trackedInGit('action/dist/index.js')) {
+    wiringFailed++;
+    console.error(`action.yml: runs.main "action/dist/index.js" is not committed — a consumer checkout would have no wrapper to run.`);
+  }
+  if (runtime !== 'node24') {
+    wiringFailed++;
+    console.error(`action.yml: runs.using is ${JSON.stringify(runtime ?? null)}, expected "node24" — node20 reached end-of-life and warns on every run (release-and-publish D4).`);
+  }
+}
+if (existsSync(LEGACY_METADATA)) {
+  wiringFailed++;
+  console.error(
+    `action/action.yml: a second Action metadata file exists — the root metadata must be the single copy of the inputs/outputs/runtime contract, and a subdirectory duplicate drifts.`,
+  );
+}
 function rebuildInto(dir: string): void {
   buildArtifact(wrapperBuildOptions(join(dir, 'action/dist/index.js')));
   buildArtifact({
@@ -41,7 +82,7 @@ function rebuildInto(dir: string): void {
     minify: false,
     keepNames: true,
     legalComments: 'none',
-    define: { __LEAPSCORE_ENGINE_VERSION__: '"unofficial-build"' },
+    define: { __LEAPSCORE_ENGINE_VERSION__: JSON.stringify(ENGINE_VERSION) },
     shebang: '#!/usr/bin/env node',
   });
 }

@@ -12,6 +12,8 @@ yarn-error.log
 
 # Build/Test
 dist/
+# Release pack output (`.github/workflows/release.yml` packs into dist-release/).
+dist-release/
 # The Action ships its built artifacts committed (Actions have no build step on the
 # user's runner) — un-ignore exactly the composed dist files (release-packaging D5);
 # tooling/checks/dist-freshness.ts keeps them byte-identical to their sources.

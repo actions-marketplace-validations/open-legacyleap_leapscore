@@ -40,5 +40,7 @@ jobs:
         run: npm run check:surface-boundary
       - name: Bin wiring
         run: npm run check:bin-wiring
+      - name: Package publish metadata and license
+        run: npm run check:package-publish
       - name: Committed Action dist is byte-fresh
         run: npm run check:dist

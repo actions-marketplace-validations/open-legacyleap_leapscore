@@ -341,7 +341,7 @@ describe('handleExitCode with a ratchet gate', () => {
 
 describe('6.1 a workflow supplying neither baseline nor ratchet behaves as before', () => {
   it('action.yml declares both inputs with empty defaults', () => {
-    const yml = readFileSync(new URL('../action.yml', import.meta.url), 'utf8');
+    const yml = readFileSync(new URL('../../action.yml', import.meta.url), 'utf8');
     assert.match(yml, /baseline:\n\s+description:[^\n]*\n\s+required: false\n\s+default: ""/);
     assert.match(yml, /ratchet:\n\s+description:[^\n]*\n\s+required: false\n\s+default: ""/);
   });

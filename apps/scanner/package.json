@@ -1,8 +1,8 @@
 {
-  "name": "@leapscore/scanner",
-  "version": "0.1.0",
+  "name": "leapscore-scan",
+  "version": "1.0.0",
+  "description": "Local-first legacy and maintainability scanner: one readable bundle, zero runtime dependencies, scored against a public rubric.",
   "license": "Apache-2.0",
-  "private": true,
   "type": "module",
   "bin": {
     "leapscore-scan": "./bin/leapscore-scan.mjs"
@@ -10,11 +10,32 @@
   "files": [
     "bin/leapscore-scan.mjs",
     "dist/leapscore-scan.mjs",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "engines": {
     "node": ">=20"
   },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/open-legacyleap/leapscore.git",
+    "directory": "apps/scanner"
+  },
+  "homepage": "https://github.com/open-legacyleap/leapscore#readme",
+  "bugs": {
+    "url": "https://github.com/open-legacyleap/leapscore/issues"
+  },
+  "keywords": [
+    "legacy-code",
+    "maintainability",
+    "static-analysis",
+    "code-scanning",
+    "rubric"
+  ],
   "scripts": {
     "dev": "tsx src/server.ts",
     "start": "tsx src/server.ts",

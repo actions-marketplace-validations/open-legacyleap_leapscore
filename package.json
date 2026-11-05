@@ -15,7 +15,7 @@
   "scripts": {
     "dev": "npm run dev --workspaces",
     "build": "npm run build --workspaces --if-present",
-    "build:cli": "npm run build:bundle --workspace @leapscore/scanner",
+    "build:cli": "npm run build:bundle --workspace leapscore-scan",
     "prepare": "npm run build:cli",
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
@@ -24,11 +24,14 @@
     "check:documentation-structure": "tsx tooling/checks/documentation-structure.ts",
     "check:diagrams": "tsx tooling/checks/diagrams.ts",
     "check:bin-wiring": "tsx tooling/checks/bin-wiring.ts",
+    "check:package-publish": "tsx tooling/checks/package-publish.ts",
     "check:detector-isolation": "tsx tooling/checks/detector-isolation.ts",
     "check:site-boundary": "tsx tooling/checks/site-boundary.ts",
     "check:surface-boundary": "tsx tooling/checks/surface-boundary.ts",
     "compile:rubric": "tsx tooling/scripts/compile-rubric.ts",
-    "check:dist": "tsx tooling/checks/dist-freshness.ts"
+    "check:dist": "tsx tooling/checks/dist-freshness.ts",
+    "release:guard": "tsx tooling/scripts/release-version-guard.ts",
+    "release:gates": "tsx tooling/scripts/release-gates.ts"
   },
   "devDependencies": {
     "tsx": "^4.19.0",

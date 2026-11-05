@@ -34,7 +34,7 @@ jobs:
           node apps/scanner/dist/leapscore-scan.mjs --help > /dev/null
           grep -q "COMPILED from docs/rubric" apps/scanner/dist/leapscore-scan.mjs
       - name: Source vs artifact parity + bare-environment smoke
-        run: npm run test --workspace @leapscore/scanner -- src/scan/__tests__/bundle-parity.test.ts
+        run: npm run test --workspace leapscore-scan -- src/scan/__tests__/bundle-parity.test.ts
       # The committed dist must match a rebuild from the sources in THIS checkout, not
       # from the working tree — the tree may hold an uncommitted rebuild; only the git
       # blob is what a `uses:` checkout actually runs.

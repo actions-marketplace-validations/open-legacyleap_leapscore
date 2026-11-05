@@ -1,0 +1,270 @@
+# Tag-driven release (release-and-publish §4, design D6).
+#
+# One annotated `vX.Y.Z` tag produces one artifact. `verify` runs every release gate and
+# packs the tarball once; `publish` uploads that exact tarball to npm with provenance and
+# attaches it (plus SHA256SUMS) to the GitHub release; `smoke` installs the released
+# version in a clean directory with no checkout and scans a fixture offline; `finalize`
+# moves the major tag only after the publish and the smoke both succeed.
+#
+# `workflow_dispatch` is the dry-run path: it runs the same gates and packs the same
+# tarball, but never publishes (the publish job is tag-only). Set `smoke_version` to
+# smoke-test a version that is already published (used for the 1.0.0-rc.1 reservation).
+name: Release
+
+on:
+  push:
+    # GitHub tag filters are globs, not regexes: this admits `v` + digit-leading parts and
+    # the strict semver check below rejects anything that is not `vX.Y.Z`.
+    tags: ['v[0-9]*.[0-9]*.[0-9]*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to verify and pack (dry run; defaults to apps/scanner/package.json)'
+        required: false
+        default: ''
+      smoke_version:
+        description: 'Published version to smoke-test (e.g. 1.0.0-rc.1); empty = dry run only'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Verify gates and pack
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+
+      - name: Resolve and guard the release version
+        id: version
+        env:
+          REF: ${{ github.ref_type == 'tag' && github.ref_name || inputs.version }}
+        run: |
+          set -euo pipefail
+          if [ -z "$REF" ]; then
+            REF="$(node -p "require('./apps/scanner/package.json').version")"
+          fi
+          FLAGS=""
+          if [ "${{ github.ref_type }}" != "tag" ]; then
+            # A dry run may exercise a prerelease; a tag push may not (prereleases are
+            # reserved once, under the `next` dist-tag, by task 5.1).
+            FLAGS="--allow-prerelease"
+          fi
+          VERSION="$(./node_modules/.bin/tsx tooling/scripts/release-version-guard.ts "$REF" $FLAGS)"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "release version: $VERSION"
+
+      - name: Run every release gate
+        run: npm run release:gates
+
+      - name: Pack the release tarball (once, from this commit)
+        run: |
+          set -euo pipefail
+          mkdir -p dist-release
+          npm pack --workspace leapscore-scan --pack-destination dist-release
+          ls -l dist-release
+
+      - uses: actions/upload-artifact@v5
+        with:
+          name: leapscore-scan-${{ steps.version.outputs.version }}
+          path: dist-release/*.tgz
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    name: Publish the tested tarball
+    needs: verify
+    # Tag-only: a dry run (workflow_dispatch) never writes to a registry.
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Publication authority comes from this protected environment's OIDC identity, never a
+    # stored token. Create it with required reviewers before the first OIDC publish (task
+    # 1.4, or 5.3 if the plan defers environments on private repositories). Until then the
+    # tag-only condition above is the guard: no publish credential exists in CI, and the
+    # trusted publisher (5.4) is configured against this environment name, so an
+    # auto-created, unprotected environment cannot publish.
+    environment: release
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      # Trusted publishing (OIDC) requires npm >= 11.5.1; pin it so the release does not
+      # depend on the runner image's bundled npm.
+      - run: npm install --global npm@11.19.0
+
+      - name: Download the exact tarball verify produced
+        uses: actions/download-artifact@v5
+        with:
+          name: leapscore-scan-${{ needs.verify.outputs.version }}
+          path: dist-release
+
+      - name: Guard the tag and checksum the artifact
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          set -euo pipefail
+          test "${GITHUB_REF_NAME}" = "v${VERSION}" || {
+            echo "release: tag ${GITHUB_REF_NAME} does not name version ${VERSION}" >&2
+            exit 1
+          }
+          TGZ="./dist-release/leapscore-scan-${VERSION}.tgz"
+          test -f "$TGZ" || { echo "release: missing $TGZ" >&2; exit 1; }
+          ( cd dist-release && sha256sum "leapscore-scan-${VERSION}.tgz" ) > SHA256SUMS
+          ( cd dist-release && sha256sum -c ../SHA256SUMS )
+          echo "TGZ=$TGZ" >> "$GITHUB_ENV"
+
+      - name: Publish to npm with provenance
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          set -euo pipefail
+          npm publish "$TGZ" --provenance --access public --tag latest
+          echo "published leapscore-scan@${VERSION}"
+
+      - name: Create the GitHub release with the same bytes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          set -euo pipefail
+          if [ -f "docs/releases/${VERSION}.md" ]; then
+            NOTES=(--notes-file "docs/releases/${VERSION}.md")
+          else
+            NOTES=(--generate-notes)
+          fi
+          gh release create "v${VERSION}" "$TGZ" SHA256SUMS \
+            --verify-tag \
+            --title "LeapScore ${VERSION}" \
+            "${NOTES[@]}"
+
+  smoke:
+    name: Install and scan from the registry
+    needs: [verify, publish]
+    # Runs after a successful publish, or on demand for an already-published version.
+    if: always() && (needs.publish.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.smoke_version != ''))
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+
+      # Deliberately no checkout: this proves the published artifact alone works.
+      - name: Install the released package in a clean directory
+        env:
+          VERSION: ${{ inputs.smoke_version || needs.verify.outputs.version }}
+        run: |
+          set -euo pipefail
+          echo "smoke version: $VERSION"
+          mkdir smoke && cd smoke
+          npm init -y > /dev/null
+          npm install "leapscore-scan@${VERSION}" --no-audit --no-fund
+          ./node_modules/.bin/leapscore-scan --help > /dev/null
+          echo "help: exit 0"
+
+      - name: Scan a checked-in fixture with no network
+        env:
+          VERSION: ${{ inputs.smoke_version || needs.verify.outputs.version }}
+        run: |
+          set -euo pipefail
+          cd smoke
+          # The fixture is checked into this workflow (the job has no checkout). `--strict`
+          # is the zero-socket mode: any network attempt aborts the scan.
+          mkdir -p fixture/src
+          cat > fixture/package.json <<'JSON'
+          {"name":"leapscore-smoke-fixture","version":"1.0.0","private":true,"main":"src/index.js"}
+          JSON
+          cat > fixture/README.md <<'MD'
+          # LeapScore smoke fixture
+
+          Synthetic target for the post-publish install-and-scan check.
+          MD
+          cat > fixture/src/index.js <<'JS'
+          export function add(a, b) { return a + b; }
+          export function subtract(a, b) { return a - b; }
+          JS
+
+          ./node_modules/.bin/leapscore-scan scan fixture --out out --strict
+          test -f out/report.json
+          test -f out/report.html
+          test -f out/report.md
+
+          node -e '
+            const fs = require("fs");
+            const report = JSON.parse(fs.readFileSync("out/report.json", "utf8"));
+            const expected = process.env.VERSION;
+            if (report.meta.engine_version !== expected) {
+              console.error(`smoke: engine_version ${report.meta.engine_version} != released ${expected}`);
+              process.exit(1);
+            }
+            console.log(`smoke: sealed engine_version=${expected} fingerprint=${report.meta.score_fingerprint}`);
+          '
+
+      - name: Assert the documented exit codes
+        env:
+          VERSION: ${{ inputs.smoke_version || needs.verify.outputs.version }}
+        run: |
+          set -euo pipefail
+          cd smoke
+          set +e
+          ./node_modules/.bin/leapscore-scan scan ./does-not-exist --out out-usage > /dev/null 2>&1
+          usage=$?
+          ./node_modules/.bin/leapscore-scan scan fixture --out out-gate --strict --fail-under 100 > /dev/null 2>&1
+          gate=$?
+          set -e
+          test "$usage" -eq 2 || { echo "smoke: bad-path exit $usage, expected 2" >&2; exit 1; }
+          test "$gate" -eq 3 || { echo "smoke: threshold-trip exit $gate, expected 3" >&2; exit 1; }
+          test -f out-gate/report.json
+          echo "exit codes: 2 (usage) and 3 (threshold trip) as documented"
+
+  finalize:
+    name: Move the major tag
+    needs: [verify, publish, smoke]
+    # Only after the registry accepted the version AND the installed artifact passed. A
+    # failed smoke leaves the previous major tag unmoved.
+    if: startsWith(github.ref, 'refs/tags/') && needs.publish.result == 'success' && needs.smoke.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - name: Point v<major> at this release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          set -euo pipefail
+          MAJOR="v${VERSION%%.*}"
+          if gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${MAJOR}" > /dev/null 2>&1; then
+            gh api -X PATCH "repos/${GITHUB_REPOSITORY}/git/refs/tags/${MAJOR}" \
+              -f sha="${GITHUB_SHA}" -F force=true > /dev/null
+            echo "moved ${MAJOR} to ${GITHUB_SHA}"
+          else
+            gh api -X POST "repos/${GITHUB_REPOSITORY}/git/refs" \
+              -f ref="refs/tags/${MAJOR}" -f sha="${GITHUB_SHA}" > /dev/null
+            echo "created ${MAJOR} at ${GITHUB_SHA}"
+          fi

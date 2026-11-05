@@ -10,14 +10,62 @@ A local path scan reads the target on your machine and makes no network requests
 
 ## Run a scan
 
-Prerequisites: Node.js 20 or newer and a checkout of this repository. From the repository root, install dependencies (which prepares the CLI bundle), then run:
+Prerequisite: Node.js 20 or newer. Nothing to clone, install, or build.
 
 ```bash
-npm install
-node apps/scanner/dist/leapscore-scan.mjs scan . --out report/ --strict
+npx leapscore-scan . --out leapscore-report
 ```
 
-The local scan reads `.` and writes `report.json`, `report.html`, and `report.md` to `report/`. `--strict` makes any attempted network access fail.
+The local scan reads `.` and writes `report.json`, `report.html`, and `report.md` to
+`leapscore-report/`. `--out <dir>` is required on every sealed run. Add `--strict` for
+zero-socket mode: detectors use the vendored snapshots and any attempted network access
+aborts the scan.
+
+The same artifact has two secondary forms — both run the identical bundle:
+
+```bash
+# From a checkout of this repository (contributors; installs the workspace and builds the bundle)
+npm install
+leapscore-scan scan . --out leapscore-report --strict
+
+# Pin an exact commit from git (no registry access)
+npx -p "github:open-legacyleap/leapscore#<sha>" leapscore-scan scan . --out leapscore-report
+```
+
+## Use it in GitHub Actions
+
+```yaml
+permissions:
+  contents: read
+
+jobs:
+  leapscore:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: open-legacyleap/leapscore@v1
+        with:
+          path: .
+          fail_under_band: moderate
+          out_dir: leapscore-report
+```
+
+- `actions/checkout` must run first — the Action scans the checked-out working tree and does
+  no clone of its own.
+- `fetch-depth: 0` is recommended. A shallow checkout has no history, so history-derived
+  indicators (for example `ARCH-05`, churn vs. defect hot spots) seal as `unknown` with a
+  re-run hint; full history lets them measure. The scan seals either way, and the report
+  discloses which rows were unscored.
+- Gate on a band with `fail_under_band: critical|high|moderate|low`, or on a number with
+  `fail_under: <0-100>`; they are mutually exclusive. Either gate exits `3` while still
+  writing all three report files.
+- Inputs: `path`, `fail_under`, `fail_under_band`, `strict`, `out_dir`, `engine_ref`,
+  `baseline`, `ratchet`, `badge`.
+- Pin `@v1` (the moving major tag) for automatic compatible updates, `@v1.0.0` (an immutable
+  release tag) for a fixed version, or a commit SHA for the strictest pin. No moving minor
+  tag is published; use the exact `vX.Y.Z` tag when you want minor-level stability.
 
 ## Sample report
 

@@ -1,13 +1,17 @@
-# @leapscore/scanner
+# leapscore-scan
 
-Local-first legacy/maintainability scanner. Default entry scans a local directory —
-no clone, no GH-API:
+Local-first legacy/maintainability scanner. Published as the unscoped npm package
+`leapscore-scan`, so the package name and the command name are the same. Default entry
+scans a local directory — no clone, no GH-API:
 
 ```sh
-leapscore-scan scan ./claims-core --out ./out
-leapscore-scan scan ./app --strict --out ./out
-leapscore-scan --repo vercel/next.js --out ./out
+npx leapscore-scan scan ./claims-core --out ./out
+npx leapscore-scan scan ./app --strict --out ./out
+npx leapscore-scan --repo vercel/next.js --out ./out
 ```
+
+Prerequisite: Node.js 20 or newer. A registry install needs no repository checkout and no
+build step; the package is a single readable bundle with zero runtime dependencies.
 
 `--out <dir>` always receives all three files: `report.json` (machine),
 `report.html` (self-contained, no external assets), `report.md` (pasteable).
@@ -26,19 +30,25 @@ aborts) and conflicts with `--repo` (exit 2, before any work).
 single readable ESM bundle with zero runtime dependencies (JSON assets inlined; `git` is
 the only binary it spawns). It runs on stock Node ≥ 20; nothing else. The build is
 `npm run build:cli` at the repo root, and the root `prepare` script runs it on every
-`npm install`. Both install topologies point at the committed launcher
-`apps/scanner/bin/leapscore-scan.mjs`, which execs that artifact, and both must stay wired:
+`npm install`. All install topologies point at the committed launcher
+`apps/scanner/bin/leapscore-scan.mjs`, which execs that artifact, and all of them must stay
+wired:
 
-- **Workspace install (local authority):** `apps/scanner/package.json` declares
+- **Registry install (primary):** `npx leapscore-scan …` or a local/global install of the
+  published package. The tarball carries the launcher, the bundle, `README.md`, `LICENSE`,
+  and the manifest; the installed version is stamped into the bundle, so the sealed
+  `engine_version` equals the installed package version. No checkout, no build step.
+- **Workspace install:** `apps/scanner/package.json` declares
   `"bin": { "leapscore-scan": "./bin/leapscore-scan.mjs" }`. A `npm install` at the repo root
   links `node_modules/.bin/leapscore-scan` to the launcher, so the command runs from any npm
   context — `npm run`, `npm exec`, Action scripts. Invoke it as `leapscore-scan …`; do not
   fall back to `npx tsx apps/scanner/bin/scan.ts` (that form bypasses the wiring and hides a
   broken shim).
-- **Git install (`npx -p "<repo>#<ref>" leapscore-scan`):** a git install of this repo
-  installs only the root package, so the root `package.json` `bin` block must keep the
-  same `leapscore-scan` → `apps/scanner/bin/leapscore-scan.mjs` mapping. This is the form
-  `.github/workflows` and the [workflow-scan specification](../../openspec/specs/workflow-scan/spec.md) use.
+- **Git install (secondary; exact-commit pinning):** a git install of this repo installs
+  only the root package, so the root `package.json` `bin` block keeps the same
+  `leapscore-scan` → `apps/scanner/bin/leapscore-scan.mjs` mapping. Use it to pin a commit
+  (`npx -p "github:open-legacyleap/leapscore#<sha>" leapscore-scan …`), not as the primary
+  install path; it installs the monorepo and runs `prepare`.
 
 **Why the launcher, not the bundle:** npm links `node_modules/.bin/*` during reify, before
 the root `prepare` script runs, and it skips a `bin` target that does not exist yet — so a

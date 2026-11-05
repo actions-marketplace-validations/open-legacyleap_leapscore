@@ -53,5 +53,5 @@ outputs:
     description: "Path of the written badge SVG (when the badge input was set)"
 
 runs:
-  using: "node20"
-  main: "dist/index.js"
+  using: "node24"
+  main: "action/dist/index.js"
