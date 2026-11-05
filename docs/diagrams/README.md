@@ -10,19 +10,19 @@ Nine archify diagrams of the LeapScore system. Each diagram is a matched pair: a
 
 | Diagram | Answers | Type | Rendered against |
 |---|---|---|---|
-| [architecture-leapscore-system.html](./architecture-leapscore-system.html) · [spec](./architecture-leapscore-system.json) | How do the producer contract, stateless scanner, static site, CLI/Action, and separate surface app relate? | `architecture` | `4877997` |
-| [class-contracts-seams.html](./class-contracts-seams.html) · [spec](./class-contracts-seams.json) | Which types form the report envelope, its rollup parts, the presentation seam, and the detector contract? | `class` | `4877997` |
-| [dataflow-scoring-envelope.html](./dataflow-scoring-envelope.html) · [spec](./dataflow-scoring-envelope.json) | How do detector facts become graded rows, a rollup, and one sealed envelope every consumer reads? | `dataflow` | `4877997` |
-| [erd-report-envelope.html](./erd-report-envelope.html) · [spec](./erd-report-envelope.json) | What entities make up the persisted report document — identity, rollup, row/gate evidence, baseline delta? | `erd` | `4877997` |
-| [lifecycle-indicator-row.html](./lifecycle-indicator-row.html) · [spec](./lifecycle-indicator-row.json) | How does one indicator row move from requested to sealed, and where is a non-measured path disclosed? | `lifecycle` | `4877997` |
-| [sequence-scan-request.html](./sequence-scan-request.html) · [spec](./sequence-scan-request.json) | What happens between `GET /scan` admission and the single terminal frame? | `sequence` | `4877997` |
-| [tree-repository.html](./tree-repository.html) · [spec](./tree-repository.json) | Where do the producer apps, shared contracts, generated rubric data, and boundary checks live? | `tree` | `4877997` |
-| [waterfall-scan-budget.html](./waterfall-scan-budget.html) · [spec](./waterfall-scan-budget.json) | How does a 240s indicator-driven budget split across the remote-scan lanes? (Illustrative shares; timings are not measured.) | `waterfall` | `4877997` |
-| [workflow-scan-pipeline.html](./workflow-scan-pipeline.html) · [spec](./workflow-scan-pipeline.json) | How does one indicator-count budget span the GitHub-API lane, the shallow clone, clone detectors, and sealing? | `workflow` | `4877997` |
+| [architecture-leapscore-system.html](./architecture-leapscore-system.html) · [spec](./architecture-leapscore-system.json) | How do the producer contract, stateless scanner, static site, CLI/Action, and separate surface app relate? | `architecture` | `537c8ee` |
+| [class-contracts-seams.html](./class-contracts-seams.html) · [spec](./class-contracts-seams.json) | Which types form the report envelope, its rollup parts, the presentation seam, and the detector contract? | `class` | `537c8ee` |
+| [dataflow-scoring-envelope.html](./dataflow-scoring-envelope.html) · [spec](./dataflow-scoring-envelope.json) | How do detector facts become graded rows, a rollup, and one sealed envelope every consumer reads? | `dataflow` | `537c8ee` |
+| [erd-report-envelope.html](./erd-report-envelope.html) · [spec](./erd-report-envelope.json) | What entities make up the persisted report document — identity, rollup, row/gate evidence, baseline delta? | `erd` | `537c8ee` |
+| [lifecycle-indicator-row.html](./lifecycle-indicator-row.html) · [spec](./lifecycle-indicator-row.json) | How does one indicator row move from requested to sealed, and where is a non-measured path disclosed? | `lifecycle` | `537c8ee` |
+| [sequence-scan-request.html](./sequence-scan-request.html) · [spec](./sequence-scan-request.json) | What happens between `GET /scan` admission and the single terminal frame? | `sequence` | `537c8ee` |
+| [tree-repository.html](./tree-repository.html) · [spec](./tree-repository.json) | Where do the producer apps, shared contracts, generated rubric data, and boundary checks live? | `tree` | `537c8ee` |
+| [waterfall-scan-budget.html](./waterfall-scan-budget.html) · [spec](./waterfall-scan-budget.json) | How does a 240s indicator-driven budget split across the remote-scan lanes? (Illustrative shares; timings are not measured.) | `waterfall` | `537c8ee` |
+| [workflow-scan-pipeline.html](./workflow-scan-pipeline.html) · [spec](./workflow-scan-pipeline.json) | How does one indicator-count budget span the GitHub-API lane, the shallow clone, clone detectors, and sealing? | `workflow` | `537c8ee` |
 
 ## Drift
 
-The pin is `4877997` for all nine — the revision the node→file/line evidence was verified against, one commit behind the roadmap commit that followed it. **The pin predates the current HEAD.** Treat the embedded file/line links as a historical citation, not as pointers into today's checkout. A stale diagram is not corrected by editing `meta.repository.revision`: moving the pin forward means re-verifying the evidence at that revision, which is a fresh authoring round.
+The pin is `537c8ee` for all nine — the revision the node→file/line evidence was verified against, one commit behind the commit that carries the current diagram set. The pin was moved by re-rendering the whole set against that tree, not by editing `meta.repository.revision`: moving the pin means re-verifying the evidence at that revision, which is a fresh authoring round. A stale diagram is never corrected by editing the pin alone.
 
 Regenerate when the layout or behavior a diagram shows changes, not on every commit.
 
