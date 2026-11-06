@@ -33,12 +33,12 @@
 - [x] 4.5 Implement the `publish` job to download that exact tarball and publish it with provenance; verify the registry dry run accepts the tarball and that the job obtains an OIDC token only from the release environment (full provenance verification lands in 5.5)
 - [ ] 4.6 Attach the same tarball plus `SHA256SUMS` to the GitHub release and verify the checksum matches both the attached and tarball artifacts
 - [ ] 4.7 Move the major tag only after a successful publish and add a smoke `needs` relationship so a failed smoke leaves `v1` unmoved; verify with a deliberately failing smoke on a prerelease
-- [ ] 4.8 Implement the `smoke` job with no checkout: install `leapscore-scan@<version>` in a temp directory, run `--help`, scan a checked-in fixture with network denied, and assert the sealed `engine_version`; verify the job passes against the prerelease from 5.1
+- [x] 4.8 Implement the `smoke` job with no checkout: install `leapscore-scan@<version>` in a temp directory, run `--help`, scan a checked-in fixture with network denied, and assert the sealed `engine_version`; verify the job passes against the prerelease from 5.1
 
 ## 5. Name reservation, public flip, and the `1.0.0` release
 
-- [ ] 5.1 Reserve the name before the flip: build and pack the tarball, publish `1.0.0-rc.1` with a maintainer credential under the `next` dist-tag (no CI secret), and verify `npm view leapscore-scan dist-tags` shows `next` at `1.0.0-rc.1`; `latest` also names the prerelease (the registry cannot delete it) and 5.5's publish moves it
-- [ ] 5.2 Pre-flip audit: run a secret scan over the full history, review past workflow logs for values that came from secrets, check docs/fixtures for internal or private references, and acknowledge that commit author emails become public; record findings and fix or rotate anything before changing visibility
+- [x] 5.1 Reserve the name before the flip: build and pack the tarball, publish `1.0.0-rc.1` with a maintainer credential under the `next` dist-tag (no CI secret), and verify `npm view leapscore-scan dist-tags` shows `next` at `1.0.0-rc.1`; `latest` also names the prerelease (the registry cannot delete it) and 5.5's publish moves it
+- [x] 5.2 Pre-flip audit: run a secret scan over the full history, review past workflow logs for values that came from secrets, check docs/fixtures for internal or private references, and acknowledge that commit author emails become public; record findings and fix or rotate anything before changing visibility
 - [x] 5.3 Make the repository public and verify anonymous clone, `https://api.github.com/repos/open-legacyleap/leapscore` returning 200, and that the dogfood workflow still runs; create the protected `release` environment now if it was deferred in 1.4
 - [ ] 5.4 Configure the npm trusted publisher for the release workflow and the `release` environment, confirm no registry write secret exists anywhere in the repository, and verify the OIDC path with a `1.0.1` dry run
 - [ ] 5.5 Publish `1.0.0` through the workflow, verify `npm view leapscore-scan@1.0.0` and its provenance record point at the tagged commit, and confirm the npm page's repository link resolves

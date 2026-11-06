@@ -108,6 +108,29 @@ because no tag exists yet.
   uncommitted changes (runbook corrections plus the `latest`/environment findings);
   commit and push them before tagging `v1.0.0`.
 
+## 2026-11-07 release run and trust status
+
+- **4.8 verified:** Release workflow run `42275135527` (`workflow_dispatch`,
+  `ca3f028`, `smoke_version=1.0.0-rc.1`) completed `success`. `verify` passed every
+  gate on the release commit; `smoke` installed from the registry with no checkout,
+  printed usage, sealed `engine_version=1.0.0-rc.1`, fingerprint
+  `da8fda1bee13daff996cf8b6dabbcd283b729dbff06445ef2047429ba0f63f22`, and asserted
+  exit codes 2 (usage) and 3 (threshold trip). `publish` and `finalize` were correctly
+  skipped on the dry run.
+- **5.1 / 5.2 accepted post-flip:** both executed after the repository was already
+  public. The reservation still secured the name and proved the publish path, and the
+  audit found nothing to rotate or rewrite; the only consequence is the `latest` pin
+  documented in D11. Recorded rather than reordered.
+- **5.4 blocked on an OTP:** `npm trust github` requires the account's one-time
+  password (`two-factor auth: auth-and-writes`). `--dry-run` confirms the intended
+  relationship: package `leapscore-scan`, file `release.yml`, repository
+  `open-legacyleap/leapscore`, environment `release`, permission `publish`.
+- **3.5 blocked on org authority:** the admin token can manage `open-legacyleap/leapscore`
+  but cannot create repositories in the organization (`403 Need admin access to the
+  organization`), and the organization has no existing private repository to use.
+- **5.8 staging:** created `nareshaggarwal-legacyleap/leapscore-consumer-public` (public,
+  empty) for the external-consumer run after `v1` exists.
+
 ## Ordering caveats found while preparing the ops handoff
 
 - **5.4 cannot verify OIDC with a `1.0.1` dry run.** The `publish` job is tag-only by
