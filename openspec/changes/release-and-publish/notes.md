@@ -172,6 +172,10 @@ because no tag exists yet.
   used `actions/checkout@v5` then `uses: open-legacyleap/leapscore@v1`, and sealed
   `engine=1.0.0`, score `3.33`, tier `Critical`, status `degraded`, fingerprint
   `a7df60e2ffb40558b48c653efc21fc866b529139ccf1d94d9471bbe0b1b15a9a`.
+- 5.4: the trusted publisher is active — the `1.0.0` publish authenticated as
+  `GitHub Actions <npm-oidc-no-reply@github.com>` with a SLSA provenance statement, and
+  `GET /actions/secrets` is empty. The OIDC path was proven by the real `1.0.0` publish
+  rather than a `1.0.1` dry run (a dry run skips the tag-only publish job).
 - 7.3 (partial): the documented `v1` rollback command was exercised against the release
   commit and `v1` still resolves to `4975b15` (`refs/tags/v1` = `4975b15`). The
   deprecation half needs the account OTP (`npm deprecate` returned `EOTP`).
