@@ -44,12 +44,12 @@
 - [x] 5.5 Publish `1.0.0` through the workflow, verify `npm view leapscore-scan@1.0.0` and its provenance record point at the tagged commit, and confirm the npm page's repository link resolves
 - [x] 5.6 Create the immutable `v1.0.0` tag and move `v1`, then verify `uses: open-legacyleap/leapscore@v1` resolves to the `1.0.0` commit
 - [ ] 5.7 Publish the Marketplace listing from the GitHub release UI and verify the listing shows the root metadata's inputs and branding
-- [ ] 5.8 Verify the external consumer path from a throwaway **public** repository: `actions/checkout` then `uses: open-legacyleap/leapscore@v1` seals a report; record the run URL and sealed score
+- [x] 5.8 Verify the external consumer path from a throwaway **public** repository: `actions/checkout` then `uses: open-legacyleap/leapscore@v1` seals a report; record the run URL and sealed score
 - [ ] 5.9 Record release evidence in the change notes: package version, tarball SHA256, provenance URL, action tag SHAs, smoke output, and the Marketplace URL
 
 ## 6. Documentation and reconciliation
 
-- [ ] 6.1 Rewrite the root README's primary command as `npx leapscore-scan . --out leapscore-report` with Node ≥ 20 as the only prerequisite, demote the from-source and git-install forms, and verify the primary command from an empty directory after the `1.0.0` publish
+- [x] 6.1 Rewrite the root README's primary command as `npx leapscore-scan . --out leapscore-report` with Node ≥ 20 as the only prerequisite, demote the from-source and git-install forms, and verify the primary command from an empty directory after the `1.0.0` publish
 - [x] 6.2 Add the Action section with the exact `uses:` line, `actions/checkout`, `fetch-depth: 0` rationale, a band-gate example, and pinning guidance; verify every documented input exists in the root metadata
 - [x] 6.3 Update `apps/scanner/README.md` and `action/README.md` so the registry topology is primary and the git-install form is explicitly secondary, and verify the documented command runs
 - [x] 6.4 Update `docs/roadmap/distribution-packaging.md` statuses and replace its scoped-name assumption with the `leapscore-scan` decision; verify no remaining claim says the package is private or the registry returns 404
@@ -58,6 +58,6 @@
 ## 7. Integration verification and rollback
 
 - [x] 7.1 Run the full check family on the `v1.0.0` commit (`npm run check:rubric-consistency`, `check:schemas`, `check:documentation-structure`, `check:diagrams`, `check:detector-isolation`, `check:site-boundary`, `check:surface-boundary`, `check:bin-wiring`, `check:dist`) and record the result
-- [ ] 7.2 Re-run the two consumer paths at the released tags: `npx leapscore-scan` from an empty directory and `uses: open-legacyleap/leapscore@v1` from a public test repo; record sealed scores and fingerprints
+- [x] 7.2 Re-run the two consumer paths at the released tags: `npx leapscore-scan` from an empty directory and `uses: open-legacyleap/leapscore@v1` from a public test repo; record sealed scores and fingerprints
 - [ ] 7.3 Rehearse rollback on a throwaway prerelease: deprecate it with a replacement message, move `v1` back to the last good release, and verify the documented recovery commands work
 - [x] 7.4 Audit the release posture: confirm no long-lived registry token, minimal workflow permissions, the `release` environment gate, and that the published tarball is assembled from the tag

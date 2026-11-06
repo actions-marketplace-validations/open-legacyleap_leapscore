@@ -162,6 +162,19 @@ because no tag exists yet.
   the publish job ran behind the protected `release` environment (approval recorded on
   deployment `7608458388`), and the published tarball is the artifact packed by the
   tagged `verify` job.
+- 6.1 / 7.2 (registry path): from a directory that is not a LeapScore checkout,
+  `npx -y leapscore-scan . --out leapscore-report` sealed `engine=1.0.0`, score `3.33`,
+  tier `Critical`, fingerprint
+  `55abba40cde2458a444e844c05fdb44bee8c17e65c502daaddcbfabea1aa38c6`, and all three
+  report files; `--help` exited 0.
+- 5.8 / 7.2 (Action path): public consumer run
+  <https://github.com/nareshaggarwal-legacyleap/leapscore-consumer-public/actions/runs/42277426186>
+  used `actions/checkout@v5` then `uses: open-legacyleap/leapscore@v1`, and sealed
+  `engine=1.0.0`, score `3.33`, tier `Critical`, status `degraded`, fingerprint
+  `a7df60e2ffb40558b48c653efc21fc866b529139ccf1d94d9471bbe0b1b15a9a`.
+- 7.3 (partial): the documented `v1` rollback command was exercised against the release
+  commit and `v1` still resolves to `4975b15` (`refs/tags/v1` = `4975b15`). The
+  deprecation half needs the account OTP (`npm deprecate` returned `EOTP`).
 
 ## Ordering caveats found while preparing the ops handoff
 
