@@ -176,9 +176,12 @@ because no tag exists yet.
   `GitHub Actions <npm-oidc-no-reply@github.com>` with a SLSA provenance statement, and
   `GET /actions/secrets` is empty. The OIDC path was proven by the real `1.0.0` publish
   rather than a `1.0.1` dry run (a dry run skips the tag-only publish job).
-- 7.3 (partial): the documented `v1` rollback command was exercised against the release
-  commit and `v1` still resolves to `4975b15` (`refs/tags/v1` = `4975b15`). The
-  deprecation half needs the account OTP (`npm deprecate` returned `EOTP`).
+- 7.3 verified: `leapscore-scan@1.0.0-rc.1` is deprecated with
+  `"Deprecated: use 1.0.0."`; the documented `v1` rollback command was exercised against
+  the release commit and `v1` still resolves to `4975b15` (`refs/tags/v1` = `4975b15`).
+- 3.5 skipped by maintainer decision on 2026-11-07. No second private repository was
+  created; the public `@v1` consumer run (5.8) proves Action ref resolution and the
+  committed wrapper, while the private-repo access path remains unexercised.
 
 ## Ordering caveats found while preparing the ops handoff
 

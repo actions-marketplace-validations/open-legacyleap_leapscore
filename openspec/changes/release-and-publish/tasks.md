@@ -21,7 +21,7 @@
 - [x] 3.2 Update `.github/workflows/leapscore-scan.yml` from `uses: ./action` to `uses: ./` in the same change, then verify the dogfood scan job is green on a push
 - [x] 3.3 Bump the Action runtime to `node24` and verify a hosted-runner run reaches the scan step without a runtime warning; record the self-hosted-runner caveat in the Action README
 - [x] 3.4 Extend `tooling/checks/bin-wiring.ts` or `tooling/checks/dist-freshness.ts` to assert the root metadata's `runs.main` exists and is the committed wrapper, and verify the check fails when the path is broken
-- [ ] 3.5 Verify the internal consumer path from a second **private** repository in the same org with workflow access granted: `actions/checkout` then `uses: open-legacyleap/leapscore@<sha>` seals a report, and record the run URL and sealed score
+- [x] 3.5 **Skipped by decision (2026-11-07):** no second private repository will be created; the public `@v1` consumer run (5.8) covers Action ref resolution, and the private-repo access path is not exercised. Original: Verify the internal consumer path from a second **private** repository in the same org with workflow access granted: `actions/checkout` then `uses: open-legacyleap/leapscore@<sha>` seals a report, and record the run URL and sealed score
 - [x] 3.6 Verify a shallow checkout (default `fetch-depth`) leaves history-derived indicators `unknown` and that `fetch-depth: 0` measures them, so the documented guidance is evidence-backed
 
 ## 4. Release workflow and dry runs (private phase)
@@ -59,5 +59,5 @@
 
 - [x] 7.1 Run the full check family on the `v1.0.0` commit (`npm run check:rubric-consistency`, `check:schemas`, `check:documentation-structure`, `check:diagrams`, `check:detector-isolation`, `check:site-boundary`, `check:surface-boundary`, `check:bin-wiring`, `check:dist`) and record the result
 - [x] 7.2 Re-run the two consumer paths at the released tags: `npx leapscore-scan` from an empty directory and `uses: open-legacyleap/leapscore@v1` from a public test repo; record sealed scores and fingerprints
-- [ ] 7.3 Rehearse rollback on a throwaway prerelease: deprecate it with a replacement message, move `v1` back to the last good release, and verify the documented recovery commands work
+- [x] 7.3 Rehearse rollback on a throwaway prerelease: deprecate it with a replacement message, move `v1` back to the last good release, and verify the documented recovery commands work
 - [x] 7.4 Audit the release posture: confirm no long-lived registry token, minimal workflow permissions, the `release` environment gate, and that the published tarball is assembled from the tag
