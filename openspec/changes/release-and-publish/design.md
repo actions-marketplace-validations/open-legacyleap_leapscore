@@ -74,7 +74,7 @@ Publishing the downloaded `.tgz` rather than a rebuilt directory is the mechanis
 
 Consequences: the private phase carries the package metadata, license gate, Action move, dogfood, release workflow, dry runs, and a name-reservation prerelease; the public flip carries provenance, the `1.0.0` publish, the environment gate (if deferred), Marketplace, and the external consumer test. GitHub redirects the old path after a transfer, so the existing `npx -p "github:open-legacyleap/leapscore#<sha>"` form keeps resolving. The npm account needs no organization for an unscoped name.
 
-**D11 — Reserve the name with a prerelease, never with `1.0.0`.** Publish `1.0.0-rc.1` under the `next` dist-tag while private, so the unclaimed name is secured and the publish path is exercised once, without ever presenting `latest` backed by a private repository (no provenance, broken repository link). `1.0.0` is published only after the flip, with provenance and a working repository link.
+**D11 — Reserve the name with a prerelease, never with `1.0.0`.** Publish `1.0.0-rc.1` under the `next` dist-tag while private, so the unclaimed name is secured and the publish path is exercised once. `latest` cannot be withheld: every published package must have one, the registry answers `400 Bad Request` to `npm dist-tag rm <pkg> latest`, and a tag only ever moves ([npm/cli#8490](https://github.com/npm/cli/issues/8490)). The reservation therefore leaves `latest` on the prerelease — a version with no provenance and a `repository` link that 404s for non-members. That cost is accepted and bounded rather than avoided: `1.0.0` is published only after the flip, with provenance and a working repository link, and that publish moves `latest` off the prerelease.
 
 **D12 — Audit history and logs before the flip.** Making the repository public publishes the full commit history and the logs of every past Actions run. The pre-flip gate is: secret scan over history, scan old workflow logs for values that came from secrets, check docs/fixtures for internal references, and acknowledge that commit author emails become public. Anything found is rewritten or rotated before the flip, not after.
 
@@ -99,7 +99,7 @@ Consequences: the private phase carries the package metadata, license gate, Acti
 1. **Identity and package metadata** — rename the workspace package, set `1.0.0`, drop `private`, add `publishConfig`/`repository`/`homepage`/`bugs`, commit the package `LICENSE` and its equality gate, update workspace scripts and the lockfile.
 2. **Action addressability** — move `action.yml` to the root, delete the subdirectory copy, switch the dogfood workflow to `uses: ./`, bump the runtime, verify the Action executes from a git-sha ref inside the repository.
 3. **Release workflow and dry run** — add the tag-triggered workflow with verify/publish/smoke jobs, run the gates and `workflow_dispatch` dry-run path, verify the tarball and smoke against the prerelease.
-4. **Name reservation** — tag and publish `1.0.0-rc.1` under the `next` dist-tag; confirm `latest` stays unset and the name is secured.
+4. **Name reservation** — tag and publish `1.0.0-rc.1` under the `next` dist-tag; confirm `next` names `1.0.0-rc.1` and the name is secured. `latest` also names the prerelease, since it cannot be deleted; the step-7 publish moves it.
 
 **Phase B — public release**
 

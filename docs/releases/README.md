@@ -78,11 +78,15 @@ temporary version and the committed identity is restored before anything is comm
 # Build an rc.1-stamped bundle and tarball: package version and engine_version agree.
 npm version --no-git-tag-version --workspace leapscore-scan 1.0.0-rc.1
 npm run build:cli
+mkdir -p dist-release   # npm pack does not create the destination directory
 npm pack --workspace leapscore-scan --pack-destination dist-release
 
-# Publish under `next`; never `latest` while the repository is still private.
-npm publish dist-release/leapscore-scan-1.0.0-rc.1.tgz --tag next --access public
-npm view leapscore-scan dist-tags   # next: 1.0.0-rc.1, no latest
+# Publish under `next`; never `latest` while the repository is still private. The `./` keeps
+# npm from reading the path as a GitHub shorthand. `--no-provenance` overrides
+# `publishConfig.provenance` here: automatic provenance needs a CI OIDC provider, and this
+# one-time reservation runs locally. Tagged releases get provenance in the workflow.
+npm publish ./dist-release/leapscore-scan-1.0.0-rc.1.tgz --tag next --access public --no-provenance
+npm view leapscore-scan dist-tags   # next: 1.0.0-rc.1; latest is unchanged, never absent
 
 # Restore the release identity and rebuild the committed bundle.
 npm version --no-git-tag-version --workspace leapscore-scan 1.0.0
@@ -93,6 +97,17 @@ git status --short   # the temporary version must leave no diff behind
 
 The maintainer credential used here is never stored in the repository or in CI. Revoke it
 after `1.0.0` is published through OIDC.
+
+`latest` is reserved: the registry cannot delete it, and answers `400 Bad Request` to
+`npm dist-tag rm <pkg> latest`. The first publish of a name sets `latest` (publishing with
+`--tag latest`, or with no tag at all); from then on it only ever moves. Two consequences:
+
+- Publish the reservation with `--tag next` so `latest` keeps pointing where it already does,
+  and let the `v1.0.0` release move it to the stable version — the workflow publishes with
+  `--tag latest`.
+- Never reserve the name with a placeholder version. A placeholder pins `latest` to a tarball
+  with no `bin`, so `npx leapscore-scan` fails until the first real release, and the pin cannot
+  be undone.
 
 ## Rollback
 

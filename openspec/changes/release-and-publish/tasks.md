@@ -1,9 +1,9 @@
 ## 1. Private home and prerequisites
 
-- [ ] 1.1 Transfer the repository to `open-legacyleap/leapscore` **while keeping it private**, and verify the old path still clones through GitHub's redirect and the new path resolves for a member
+- [x] 1.1 Transfer the repository to `open-legacyleap/leapscore` **while keeping it private**, and verify the old path still clones through GitHub's redirect and the new path resolves for a member
 - [x] 1.2 Verify Actions is enabled, the default branch is `main`, and the dogfood workflow runs without a PAT; record that standard-runner minutes are metered until the repository is public
-- [ ] 1.3 Confirm the publishing npm account has 2FA and publish rights, and that `npm view leapscore-scan` still returns `E404`; record the account name
-- [ ] 1.4 If the org plan supports environments on private repositories (Pro/Team/Enterprise), create the protected `release` environment now, restricted to `v*.*.*` tags with required reviewers, and verify a contributor without approval cannot start its jobs; otherwise record the deferral to 5.3 and keep every publish credential out of CI until then
+- [x] 1.3 Confirm the publishing npm account has 2FA and publish rights, and that `npm view leapscore-scan` still returns `E404`; record the account name
+- [x] 1.4 If the org plan supports environments on private repositories (Pro/Team/Enterprise), create the protected `release` environment now, restricted to `v*.*.*` tags with required reviewers, and verify a contributor without approval cannot start its jobs; otherwise record the deferral to 5.3 and keep every publish credential out of CI until then
 - [x] 1.5 Confirm the tag scheme is free: `git ls-remote --tags` shows no `vX.Y.Z` and no `v1`, and record that `vX.Y.Z` tags are immutable while `v1` is the only moving tag
 
 ## 2. Package publication shape (private phase)
@@ -37,9 +37,9 @@
 
 ## 5. Name reservation, public flip, and the `1.0.0` release
 
-- [ ] 5.1 Reserve the name before the flip: build and pack the tarball, publish `1.0.0-rc.1` with a maintainer credential under the `next` dist-tag (no CI secret), and verify `npm view leapscore-scan dist-tags` shows `next` and no `latest`
+- [ ] 5.1 Reserve the name before the flip: build and pack the tarball, publish `1.0.0-rc.1` with a maintainer credential under the `next` dist-tag (no CI secret), and verify `npm view leapscore-scan dist-tags` shows `next` at `1.0.0-rc.1`; `latest` also names the prerelease (the registry cannot delete it) and 5.5's publish moves it
 - [ ] 5.2 Pre-flip audit: run a secret scan over the full history, review past workflow logs for values that came from secrets, check docs/fixtures for internal or private references, and acknowledge that commit author emails become public; record findings and fix or rotate anything before changing visibility
-- [ ] 5.3 Make the repository public and verify anonymous clone, `https://api.github.com/repos/open-legacyleap/leapscore` returning 200, and that the dogfood workflow still runs; create the protected `release` environment now if it was deferred in 1.4
+- [x] 5.3 Make the repository public and verify anonymous clone, `https://api.github.com/repos/open-legacyleap/leapscore` returning 200, and that the dogfood workflow still runs; create the protected `release` environment now if it was deferred in 1.4
 - [ ] 5.4 Configure the npm trusted publisher for the release workflow and the `release` environment, confirm no registry write secret exists anywhere in the repository, and verify the OIDC path with a `1.0.1` dry run
 - [ ] 5.5 Publish `1.0.0` through the workflow, verify `npm view leapscore-scan@1.0.0` and its provenance record point at the tagged commit, and confirm the npm page's repository link resolves
 - [ ] 5.6 Create the immutable `v1.0.0` tag and move `v1`, then verify `uses: open-legacyleap/leapscore@v1` resolves to the `1.0.0` commit
