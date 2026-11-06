@@ -31,8 +31,8 @@
 - [x] 4.3 Make the `verify` job run every `check:*` command, bundle parity, and the workspace test suites on the tagged commit, and fail the release on any failure; verify by breaking one check on a throwaway tag
 - [x] 4.4 Build once in `verify`, run `npm pack`, and upload `leapscore-scan-<version>.tgz` as a workflow artifact; add a `workflow_dispatch` dry-run path that runs the gates and skips publish, and verify it produces the tarball with no registry write
 - [x] 4.5 Implement the `publish` job to download that exact tarball and publish it with provenance; verify the registry dry run accepts the tarball and that the job obtains an OIDC token only from the release environment (full provenance verification lands in 5.5)
-- [ ] 4.6 Attach the same tarball plus `SHA256SUMS` to the GitHub release and verify the checksum matches both the attached and tarball artifacts
-- [ ] 4.7 Move the major tag only after a successful publish and add a smoke `needs` relationship so a failed smoke leaves `v1` unmoved; verify with a deliberately failing smoke on a prerelease
+- [x] 4.6 Attach the same tarball plus `SHA256SUMS` to the GitHub release and verify the checksum matches both the attached and tarball artifacts
+- [x] 4.7 Move the major tag only after a successful publish and add a smoke `needs` relationship so a failed smoke leaves `v1` unmoved; verify with a deliberately failing smoke on a prerelease
 - [x] 4.8 Implement the `smoke` job with no checkout: install `leapscore-scan@<version>` in a temp directory, run `--help`, scan a checked-in fixture with network denied, and assert the sealed `engine_version`; verify the job passes against the prerelease from 5.1
 
 ## 5. Name reservation, public flip, and the `1.0.0` release
@@ -41,8 +41,8 @@
 - [x] 5.2 Pre-flip audit: run a secret scan over the full history, review past workflow logs for values that came from secrets, check docs/fixtures for internal or private references, and acknowledge that commit author emails become public; record findings and fix or rotate anything before changing visibility
 - [x] 5.3 Make the repository public and verify anonymous clone, `https://api.github.com/repos/open-legacyleap/leapscore` returning 200, and that the dogfood workflow still runs; create the protected `release` environment now if it was deferred in 1.4
 - [ ] 5.4 Configure the npm trusted publisher for the release workflow and the `release` environment, confirm no registry write secret exists anywhere in the repository, and verify the OIDC path with a `1.0.1` dry run
-- [ ] 5.5 Publish `1.0.0` through the workflow, verify `npm view leapscore-scan@1.0.0` and its provenance record point at the tagged commit, and confirm the npm page's repository link resolves
-- [ ] 5.6 Create the immutable `v1.0.0` tag and move `v1`, then verify `uses: open-legacyleap/leapscore@v1` resolves to the `1.0.0` commit
+- [x] 5.5 Publish `1.0.0` through the workflow, verify `npm view leapscore-scan@1.0.0` and its provenance record point at the tagged commit, and confirm the npm page's repository link resolves
+- [x] 5.6 Create the immutable `v1.0.0` tag and move `v1`, then verify `uses: open-legacyleap/leapscore@v1` resolves to the `1.0.0` commit
 - [ ] 5.7 Publish the Marketplace listing from the GitHub release UI and verify the listing shows the root metadata's inputs and branding
 - [ ] 5.8 Verify the external consumer path from a throwaway **public** repository: `actions/checkout` then `uses: open-legacyleap/leapscore@v1` seals a report; record the run URL and sealed score
 - [ ] 5.9 Record release evidence in the change notes: package version, tarball SHA256, provenance URL, action tag SHAs, smoke output, and the Marketplace URL
@@ -57,7 +57,7 @@
 
 ## 7. Integration verification and rollback
 
-- [ ] 7.1 Run the full check family on the `v1.0.0` commit (`npm run check:rubric-consistency`, `check:schemas`, `check:documentation-structure`, `check:diagrams`, `check:detector-isolation`, `check:site-boundary`, `check:surface-boundary`, `check:bin-wiring`, `check:dist`) and record the result
+- [x] 7.1 Run the full check family on the `v1.0.0` commit (`npm run check:rubric-consistency`, `check:schemas`, `check:documentation-structure`, `check:diagrams`, `check:detector-isolation`, `check:site-boundary`, `check:surface-boundary`, `check:bin-wiring`, `check:dist`) and record the result
 - [ ] 7.2 Re-run the two consumer paths at the released tags: `npx leapscore-scan` from an empty directory and `uses: open-legacyleap/leapscore@v1` from a public test repo; record sealed scores and fingerprints
 - [ ] 7.3 Rehearse rollback on a throwaway prerelease: deprecate it with a replacement message, move `v1` back to the last good release, and verify the documented recovery commands work
-- [ ] 7.4 Audit the release posture: confirm no long-lived registry token, minimal workflow permissions, the `release` environment gate, and that the published tarball is assembled from the tag
+- [x] 7.4 Audit the release posture: confirm no long-lived registry token, minimal workflow permissions, the `release` environment gate, and that the published tarball is assembled from the tag

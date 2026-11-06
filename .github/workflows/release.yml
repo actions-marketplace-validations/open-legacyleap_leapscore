@@ -182,6 +182,20 @@ jobs:
           echo "smoke version: $VERSION"
           mkdir smoke && cd smoke
           npm init -y > /dev/null
+          # A successful publish can return before the registry serves the version
+          # ("being processed and may take a few minutes"). Wait for availability rather
+          # than failing the release on propagation lag (observed on 1.0.0).
+          for attempt in $(seq 1 30); do
+            if npm view "leapscore-scan@${VERSION}" version --prefer-online > /dev/null 2>&1; then
+              echo "registry served ${VERSION} after ${attempt} check(s)"
+              break
+            fi
+            if [ "$attempt" -eq 30 ]; then
+              echo "smoke: registry did not serve ${VERSION} after 30 checks" >&2
+              exit 1
+            fi
+            sleep 10
+          done
           npm install "leapscore-scan@${VERSION}" --no-audit --no-fund
           ./node_modules/.bin/leapscore-scan --help > /dev/null
           echo "help: exit 0"

@@ -131,6 +131,38 @@ because no tag exists yet.
 - **5.8 staging:** created `nareshaggarwal-legacyleap/leapscore-consumer-public` (public,
   empty) for the external-consumer run after `v1` exists.
 
+## 2026-11-07 release evidence (1.0.0)
+
+- Release workflow run: <https://github.com/open-legacyleap/leapscore/actions/runs/42276050661>
+  on tag `v1.0.0` (commit `4975b15`). `verify`, `publish`, `smoke`, and `finalize` all
+  completed `success` after the rerun described below.
+- npm: `leapscore-scan@1.0.0` is live; `dist-tags` are `{ latest: "1.0.0", next:
+  "1.0.0-rc.1" }`; publisher is `GitHub Actions <npm-oidc-no-reply@github.com>`.
+  Provenance: <https://registry.npmjs.org/-/npm/v1/attestations/leapscore-scan@1.0.0>
+  (SLSA provenance names the repository, `refs/tags/v1.0.0`, and `release.yml`).
+- Tarball SHA256: `6f421afb663692a0206094a829dba57020fd7db3961f0f6017c71379ab629c4d`.
+  The registry tarball and the GitHub release asset are byte-identical; `SHA256SUMS`
+  verifies.
+- Tags: annotated `v1.0.0` = tag object `de6ce08e726021e36db18fe6cb25716040f16742`,
+  commit `4975b15`; `v1` = `4975b15`. `v1.0.0^{}` and `v1` both resolve to the release
+  commit.
+- Smoke: `engine_version=1.0.0`,
+  `fingerprint=6dc4441a8a027252bcb874cd587f2c172dc2bcbc6e52db5d88e8eded100580e6`,
+  exit codes 2 (usage) and 3 (threshold trip).
+- **Registry-propagation race found and fixed:** the first smoke attempt failed with
+  `ETARGET` because npm accepted the publish and then said the version was "being
+  processed". `finalize` correctly stayed skipped, so `v1` did not move while the smoke
+  was failing. After `1.0.0` appeared in the registry, re-running the failed smoke
+  (without republishing) passed and `finalize` moved `v1`. The smoke job now polls
+  `npm view <pkg>@<version> --prefer-online` before installing, so the next release does
+  not fail on propagation lag.
+- 7.1: the tagged run's `verify` job executed `npm run release:gates` on `4975b15`:
+  every `check:*`, bundle parity, and the workspace suites passed.
+- 7.4: repository has zero Actions secrets, default workflow permissions are `read`,
+  the publish job ran behind the protected `release` environment (approval recorded on
+  deployment `7608458388`), and the published tarball is the artifact packed by the
+  tagged `verify` job.
+
 ## Ordering caveats found while preparing the ops handoff
 
 - **5.4 cannot verify OIDC with a `1.0.1` dry run.** The `publish` job is tag-only by
