@@ -71,11 +71,24 @@ runs the offline fixture scan.
 
 ## Reserve the name (one-time)
 
+The package version is the stamp inside the bundle, so the prerelease is built from a
+temporary version and the committed identity is restored before anything is committed.
+
 ```bash
+# Build an rc.1-stamped bundle and tarball: package version and engine_version agree.
+npm version --no-git-tag-version --workspace leapscore-scan 1.0.0-rc.1
 npm run build:cli
-cd apps/scanner && npm pack
-npm publish ./leapscore-scan-1.0.0-rc.1.tgz --tag next --access public
+npm pack --workspace leapscore-scan --pack-destination dist-release
+
+# Publish under `next`; never `latest` while the repository is still private.
+npm publish dist-release/leapscore-scan-1.0.0-rc.1.tgz --tag next --access public
 npm view leapscore-scan dist-tags   # next: 1.0.0-rc.1, no latest
+
+# Restore the release identity and rebuild the committed bundle.
+npm version --no-git-tag-version --workspace leapscore-scan 1.0.0
+npm run build:cli
+npm run check:dist
+git status --short   # the temporary version must leave no diff behind
 ```
 
 The maintainer credential used here is never stored in the repository or in CI. Revoke it

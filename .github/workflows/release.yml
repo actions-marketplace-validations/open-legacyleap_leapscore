@@ -80,7 +80,7 @@ jobs:
           npm pack --workspace leapscore-scan --pack-destination dist-release
           ls -l dist-release
 
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         with:
           name: leapscore-scan-${{ steps.version.outputs.version }}
           path: dist-release/*.tgz
@@ -115,7 +115,7 @@ jobs:
       - run: npm install --global npm@11.19.0
 
       - name: Download the exact tarball verify produced
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v7
         with:
           name: leapscore-scan-${{ needs.verify.outputs.version }}
           path: dist-release

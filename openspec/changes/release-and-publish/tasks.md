@@ -1,7 +1,7 @@
 ## 1. Private home and prerequisites
 
 - [ ] 1.1 Transfer the repository to `open-legacyleap/leapscore` **while keeping it private**, and verify the old path still clones through GitHub's redirect and the new path resolves for a member
-- [ ] 1.2 Verify Actions is enabled, the default branch is `main`, and the dogfood workflow runs without a PAT; record that standard-runner minutes are metered until the repository is public
+- [x] 1.2 Verify Actions is enabled, the default branch is `main`, and the dogfood workflow runs without a PAT; record that standard-runner minutes are metered until the repository is public
 - [ ] 1.3 Confirm the publishing npm account has 2FA and publish rights, and that `npm view leapscore-scan` still returns `E404`; record the account name
 - [ ] 1.4 If the org plan supports environments on private repositories (Pro/Team/Enterprise), create the protected `release` environment now, restricted to `v*.*.*` tags with required reviewers, and verify a contributor without approval cannot start its jobs; otherwise record the deferral to 5.3 and keep every publish credential out of CI until then
 - [x] 1.5 Confirm the tag scheme is free: `git ls-remote --tags` shows no `vX.Y.Z` and no `v1`, and record that `vX.Y.Z` tags are immutable while `v1` is the only moving tag
@@ -18,8 +18,8 @@
 ## 3. Action addressability (private phase)
 
 - [x] 3.1 Move `action/action.yml` to the repository root with `runs.main: action/dist/index.js`, delete the subdirectory metadata, and verify the repository contains exactly one Action metadata file whose inputs/outputs match the published contract
-- [ ] 3.2 Update `.github/workflows/leapscore-scan.yml` from `uses: ./action` to `uses: ./` in the same change, then verify the dogfood scan job is green on a push
-- [ ] 3.3 Bump the Action runtime to `node24` and verify a hosted-runner run reaches the scan step without a runtime warning; record the self-hosted-runner caveat in the Action README
+- [x] 3.2 Update `.github/workflows/leapscore-scan.yml` from `uses: ./action` to `uses: ./` in the same change, then verify the dogfood scan job is green on a push
+- [x] 3.3 Bump the Action runtime to `node24` and verify a hosted-runner run reaches the scan step without a runtime warning; record the self-hosted-runner caveat in the Action README
 - [x] 3.4 Extend `tooling/checks/bin-wiring.ts` or `tooling/checks/dist-freshness.ts` to assert the root metadata's `runs.main` exists and is the committed wrapper, and verify the check fails when the path is broken
 - [ ] 3.5 Verify the internal consumer path from a second **private** repository in the same org with workflow access granted: `actions/checkout` then `uses: open-legacyleap/leapscore@<sha>` seals a report, and record the run URL and sealed score
 - [x] 3.6 Verify a shallow checkout (default `fetch-depth`) leaves history-derived indicators `unknown` and that `fetch-depth: 0` measures them, so the documented guidance is evidence-backed
