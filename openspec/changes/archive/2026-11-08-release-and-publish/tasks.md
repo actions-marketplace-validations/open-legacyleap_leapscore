@@ -45,7 +45,7 @@
 - [x] 5.6 Create the immutable `v1.0.0` tag and move `v1`, then verify `uses: open-legacyleap/leapscore@v1` resolves to the `1.0.0` commit
 - [x] 5.7 Publish the Marketplace listing from the `v1.0.2` release UI (`LeapScore scan` → `leapscore-scan`) and verify the listing shows the root metadata's inputs and branding; then clear the Marketplace flag on `v1.0.1` so the superseded `leapscore-local-scan` listing is retired and no visible version sits below `1.0.2`
 - [x] 5.8 Verify the external consumer path from a throwaway **public** repository: `actions/checkout` then `uses: open-legacyleap/leapscore@v1` seals a report; record the run URL and sealed score
-- [ ] 5.9 Record release evidence in the change notes: package version, tarball SHA256, provenance URL, action tag SHAs, smoke output, and the Marketplace URL
+- [x] 5.9 Record release evidence in the change notes: package version, tarball SHA256, provenance URL, action tag SHAs, smoke output, and the Marketplace URL
 
 ## 6. Documentation and reconciliation
 

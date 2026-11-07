@@ -197,6 +197,34 @@ because no tag exists yet.
 - `latest` is `1.0.1`; `v1.0.1^{}` and `v1` both resolve to `61c24c4`. The `next`
   dist-tag no longer exists (`1.0.0-rc.1` remains published and deprecated).
 
+## 5.9 consolidated release evidence
+
+Recorded at the close of the change. Values below are for the current release
+(`1.0.2`); the `1.0.0` and `1.0.1` sections above carry the same fields for the earlier
+releases. Registry checks were re-run on 2026-11-08.
+
+- package version: `1.0.2` is `latest` (`npm view leapscore-scan version dist-tags` →
+  `{ latest: "1.0.2" }`); `1.0.1` and `1.0.0` remain installable.
+- tarball SHA256: `2169e31c4f41a4d9761eee9cb36fd2d22cfe7eefbeed3ecaed7e5f80ef17af44`
+  — re-computed from the registry tarball
+  (`https://registry.npmjs.org/leapscore-scan/-/leapscore-scan-1.0.2.tgz`) and identical
+  to the GitHub release asset.
+- provenance URL: <https://registry.npmjs.org/-/npm/v1/attestations/leapscore-scan@1.0.2>
+  (HTTP 200; SLSA statement names the repository, `refs/tags/v1.0.2`, and `release.yml`).
+- Action tag SHAs: `v1.0.2` annotated tag object
+  `dcba3a17f952dede5d310f24e6a38b8786782130`, commit `e58b1e7`; the moving `v1` resolves
+  to `e58b1e7` on the remote (`git ls-remote --tags origin refs/tags/v1`). Local clones
+  that still hold the rollback-rehearsal value for `v1` refresh with `git fetch --tags`.
+- smoke output: release run
+  <https://github.com/open-legacyleap/leapscore/actions/runs/42406406565> —
+  `engine_version=1.0.2`,
+  `fingerprint=b072331ceb12a2574e7b2e9be5fd9aa4910281748b55d43df35de6034a661dd6`,
+  exit codes 2 (usage) and 3 (threshold trip); registry propagation wait passed after
+  10 checks.
+- Marketplace URL: <https://github.com/marketplace/actions/leapscore-scan> (HTTP 200) —
+  title `LeapScore scan`, description from the `1.0.2` metadata; `leapscore-local-scan`
+  is retired (404), so `1.0.2` is the only Marketplace-visible version.
+
 ## Ordering caveats found while preparing the ops handoff
 
 - **5.4 cannot verify OIDC with a `1.0.1` dry run.** The `publish` job is tag-only by
@@ -230,6 +258,5 @@ authenticated):
   the repository, so the rename was completed by clearing both flags and re-flagging
   `v1.0.2` alone; see `docs/releases/1.0.2.md` for the exact ordering.
 - 5.8 external public-repository consumer run
-- 5.9 release evidence (blocked on 5.5)
 - 6.1 verification from an empty directory (blocked on 5.5)
 - 7.2 / 7.3 / 7.4 released-tag checks, rollback rehearsal, and posture audit
