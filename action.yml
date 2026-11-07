@@ -1,5 +1,5 @@
 name: "LeapScore local scan"
-description: "Checkout-first thin wrapper around `leapscore-scan scan <path>`: scans the checked-out working tree with local detectors, no clone, no GH-API."
+description: "Checkout-first LeapScore scan: grades the checked-out working tree locally, with no clone and no token."
 branding:
   icon: "activity"
   color: "blue"
