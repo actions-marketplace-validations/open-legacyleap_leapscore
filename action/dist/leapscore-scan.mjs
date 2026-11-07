@@ -4030,7 +4030,7 @@ async function deriveIdentityInner(input2) {
 __name(deriveIdentityInner, "deriveIdentityInner");
 
 // ../../src/identity.ts
-var ENGINE_VERSION = true ? "1.0.1" : UNOFFICIAL_ENGINE_VERSION;
+var ENGINE_VERSION = true ? "1.0.2" : UNOFFICIAL_ENGINE_VERSION;
 
 // ../../src/scan/detectors/vel06.ts
 async function detectVel06(ctx) {

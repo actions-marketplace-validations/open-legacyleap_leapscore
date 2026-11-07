@@ -1,6 +1,6 @@
 {
   "name": "leapscore-scan",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Local-first legacy and maintainability scanner: one readable bundle, zero runtime dependencies, scored against a public rubric.",
   "license": "Apache-2.0",
   "type": "module",

@@ -1,5 +1,5 @@
-name: "LeapScore local scan"
-description: "Checkout-first LeapScore scan: grades the checked-out working tree locally, with no clone and no token."
+name: "LeapScore scan"
+description: "Checkout-first local scan: grades the checked-out working tree, with no clone and no token."
 branding:
   icon: "activity"
   color: "blue"

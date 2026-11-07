@@ -109,6 +109,19 @@ after `1.0.0` is published through OIDC.
   with no `bin`, so `npx leapscore-scan` fails until the first real release, and the pin cannot
   be undone.
 
+## Marketplace listing
+
+Marketplace identity follows release identity. The root `action.yml` `name` is slugified by
+GitHub into the listing URL, so it must name the product's scan identity and its slug must
+equal the published package and command name (`leapscore-scan`). GitHub reads the metadata
+frozen at the release tag, so a rename ships as a new `vX.Y.Z` release whose bundles are
+rebuilt and re-stamped; an already-released tag is never re-pointed. Publish the new
+listing first, confirm its URL resolves, then clear the Marketplace flag on every version
+published under the superseded name — the old listing stays live until the replacement is
+confirmed, and the retirement is recorded with the new URL in that release's evidence.
+Listing publication is an operator step in the release UI; the workflow cannot set or clear
+the flag, and a released version stays installable through its tag either way.
+
 ## Rollback
 
 Withdraw a defective release without rewriting it. A published version is never
