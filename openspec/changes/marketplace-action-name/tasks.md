@@ -19,7 +19,7 @@
 
 ## 4. Cut the release
 
-- [ ] 4.1 Run `npm run release:gates` and verify every `check:*`, bundle parity, and workspace suite passes
+- [x] 4.1 Run `npm run release:gates` and verify every `check:*`, bundle parity, and workspace suite passes
 - [x] 4.2 Commit the metadata, identity, notes, and rebuilt bundles, then create annotated tag `v1.0.2` and push the tag
 - [x] 4.3 Verify the workflow's `verify` and `publish` jobs succeed and the registry serves `1.0.2` with provenance
 - [x] 4.4 Verify the `smoke` job seals `engine_version=1.0.2` with a fingerprint that differs from `1.0.1`, and that `finalize` moves `v1` to the release commit
