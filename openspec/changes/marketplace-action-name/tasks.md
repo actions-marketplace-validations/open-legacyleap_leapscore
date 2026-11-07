@@ -20,19 +20,19 @@
 ## 4. Cut the release
 
 - [ ] 4.1 Run `npm run release:gates` and verify every `check:*`, bundle parity, and workspace suite passes
-- [ ] 4.2 Commit the metadata, identity, notes, and rebuilt bundles, then create annotated tag `v1.0.2` and push the tag
-- [ ] 4.3 Verify the workflow's `verify` and `publish` jobs succeed and the registry serves `1.0.2` with provenance
-- [ ] 4.4 Verify the `smoke` job seals `engine_version=1.0.2` with a fingerprint that differs from `1.0.1`, and that `finalize` moves `v1` to the release commit
+- [x] 4.2 Commit the metadata, identity, notes, and rebuilt bundles, then create annotated tag `v1.0.2` and push the tag
+- [x] 4.3 Verify the workflow's `verify` and `publish` jobs succeed and the registry serves `1.0.2` with provenance
+- [x] 4.4 Verify the `smoke` job seals `engine_version=1.0.2` with a fingerprint that differs from `1.0.1`, and that `finalize` moves `v1` to the release commit
 
 ## 5. Marketplace listing
 
-- [ ] 5.1 Set the Marketplace flag on the `v1.0.2` release and verify `https://github.com/marketplace/actions/leapscore-scan` resolves with the new name and description
-- [ ] 5.2 If GitHub refuses a second listing for the repository, clear the flag on `v1.0.1` and then set it on `v1.0.2`, and record that the fallback sequence was used
-- [ ] 5.3 Clear the Marketplace flag on `v1.0.1` and verify no version below `1.0.2` remains visible on the surviving listing
-- [ ] 5.4 Verify `https://github.com/marketplace/actions/leapscore-local-scan` no longer serves a listing, or record its redirect target if it does
+- [x] 5.1 Set the Marketplace flag on the `v1.0.2` release and verify `https://github.com/marketplace/actions/leapscore-scan` resolves with the new name and description
+- [x] 5.2 If GitHub refuses a second listing for the repository, clear the flag on `v1.0.1` and then set it on `v1.0.2`, and record that the fallback sequence was used
+- [x] 5.3 Clear the Marketplace flag on `v1.0.1` and verify no version below `1.0.2` remains visible on the surviving listing
+- [x] 5.4 Verify `https://github.com/marketplace/actions/leapscore-local-scan` no longer serves a listing, or record its redirect target if it does
 
 ## 6. Evidence
 
-- [ ] 6.1 Record the listing URL, the retired slug, the visible-version floor, and the ordering actually used in the release evidence for `1.0.2`
-- [ ] 6.2 Update the `release-and-publish` change notes so task 5.7 points at the `1.0.2` listing and the retired `1.0.1` flag instead of leaving the generic listing instruction open
-- [ ] 6.3 Verify a consumer pinned to `@v1.0.1` and one pinned to `@v1` still resolve after the retirement, confirming the listing flag is presentation-only
+- [x] 6.1 Record the listing URL, the retired slug, the visible-version floor, and the ordering actually used in the release evidence for `1.0.2`
+- [x] 6.2 Update the `release-and-publish` change notes so task 5.7 points at the `1.0.2` listing and the retired `1.0.1` flag instead of leaving the generic listing instruction open
+- [x] 6.3 Verify a consumer pinned to `@v1.0.1` and one pinned to `@v1` still resolve after the retirement, confirming the listing flag is presentation-only

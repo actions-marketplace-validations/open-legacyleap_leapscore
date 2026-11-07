@@ -43,7 +43,7 @@
 - [x] 5.4 Configure the npm trusted publisher for the release workflow and the `release` environment, confirm no registry write secret exists anywhere in the repository, and verify the OIDC path with a `1.0.1` dry run
 - [x] 5.5 Publish `1.0.0` through the workflow, verify `npm view leapscore-scan@1.0.0` and its provenance record point at the tagged commit, and confirm the npm page's repository link resolves
 - [x] 5.6 Create the immutable `v1.0.0` tag and move `v1`, then verify `uses: open-legacyleap/leapscore@v1` resolves to the `1.0.0` commit
-- [ ] 5.7 Publish the Marketplace listing from the GitHub release UI and verify the listing shows the root metadata's inputs and branding
+- [x] 5.7 Publish the Marketplace listing from the `v1.0.2` release UI (`LeapScore scan` → `leapscore-scan`) and verify the listing shows the root metadata's inputs and branding; then clear the Marketplace flag on `v1.0.1` so the superseded `leapscore-local-scan` listing is retired and no visible version sits below `1.0.2`
 - [x] 5.8 Verify the external consumer path from a throwaway **public** repository: `actions/checkout` then `uses: open-legacyleap/leapscore@v1` seals a report; record the run URL and sealed score
 - [ ] 5.9 Record release evidence in the change notes: package version, tarball SHA256, provenance URL, action tag SHAs, smoke output, and the Marketplace URL
 

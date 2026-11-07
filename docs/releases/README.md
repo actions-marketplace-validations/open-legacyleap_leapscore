@@ -112,13 +112,23 @@ after `1.0.0` is published through OIDC.
 ## Marketplace listing
 
 Marketplace identity follows release identity. The root `action.yml` `name` is slugified by
-GitHub into the listing URL, so it must name the product's scan identity and its slug must
+GitHub into the listing URL, so it must name the product's scan identity and its slug should
 equal the published package and command name (`leapscore-scan`). GitHub reads the metadata
 frozen at the release tag, so a rename ships as a new `vX.Y.Z` release whose bundles are
-rebuilt and re-stamped; an already-released tag is never re-pointed. Publish the new
-listing first, confirm its URL resolves, then clear the Marketplace flag on every version
-published under the superseded name — the old listing stays live until the replacement is
-confirmed, and the retirement is recorded with the new URL in that release's evidence.
+rebuilt and re-stamped; an already-released tag is never re-pointed.
+
+A listing's identity is fixed when the listing is created, not when a version is added: a
+repository has exactly one Marketplace listing (its root `action.yml`; subfolder actions are
+not listable), and flagging a renamed release attaches it to the existing listing without
+changing its slug, name, or description. So a rename is **release-and-relist**, not
+additive: clear the Marketplace flag on every currently listed release, confirm the old slug
+no longer resolves, then set the flag on the rename release alone, which recreates the
+listing from that release's metadata. This has a brief zero-listing window — accepted for a
+listing with no inbound links, and the price of the slug change — so publish the rename
+release first and confirm its tag is installable before releasing the old identifier. Record
+the new URL, the retired slug, the visible-version floor, and the ordering used in that
+release's evidence.
+
 Listing publication is an operator step in the release UI; the workflow cannot set or clear
 the flag, and a released version stays installable through its tag either way.
 

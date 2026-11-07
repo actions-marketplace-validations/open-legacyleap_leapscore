@@ -224,7 +224,11 @@ authenticated):
 - 5.1 / 5.2 post-flip ordering waiver (both ran after the repository was already public)
 - 5.4 trusted-publisher configuration (needs npm + admin)
 - 5.5 / 5.6 publish `1.0.0`, create `v1.0.0`, move `v1` (needs write access)
-- 5.7 Marketplace listing (needs release UI access)
+- 5.7 closed by `marketplace-action-name`: the listing is
+  <https://github.com/marketplace/actions/leapscore-scan> (`LeapScore scan`, only `v1.0.2`
+  visible), and `leapscore-local-scan` is retired (404). GitHub refused a second listing for
+  the repository, so the rename was completed by clearing both flags and re-flagging
+  `v1.0.2` alone; see `docs/releases/1.0.2.md` for the exact ordering.
 - 5.8 external public-repository consumer run
 - 5.9 release evidence (blocked on 5.5)
 - 6.1 verification from an empty directory (blocked on 5.5)
