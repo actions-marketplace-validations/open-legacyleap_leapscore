@@ -26,12 +26,17 @@ The root Action metadata's `name` SHALL be the product's scan identity, and its 
 
 ### Requirement: A superseded listing is retired, never duplicated
 
-When a listing is published under a new name, every release version published under the superseded name SHALL have its Marketplace flag removed, so at most one listing is discoverable and no Marketplace-visible version sits below the rename release. The superseded listing SHALL stay live until the replacement URL is confirmed to resolve, and the retirement SHALL be recorded alongside the new listing URL in the release evidence.
+A repository has exactly one Marketplace listing — its root `action.yml`; subfolder actions are not listable — and a listing's identity (slug, name, and description) is fixed when the listing is created, not when a version is added. Flagging the rename release therefore attaches it to the existing listing without changing that identity. A rename SHALL be executed as a release-and-relist: the rename release SHALL be published and installable through its tag before the superseded listing is retired; the Marketplace flag SHALL then be removed from every version published under the superseded name; the superseded slug SHALL be confirmed to no longer resolve; and the flag SHALL be set on the rename release alone, which recreates the listing from that release's metadata. At most one listing is discoverable and no Marketplace-visible version sits below the rename release, and the zero-listing window this sequence requires SHALL be recorded — with the retired slug, the new listing URL, and the visible-version floor — in the release evidence.
 
-#### Scenario: Replacement confirmed before retirement
+#### Scenario: Rename release published before retirement
 
 - **WHEN** the rename release's listing is being published
-- **THEN** the superseded listing remains live until the new listing URL resolves
+- **THEN** the rename release exists and its tag resolves before any superseded Marketplace flag is cleared
+
+#### Scenario: In-place rename releases the old identifier first
+
+- **WHEN** the platform refuses a second listing for the repository, as it does for any repository that already has one
+- **THEN** the superseded flags are cleared before the rename release's flag is set, and the release evidence records that ordering and the zero-listing window it opened
 
 #### Scenario: Exactly one listing remains
 

@@ -7,7 +7,7 @@ The GitHub Marketplace listing is keyed by the `action.yml` `name` field, and Gi
 - Root `action.yml` `name` changes from `LeapScore local scan` to `LeapScore scan`, so the Marketplace slug becomes `leapscore-scan` and matches the package and command.
 - `action.yml` `description` is reworded so the local-only scope survives in the description once the name stops carrying it, and stays under Marketplace's 125-character limit.
 - Release `1.0.2` carries the metadata change: version bump, rebuilt scanner and Action bundles, no scanner, scoring, rubric, report-envelope, CLI, or Action-input behavior change.
-- The Marketplace listing is republished from `v1.0.2`, and `v1.0.1`'s Marketplace flag is retired, so exactly one listing exists and no Marketplace-visible version sits below `1.0.2`.
+- The Marketplace listing is recreated from `v1.0.2`, and `v1.0.1`'s Marketplace flag is retired, so exactly one listing exists and no Marketplace-visible version sits below `1.0.2`. GitHub allows one listing per repository and fixes its identity when the listing is created, so the old flags are cleared and `v1.0.2` is re-flagged rather than a second listing being added.
 - The resulting listing URL and the retirement of the old slug are recorded as release evidence.
 - The durable rule is written down: Marketplace identity follows release identity, and a rename requires a new tag because published metadata is frozen at its tag.
 
@@ -28,6 +28,6 @@ None.
 - **Metadata:** `action.yml` (`name`, `description`).
 - **Release identity:** `apps/scanner/package.json` (`1.0.2`), `package-lock.json`, rebuilt `apps/scanner/dist/leapscore-scan.mjs` and `action/dist/**`.
 - **Docs:** `docs/releases/1.0.2.md` (new), `docs/releases/1.0.1.md` (old listing marked superseded), `openspec/changes/release-and-publish/notes.md` (evidence entry).
-- **Manual ops:** publishing the `v1.0.2` listing and unchecking `v1.0.1` happen in the GitHub release UI; the release workflow creates the release without a Marketplace flag, so neither step is automatable from CI.
+- **Manual ops:** relisting from the `v1.0.2` release and clearing `v1.0.1`'s Marketplace flag happen in the GitHub release UI; the release workflow creates the release without a Marketplace flag, so neither step is automatable from CI.
 - **Consumers:** every `score_fingerprint` changes, because the engine version is a fingerprinted input. Baseline deltas keep working: engine identity is a recorded, non-blocking comparability input, so rows still compare across `1.0.1` and `1.0.2`.
-- **Risk:** whether GitHub permits a second listing for a repository that already has one, and whether the superseded slug `404`s or redirects, are both unverified. The rollout sequence keeps the existing listing live until the replacement is confirmed.
+- **Risk:** a repository has one Marketplace listing and its identity is fixed at creation, so a rename cannot be additive — the old identifier must be released before the new one exists, opening a zero-listing window. The rename release is published first and its tag stays installable throughout; the superseded slug `404`s rather than redirecting.
