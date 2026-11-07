@@ -183,6 +183,20 @@ because no tag exists yet.
   created; the public `@v1` consumer run (5.8) proves Action ref resolution and the
   committed wrapper, while the private-repo access path remains unexercised.
 
+## 2026-11-08 patch release 1.0.1 (Marketplace metadata)
+
+- `1.0.0`'s `action.yml` description was 142 characters; Marketplace requires fewer than
+  125. `1.0.1` shortens it to 103 characters with no behavior change.
+- Release run `42403686135` completed `success`. The new propagation wait worked: the
+  registry served `1.0.1` after 10 checks, then smoke sealed `engine_version=1.0.1`,
+  fingerprint `e53afecb30c4d7800e0949ba6e68cf67278ba9ed24206df28b4c12881ef3cca0`, and
+  asserted exit codes 2/3.
+- Tarball SHA256 `65c4e24cf411476827d5c8664feade58af6d321b90352b84e91e1cc2c3b89ba8`
+  (registry and release asset identical). Provenance:
+  <https://registry.npmjs.org/-/npm/v1/attestations/leapscore-scan@1.0.1>.
+- `latest` is `1.0.1`; `v1.0.1^{}` and `v1` both resolve to `61c24c4`. The `next`
+  dist-tag no longer exists (`1.0.0-rc.1` remains published and deprecated).
+
 ## Ordering caveats found while preparing the ops handoff
 
 - **5.4 cannot verify OIDC with a `1.0.1` dry run.** The `publish` job is tag-only by
