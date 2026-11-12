@@ -2,7 +2,7 @@
 import { stat, readFile as fsReadFile } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { join, resolve } from 'node:path';
+import { basename, join, resolve } from 'node:path';
 import { createBudgetControllerForIndicators, budgetForIndicators, BUDGET_COST, INDICATOR_BUDGET_CLASS, computeSampleN, partitionByteCap, isKillerTrip, IDENTITY_READ_ALLOCATION } from './budget';
 import { walkSortedTree } from './tree';
 import { buildToolVersions, toolVersion } from './detectors/common';
@@ -173,6 +173,9 @@ export async function* runLocalScan(
   opts: LocalScanOpts = {},
 ): AsyncGenerator<LocalScanEvent> {
   const absPath = resolve(targetPath);
+  // Local subject portability (scan-local / report-identity): the sealed subject
+  // is the directory's name, never the machine path. Reads still use absPath.
+  const subjectName = basename(absPath) || absPath;
   try {
     const st = await stat(absPath);
     if (!st.isDirectory()) {
@@ -272,7 +275,7 @@ export async function* runLocalScan(
   let identity: ReportIdentity | undefined;
   if (treeWalk) {
     const identityStart = Date.now();
-    const subject = { repo: absPath, commit: commitSha, scanned_at: scannedAt };
+    const subject = { repo: subjectName, commit: commitSha, scanned_at: scannedAt };
     try {
       const census = await cachedStackCensus(ctx, signal, { paths: treeWalk.paths });
       identity = await deriveIdentity({
@@ -301,7 +304,7 @@ export async function* runLocalScan(
     // The pass ran but had no tree to describe: state that, rather than leaving
     // the block silently absent.
     identity = degradedIdentity(
-      { repo: absPath, commit: commitSha, scanned_at: scannedAt },
+      { repo: subjectName, commit: commitSha, scanned_at: scannedAt },
       'tree walk did not complete — identity could not be derived',
     );
   }
@@ -422,12 +425,11 @@ export async function* runLocalScan(
   }
 
   const snapshot: Record<string, unknown> = {
-    repo: absPath,
+    repo: subjectName,
     scanned_at: scannedAt,
     engine_version: ENGINE_VERSION,
     rubric_version: 'docs/rubric@tranche-a',
     scanned_commit: commitSha,
-    local_path: absPath,
     // Vendored-dataset version ids (detector-honesty 3.3): recorded in the report
     // provenance and joined into the fingerprint so a dataset refresh changes the
     // fingerprint while identical data does not.

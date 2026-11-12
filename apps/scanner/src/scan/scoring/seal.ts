@@ -18,8 +18,7 @@ import {
   tierLegacyFor,
   gateCapForTier,
   localSlugFromPath,
-  assessmentUrlForBand,
-  assessmentCtaForBand,
+  assessmentNextStep,
   formatBandPathClause,
   ASSESSMENT_BASE_URL,
   ASSESSMENT_CAMPAIGN,
@@ -46,8 +45,7 @@ export {
   tierForScore,
   tierLegacyFor,
   localSlugFromPath,
-  assessmentUrlForBand,
-  assessmentCtaForBand,
+  assessmentNextStep,
   ASSESSMENT_BASE_URL,
   ASSESSMENT_CAMPAIGN,
   ALLOWED_NETWORK_HOSTS,
@@ -163,7 +161,10 @@ export function formatStdout(
   const prefix = report.headline.suppressed
     ? `insufficient-signal ${gatePart} ${coveragePart}${thresholdPart}`
     : `${report.headline.score}/${report.headline.tier}${capPart} ${gatePart} ${coveragePart}${thresholdPart}${pathPart}`;
-  return `${prefix} — ${assessmentCtaForBand(report.headline.tier)} ${assessmentUrlForBand(report.headline.tier)}`;
+  // One verdict-aware helper: a suppressed scan gets the coverage-limit sentence
+  // and a link that carries no band; a scored scan keeps the band sentence.
+  const nextStep = assessmentNextStep(report.headline);
+  return `${prefix} — ${nextStep.sentence} ${nextStep.url}`;
 }
 
 export type SealInput = {

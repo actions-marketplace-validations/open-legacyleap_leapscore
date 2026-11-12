@@ -84,20 +84,24 @@ not the generation date, so re-rendering an old report keeps the old month. The
 only way to refresh a badge is to run a new scan — a badge that says `2026-10`
 in 2028 is correctly saying the scan is old.
 
-The snippet carries both forms. Markdown:
+The snippet carries both forms. The CLI's deployment is stateless and does not
+host sealed reports, so the default snippet embeds the badge without a per-run
+link: the host page supplies any link it can actually resolve. Markdown:
 
 ```
-[![LeapScore badge: score 62, band Moderate, 65% gradeable, measured October 2026.](docs/leapscore-badge.svg)](https://leapscore.dev/reports/acme__api__a3f9c1__20261031T091200Z)
+![LeapScore badge: score 62, band Moderate, 65% gradeable, measured October 2026.](docs/leapscore-badge.svg)
 ```
 
 HTML:
 
 ```html
-<a href="https://leapscore.dev/reports/acme__api__a3f9c1__20261031T091200Z"><img src="docs/leapscore-badge.svg" alt="LeapScore badge: score 62, band Moderate, 65% gradeable, measured October 2026."></a>
+<img src="docs/leapscore-badge.svg" alt="LeapScore badge: score 62, band Moderate, 65% gradeable, measured October 2026.">
 ```
 
-The link is a provenance citation to the sealed report, so it carries no
-assessment campaign parameters. The `alt` is the full sentence, not "badge".
+A deployment that does host sealed reports can set `linkReport` when rendering
+the snippet; it then wraps the image in a provenance citation to the sealed
+report. That link carries no assessment campaign parameters. The `alt` is the
+full sentence, not "badge".
 
 ## Generic CI (any pipeline, not just GitHub Actions)
 

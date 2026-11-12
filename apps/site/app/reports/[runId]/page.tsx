@@ -20,7 +20,8 @@ export async function generateMetadata({ params }: { params: Promise<{ runId: st
   if (!isValidRunId(decoded)) return { title: "Report not found" };
   const env = await readReportEnvelope(decoded);
   if (!env) return { title: "Report not found" };
-  return { title: `${env.meta.repo} · ${env.meta.score} · LeapScore` };
+  const sampleLabel = env.report.sample === true ? "illustrative sample · " : "";
+  return { title: `${env.meta.repo} · ${sampleLabel}${env.meta.score} · LeapScore` };
 }
 
 export default async function ReportDetailPage({ params }: { params: Promise<{ runId: string }> }) {
@@ -40,7 +41,11 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ r
 
   return (
     <div>
-      <ReportView report={report} title="Persisted report" persistedMeta={meta} />
+      <ReportView
+        report={report}
+        title={report.sample === true ? "Illustrative sample" : "Persisted report"}
+        persistedMeta={meta}
+      />
       <ScanTraceView trace={trace ?? []} />
     </div>
   );

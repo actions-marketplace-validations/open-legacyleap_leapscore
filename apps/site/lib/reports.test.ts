@@ -15,7 +15,7 @@ import {
   ingestReportDocuments,
 } from "@/lib/reports";
 import { resolveEngineSha7, CONTRACT_VERSION } from "@leapscore/contracts";
-import sampleEnvelope from "@/lib/fixtures/django__django__506fc82__2026-08-12T000000-000Z.json";
+import sampleEnvelope from "@/lib/fixtures/maven-multi-module__bce7fc0__2026-11-12T155107-061Z.json";
 
 describe("repoSlug derivation", () => {
   it("normalizeRepoForSlug handles URL variants", () => {
@@ -121,16 +121,16 @@ describe("site-owned history (fixture)", () => {
   it("lists the sample fixture row", async () => {
     const metas = await listReportMetas();
     expect(metas.length).toBe(1);
-    expect(metas[0].repo).toBe("django/django");
-    expect(metas[0].runId).toBe("django__django__506fc82__2026-08-12T000000-000Z");
-    expect(metas[0].score).toBe(58);
-    expect(metas[0].tier).toBe("Moderate");
+    expect(metas[0].repo).toBe("maven-multi-module");
+    expect(metas[0].runId).toBe("maven-multi-module__bce7fc0__2026-11-12T155107-061Z");
+    expect(metas[0].score).toBe(5.71);
+    expect(metas[0].tier).toBe("Critical");
   });
 
   it("reads the sample envelope by runId", async () => {
-    const env = await readReportEnvelope("django__django__506fc82__2026-08-12T000000-000Z");
+    const env = await readReportEnvelope("maven-multi-module__bce7fc0__2026-11-12T155107-061Z");
     expect(env).not.toBeNull();
-    expect(env!.meta.runId).toBe("django__django__506fc82__2026-08-12T000000-000Z");
+    expect(env!.meta.runId).toBe("maven-multi-module__bce7fc0__2026-11-12T155107-061Z");
     expect(env!.report.headline.score).toBe(env!.meta.score);
     expect(Array.isArray(env!.trace)).toBe(true);
   });
@@ -151,16 +151,16 @@ describe("site-owned history (fixture)", () => {
 // envelopes keep the pre-change skip, now with the reason recorded.
 describe("ingest safety (report-envelope: delta document shape)", () => {
   const runRef = (score: number) => ({
-    runId: "django__django__506fc82__2026-08-12T000000-000Z",
+    runId: "maven-multi-module__bce7fc0__2026-11-12T155107-061Z",
     score,
-    tier: "Moderate",
+    tier: "Critical",
     suppressed: false,
   });
   const deltaDocument = () => ({
     document: "run-delta",
     delta_schema: 1,
-    baseline: runRef(58),
-    current: runRef(58),
+    baseline: runRef(5.71),
+    current: runRef(5.71),
     verdict: { status: "comparable", inputs: [] },
     rows: [],
     transitions: [],
@@ -180,17 +180,18 @@ describe("ingest safety (report-envelope: delta document shape)", () => {
   it("7.2 ingests the envelope and skips only the delta when both share a directory", () => {
     const result = ingestReportDocuments([envelopeDocument(), deltaDocument()]);
     expect(result.envelopes).toHaveLength(1);
-    expect(result.metas.map((m) => m.runId)).toEqual(["django__django__506fc82__2026-08-12T000000-000Z"]);
+    expect(result.metas.map((m) => m.runId)).toEqual(["maven-multi-module__bce7fc0__2026-11-12T155107-061Z"]);
     expect(result.warnings.map((w) => w.reason)).toEqual(["delta-document"]);
   });
 
   it("7.3 unknown-version envelopes keep the pre-change behavior (skipped, never a row) with the reason recorded", () => {
     const future = envelopeDocument();
     (future.meta as Record<string, unknown>).contractVersion = CONTRACT_VERSION + 1;
+    (future as Record<string, unknown>).contractVersion = CONTRACT_VERSION + 1;
     const result = ingestReportDocuments([future, envelopeDocument()]);
     expect(result.envelopes).toHaveLength(1);
     expect(result.metas).toHaveLength(1);
-    expect(result.metas[0].runId).toBe("django__django__506fc82__2026-08-12T000000-000Z");
+    expect(result.metas[0].runId).toBe("maven-multi-module__bce7fc0__2026-11-12T155107-061Z");
     expect(result.warnings).toHaveLength(1);
     expect(result.warnings[0].reason).toBe("unknown-contract-version");
     expect(result.warnings[0].detail).toContain(String(CONTRACT_VERSION + 1));
@@ -227,16 +228,16 @@ describe("run-history list reads only meta (report-envelope: list view)", () => 
       status: row.status,
       runId: row.runId,
     }).toEqual({
-      repo: "django/django",
-      score: 58,
-      tier: "Moderate",
-      ranAt: "2026-08-12T00:00:00.000Z",
-      durationMs: 0,
-      budgetMs: 0,
-      engineSha7: "506fc82",
-      repoSha: "506fc82",
-      status: "complete",
-      runId: "django__django__506fc82__2026-08-12T000000-000Z",
+      repo: "maven-multi-module",
+      score: 5.71,
+      tier: "Critical",
+      ranAt: "2026-11-12T15:51:07.061Z",
+      durationMs: 1285,
+      budgetMs: 240000,
+      engineSha7: "bce7fc0",
+      repoSha: "bce7fc006329ffc4ed69d80b6175cbe265a3d901",
+      status: "degraded",
+      runId: "maven-multi-module__bce7fc0__2026-11-12T155107-061Z",
     });
   });
 });

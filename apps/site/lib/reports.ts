@@ -17,7 +17,7 @@ import {
   type ReportEnvelope as ContractEnvelope,
   type TraceEntry as ContractTrace,
 } from "@leapscore/contracts";
-import sampleEnvelope from "./fixtures/django__django__506fc82__2026-08-12T000000-000Z.json";
+import sampleEnvelope from "./fixtures/maven-multi-module__bce7fc0__2026-11-12T155107-061Z.json";
 
 export {
   normalizeRepoForSlug,

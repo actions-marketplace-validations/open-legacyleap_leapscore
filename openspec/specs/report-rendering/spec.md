@@ -17,7 +17,7 @@ The system SHALL render every `IndicatorRow.name` and `IndicatorRow.category_id`
 - **THEN** each row's `name` is looked up from the registry (e.g. `ECOS-02` → `Major package drift`) and the UI at `apps/site/components/category-section.tsx:113` displays that name.
 
 #### Scenario: Sample and live share one source
-- **WHEN** `apps/site/lib/sample.ts` builds the sample report's `IndicatorRow`s and the scanner service builds a live report's rows
+- **WHEN** the committed sample envelope at `apps/site/lib/fixtures/maven-multi-module__bce7fc0__2026-11-12T155107-061Z.json` carries the sample report's `IndicatorRow`s and the scanner service builds a live report's rows
 - **THEN** both import the same registry; a drift between them fails `npm run check:rubric-consistency`. The website SHALL NOT carry a separate live row-builder, because live rows now arrive already built over the scan API.
 
 ### Requirement: No ID-as-title fallback
@@ -35,7 +35,7 @@ The system SHALL build `full_table` (102 rows) and `deep_dive_scope` by iteratin
 Categories in the scorecard grid SHALL be derived only from indicator rows that were requested or have a measured/estimated/unknown status. A category with zero `indicator_rows` SHALL be omitted from `report.categories` and SHALL NOT contribute `category_score` or `weighted_contribution` to the headline; the headline is the sum over non-empty categories. This is the excluding-not-zero semantics for empty categories. `coverage` (`31/102`) is unchanged.
 
 #### Scenario: Measured row carries rubric-derived remediation
-- **WHEN** the scanner seal or `apps/site/lib/sample.ts` builds a `measured` row for `ARCH-01` (Cognitive Complexity)
+- **WHEN** the scanner seal or the committed sample envelope builds a `measured` row for `ARCH-01` (Cognitive Complexity)
 - **THEN** `row.remediation.quick_win` equals the encyclopedia `Remediation playbook: Quick win:` clause (e.g. contains `carve the top 5 offenders`), `row.remediation.structural` contains the `Structural fix:` clause, `row.remediation.gold_standard` contains the `Gold standard` clause, and `row.remediation.effort` equals the entry's `Verify effort` tag; `RowDetail` renders the three sections under a `Remediation` heading.
 
 #### Scenario: Estimated row also carries remediation
@@ -210,38 +210,57 @@ The system SHALL derive the collapsed strip counts directly from `Report.gates[]
 - **THEN** the strip shows `2 proven · 5 needs verification · 1 clear` (or equivalent wording) and expanding shows 2 rows under Proven
 
 ### Requirement: CLI HTML and Markdown emitters
-The system SHALL ship HTML and Markdown report emitters with the CLI that render from the sealed envelope with no network dependencies: inline CSS only, no CDN fonts or scripts, no external images. Both SHALL open with score plus band, then the top five risks in plain language, then detail, and SHALL end with the methodology link, the band-specific assessment call to action, and the positioning line (single-sourced from `packages/contracts`) as the final content. The tracked assessment URL SHALL appear exactly once in each artifact.
+
+The system SHALL ship HTML and Markdown report emitters with the CLI that render from the sealed envelope with no network dependencies: inline CSS only, no CDN fonts or scripts, no external images. Both SHALL open with score plus band, then the top five risks in plain language, then detail, and SHALL end with the methodology link, the verdict-specific assessment call to action, and the positioning line (single-sourced from `packages/contracts`) as the final content. When the headline is suppressed, both SHALL open with `insufficient signal` and no band, and the call to action SHALL be the `insufficient-signal` sentence. The tracked assessment URL SHALL appear exactly once in each artifact.
 
 #### Scenario: HTML renders offline
+
 - **WHEN** `./out/report.html` is opened with no network access
 - **THEN** it renders fully styled with score and band first, top five risks in plain language, and no failed external requests
 
 #### Scenario: Markdown pastes into a ticket
+
 - **WHEN** `./out/report.md` is pasted into a PR or ticket
 - **THEN** it reads complete in two minutes: score and band, top five risks, band CTA, methodology link, positioning line
 
+#### Scenario: Suppressed emitters state the verdict
+
+- **WHEN** a sealed run has the `insufficient-signal` verdict and writes `report.html` and `report.md`
+- **THEN** each opens with `insufficient signal` and no band, and closes with the `insufficient-signal` sentence and a tracked URL without a `band` parameter
+
 #### Scenario: Positioning line closes both artifacts
+
 - **WHEN** a sealed run writes `report.html` and `report.md`
 - **THEN** each document's final content block is the positioning line rendered from the shared constant, and the tracked assessment URL appears exactly once in the document
 
 ### Requirement: Band-specific next step
-The system SHALL render a result-specific next step, never a generic banner: High or Critical directs to booking a $0 Assessment as significant modernisation risk; Moderate names the concentrated areas and what the assessment clarifies; Low advises keeping the scan in CI with the assessment link present but softer. The same sentence SHALL print once on CLI stdout, appended to the single stdout line after the status fields (score/band, gates, coverage, threshold state when a numeric or band threshold is set) and after the compact next-band path clause when the sealed report carries a path, with the tracked assessment URL as the line's final token and appearing exactly once in stdout. The assessment link SHALL carry a campaign parameter (`utm_campaign=cli-scan-v1` plus the sealed band) for click-through measurement; clicking is the only telemetry.
+
+The system SHALL render a result-specific next step, never a generic banner. High or Critical SHALL direct to booking a $0 Assessment as significant modernisation risk. Moderate SHALL name the concentrated areas and what the assessment clarifies. Low SHALL advise keeping the scan in CI without claiming a peer benchmark. A suppressed headline SHALL state that the scan could not grade enough of the estate to publish a headline, that this is a coverage limit rather than a clean bill of health, and SHALL invite a conversation about what would make it measurable. The same sentence SHALL print once on CLI stdout, appended to the single stdout line after the status fields (score/band, gates, coverage, threshold state when a numeric or band threshold is set) and after the compact next-band path clause when the sealed report carries a path, with the tracked assessment URL as the line's final token and appearing exactly once in stdout. The assessment link SHALL use the grammar defined by `release-funnel`: a campaign parameter, a `band` parameter only for a scored report, and a `verdict` parameter with no `band` for a suppressed report.
 
 #### Scenario: Critical band CTA
+
 - **WHEN** a report seals at score 20 (Critical)
 - **THEN** HTML, Markdown, and stdout all carry the High/Critical booking line with the tracked assessment URL
 
 #### Scenario: Low band CTA stays soft
+
 - **WHEN** a report seals at score 85 (Low)
-- **THEN** all three surfaces carry the keep-in-CI line with the assessment link present but de-emphasized
+- **THEN** all three surfaces carry the keep-in-CI line, do not claim a peer benchmark, and keep the assessment link present but de-emphasized
+
+#### Scenario: Suppressed report gets its own next step
+
+- **WHEN** a report seals with the `insufficient-signal` verdict
+- **THEN** HTML, Markdown, and stdout carry the coverage-limit sentence, and the tracked URL carries `verdict=insufficient-signal` with no `band`
 
 #### Scenario: Stdout sentence and URL land once
+
 - **WHEN** any sealed run completes
-- **THEN** stdout is a single line whose status fields keep their order, the band-specific sentence appears once after them, and the tracked URL is the final token appearing exactly once
+- **THEN** stdout is a single line whose status fields keep their order, the verdict-specific sentence appears once after them, and the tracked URL is the final token appearing exactly once
 
 #### Scenario: Path clause precedes the next-step sentence
+
 - **WHEN** a sealed run's report carries a next-band path
-- **THEN** the stdout line reads status fields, then the compact path clause, then the band-specific sentence, then the tracked URL as the final token
+- **THEN** the stdout line reads status fields, then the compact path clause, then the verdict-specific sentence, then the tracked URL as the final token
 
 ### Requirement: Next-band path block on report surfaces
 

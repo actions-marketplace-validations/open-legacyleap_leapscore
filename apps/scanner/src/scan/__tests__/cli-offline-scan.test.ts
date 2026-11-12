@@ -2,12 +2,12 @@
 import { describe, it, expect, vi } from 'vitest';
 import { mkdtempSync, writeFileSync, existsSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { main } from '../../../bin/scan';
 import { runLocalScan, GH_ONLY_IDS, LOCAL_IDS } from '../local';
 import { createStrictFetch, StrictOfflineError, assertAllowlistedUrl } from '../offline';
 import { sealScan, tierForScore, tierLegacyFor, localSlugFromPath } from '../scoring/seal';
-import { assessmentUrlForBand, assessmentCtaForBand, parseRunId, POSITIONING_LINE } from '@leapscore/contracts';
+import { assessmentNextStep, parseRunId, POSITIONING_LINE } from '@leapscore/contracts';
 import { renderHtml, renderMarkdown } from '../render';
 import type { FactRecord } from '../facts';
 
@@ -126,8 +126,9 @@ describe('1.3 + 5.3 single stdout line with tracked link', () => {
       // status fields keep their order (score/band, gates [unevaluable], coverage) and stay first
       expect(line).toMatch(new RegExp(String.raw`^\d+(\.\d+)?\/(Low|Moderate|High|Critical) gates:\d+\/\d+( unevaluable:\d+\/\d+)? coverage:\d+m\/\d+e\/\d+u${PATH_CLAUSE} — `));
       const band = /(Low|Moderate|High|Critical)/.exec(line)![0];
-      const sentence = assessmentCtaForBand(band);
-      const url = assessmentUrlForBand(band);
+      const nextStep = assessmentNextStep({ tier: band });
+      const sentence = nextStep.sentence;
+      const url = nextStep.url;
       expect(line.split(sentence)).toHaveLength(2); // next-step sentence printed once
       expect(line.split(url)).toHaveLength(2); // tracked URL printed once
       expect(line.endsWith(url)).toBe(true); // URL is the line's final token
@@ -152,7 +153,7 @@ describe('1.3 + 5.3 single stdout line with tracked link', () => {
       expect(r.out).toHaveLength(1);
       expect(r.out[0]).toMatch(new RegExp(String.raw`coverage:\d+m\/\d+e\/\d+u threshold:trip\(fail-under 100\)${PATH_CLAUSE} — `));
       expect(r.out[0].match(/utm_campaign=cli-scan-v1/g)).toHaveLength(1);
-      expect(r.out[0].endsWith(assessmentUrlForBand(/Low|Moderate|High|Critical/.exec(r.out[0])![0]))).toBe(true);
+      expect(r.out[0].endsWith(assessmentNextStep({ tier: /Low|Moderate|High|Critical/.exec(r.out[0])![0] }).url)).toBe(true);
     } finally {
       rmSync(dir, { recursive: true, force: true });
       rmSync(outDir, { recursive: true, force: true });
@@ -176,7 +177,10 @@ describe('2.1 local orchestrator excludes GH detectors', () => {
       // every local detector id is covered
       const covered = new Set(facts.map((f) => f.detectorId));
       for (const id of LOCAL_IDS) expect(covered.has(id)).toBe(true);
-      expect((done!.snapshot as Record<string, unknown>).local_path).toBeDefined();
+      // Local subject is portable (scan-local): the directory's name, not its path.
+      const snapshot = done!.snapshot as Record<string, unknown>;
+      expect(snapshot.local_path).toBeUndefined();
+      expect(snapshot.repo).toBe(basename(dir));
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -350,19 +354,19 @@ describe('5.1 + 5.2 emitters', () => {
   it('Markdown carries band CTA per tier', () => {
     for (const tier of ['Low', 'Moderate', 'High', 'Critical'] as const) {
       const md = renderMarkdown({ ...base, tier });
-      expect(md).toContain(assessmentCtaForBand(tier));
-      expect(md).toContain(assessmentUrlForBand(tier));
+      expect(md).toContain(assessmentNextStep({ tier }).sentence);
+      expect(md).toContain(assessmentNextStep({ tier }).url);
     }
   });
   it('both emitters close with methodology link, band CTA, and the positioning line; tracked URL once', () => {
     const html = renderHtml(base);
     const md = renderMarkdown(base);
-    const url = assessmentUrlForBand(base.tier);
+    const url = assessmentNextStep({ tier: base.tier }).url;
     const htmlUrl = url.replace(/&/g, '&amp;');
     for (const [doc, link] of [[html, htmlUrl], [md, url]] as const) {
       expect(doc.match(/utm_campaign=cli-scan-v1/g) ?? []).toHaveLength(1);
       expect(doc).toContain('https://leapscore.dev/methodology');
-      expect(doc).toContain(assessmentCtaForBand(base.tier));
+      expect(doc).toContain(assessmentNextStep({ tier: base.tier }).sentence);
       expect(doc).toContain(POSITIONING_LINE);
       expect(doc.indexOf(link)).toBeLessThan(doc.indexOf(POSITIONING_LINE));
     }

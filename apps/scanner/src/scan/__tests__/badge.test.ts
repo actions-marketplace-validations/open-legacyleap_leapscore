@@ -135,10 +135,23 @@ describe('2.5 month is UTC-truncated and envelope-owned', () => {
   });
 });
 
-describe('3.1 embed snippet wraps the badge in the sealed permalink', () => {
-  it('links to the run report and carries the full sentence as alt', () => {
+describe('3.1 the default embed snippet is unlinked, alt carries the sentence', () => {
+  it('never wraps the badge in a per-run link the deployment cannot resolve', () => {
     const vm = badgeViewModel(envelope());
     const snippet = renderBadgeSnippet(vm, { svgPath: 'docs/badge.svg' });
+    const alt = 'LeapScore badge: score 62, band Moderate, 65% gradeable, measured October 2026.';
+    expect(snippet.markdown).toBe(`![${alt}](docs/badge.svg)`);
+    expect(snippet.html).toBe(`<img src="docs/badge.svg" alt="${alt}">`);
+    expect(snippet.markdown).not.toContain(vm.permalink);
+    expect(snippet.html).not.toContain('<a href');
+    expect(snippet.html).not.toContain('leapscore.dev/reports');
+    expect(snippet.html).not.toContain('alt="badge"');
+    expect(snippet.html).not.toMatch(/alt="62"/);
+  });
+
+  it('links the sealed report only when the deployment explicitly hosts it', () => {
+    const vm = badgeViewModel(envelope());
+    const snippet = renderBadgeSnippet(vm, { svgPath: 'docs/badge.svg', linkReport: true });
     const permalink = 'https://leapscore.dev/reports/acme__api__a3f9c1__20261031T091200Z';
     expect(vm.permalink).toBe(permalink);
     expect(snippet.markdown).toBe(
@@ -146,17 +159,13 @@ describe('3.1 embed snippet wraps the badge in the sealed permalink', () => {
     );
     expect(snippet.html).toContain(`<a href="${permalink}">`);
     expect(snippet.html).toContain('src="docs/badge.svg"');
-    expect(snippet.html).toContain('alt="LeapScore badge: score 62');
-    // alt is the sentence, not a label
-    expect(snippet.html).not.toContain('alt="badge"');
-    expect(snippet.html).not.toMatch(/alt="62"/);
   });
 });
 
 describe('3.2 the citation link is not a campaign link', () => {
   it('carries no assessment parameters and resolves to /reports/<runId>', () => {
     const vm = badgeViewModel(envelope());
-    const snippet = renderBadgeSnippet(vm, { svgPath: 'badge.svg' });
+    const snippet = renderBadgeSnippet(vm, { svgPath: 'badge.svg', linkReport: true });
     for (const text of [snippet.markdown, snippet.html, vm.permalink]) {
       expect(text).not.toContain('utm_campaign');
       expect(text).not.toContain('band=');
@@ -167,7 +176,7 @@ describe('3.2 the citation link is not a campaign link', () => {
 });
 
 describe('6.2 the README note quotes the emitted snippet format verbatim', () => {
-  it('documents the exact Markdown and HTML lines the emitter produces', () => {
+  it('documents the exact Markdown and HTML lines the default emitter produces', () => {
     const vm = badgeViewModel(envelope());
     const snippet = renderBadgeSnippet(vm, { svgPath: 'docs/leapscore-badge.svg' });
     const readme = readFileSync(join(__dirname, '../../../README.md'), 'utf8');

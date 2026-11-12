@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 
 import { gateCapStatement, type Report as ContractReport } from "@leapscore/contracts";
 import { ReportView } from "@/components/report-view";
-import sampleEnvelope from "@/lib/fixtures/django__django__506fc82__2026-08-12T000000-000Z.json";
+import sampleEnvelope from "@/lib/fixtures/maven-multi-module__bce7fc0__2026-11-12T155107-061Z.json";
 import type { Report } from "@/lib/types";
 
 const fixture = (sampleEnvelope as unknown as { report: Report }).report;

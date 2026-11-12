@@ -3,7 +3,9 @@
  *   Category% = (Σ applicable row scores ÷ applicable × 3) × 100
  *   System    = Σ (category% × weight)
  * Exact by construction: contributions are computed over a shared integer
- * denominator, so the recompute lands on 58.00 (see lib/score.consistency.test.ts).
+ * denominator. The committed sample is a sealed envelope, so the site never
+ * recomputes its headline; this module supplies the band vocabulary, weights,
+ * and the math used by the tests and any client-rendered rollup.
  * deep-dive rows fold into a category only when run; here (standard audit)
  * they carry status `unknown` and are excluded from both numerator and
  * denominator, as are `not_applicable` (FE) rows.
@@ -123,7 +125,7 @@ export function scoreCategory(
 }
 
 export interface ScoreResult {
-  /** displayed headline, exact to the cent (e.g. 58) */
+  /** displayed headline, exact to the cent (e.g. 62.5) */
   score: number;
   cents: number;
   categories: CategoryScore[];

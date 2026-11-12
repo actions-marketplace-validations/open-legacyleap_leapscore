@@ -20,7 +20,7 @@ import {
   resolveRequestedIndicators,
   tierForScore,
   POSITIONING_LINE,
-  assessmentUrlForBand,
+  assessmentNextStep,
   type RowStatus,
 } from '@leapscore/contracts';
 import type { FactRecord } from '../facts';
@@ -327,7 +327,7 @@ describe('5.4 the delta summary is a second stdout line; the sealed line is unch
       // The sealed line is the plain run's line, untouched by the comparison.
       expect(baselined.out[0]).toBe(plain.out[0]);
       const tier = readJson<StoredEnvelope>(join(outB, 'report.json')).report.headline.tier;
-      expect(baselined.out[0].endsWith(assessmentUrlForBand(tier))).toBe(true);
+      expect(baselined.out[0].endsWith(assessmentNextStep({ tier }).url)).toBe(true);
       expect(baselined.out[0].match(/utm_campaign=cli-scan-v1/g)).toHaveLength(1);
       expect(baselined.out[1].startsWith('delta:comparable')).toBe(true);
       expect(baselined.out[1]).toContain('movement:0pp');
@@ -584,7 +584,7 @@ describe('8.6 no funnel or envelope regression with a baseline supplied', () => 
       expect(r.out[1]).not.toContain('utm_campaign');
       // Every existing envelope remains readable: this run's, the baseline's,
       // and the committed site fixture's.
-      const siteFixture = fileURLToPath(new URL('../../../../site/lib/fixtures/django__django__506fc82__2026-08-12T000000-000Z.json', import.meta.url));
+      const siteFixture = fileURLToPath(new URL('../../../../site/lib/fixtures/maven-multi-module__bce7fc0__2026-11-12T155107-061Z.json', import.meta.url));
       for (const p of [join(outDir, 'report.json'), join(baseOut, 'report.json'), siteFixture]) {
         const env = readJson<StoredEnvelope>(p);
         expect(() => assertContractVersion(env)).not.toThrow();

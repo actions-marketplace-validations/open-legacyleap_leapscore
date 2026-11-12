@@ -502,7 +502,7 @@ async function runLocalMain(
     return EXIT_USAGE;
   }
 
-  o.trace.push({ ts: 0, elapsedMs: 0, label: `Starting local scan — ${absPath}`, type: 'start' });
+  o.trace.push({ ts: 0, elapsedMs: 0, label: `Starting local scan — ${basename(absPath)}`, type: 'start' });
   let budgetMs = 0;
   let facts: unknown[] = [];
   let snapshot: Record<string, unknown> | null = null;
@@ -570,9 +570,10 @@ async function runLocalMain(
     // never `git rev-parse` in the caller's working tree.
     execImpl: () => { throw new Error('no consumer-tree git'); },
     scanId,
-    repo: absPath,
+    repo: basename(absPath),
     subjectSlug: localSlugFromPath(basename(absPath)),
-    repoUrl: `file://${absPath}`,
+    // Name-only: a local report must never publish the machine path (scan-local).
+    repoUrl: `file://${basename(absPath)}`,
     strict: o.strict,
     scorePolicy: o.scorePolicy,
   });

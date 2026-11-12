@@ -964,21 +964,77 @@ export const POSITIONING_LINE =
 export const ASSESSMENT_BASE_URL = "https://leapscore.dev/assessment";
 export const ASSESSMENT_CAMPAIGN = "cli-scan-v1";
 
+/** The suppressed headline's verdict. A suppressed scan is a result, never a
+ *  Critical estate, and never carries a `band` parameter. */
+export const ASSESSMENT_VERDICT = "insufficient-signal";
+
+/** The sealed headline state the next step is derived from. A suppressed
+ *  headline has no band verdict; a scored headline has a public band. */
+export interface AssessmentHeadline {
+  tier?: string;
+  suppressed?: boolean;
+  verdict?: string;
+}
+
+/** One next step: the sentence a reader acts on and the tracked link it opens.
+ *  Returning both from one call makes the illegal pairing — a suppressed
+ *  verdict sold with a band link — unrepresentable (design D1). */
+export interface AssessmentNextStep {
+  sentence: string;
+  url: string;
+}
+
 const BAND_CTA: Record<string, string> = {
-  Low: "Keep this scan in CI to catch drift early — a $0 Assessment benchmarks you against peers.",
+  Low: "In reasonable shape. Keep the scan in CI to catch drift. The $0 Assessment is optional.",
   Moderate:
-    "Risk is concentrated in a few areas — a $0 Assessment clarifies what to fix first.",
+    "Risk is concentrated in a few areas — the $0 Assessment shows which matter and why.",
   High: "Significant modernisation risk — book a $0 Assessment to scope the fix.",
   Critical: "Significant modernisation risk — book a $0 Assessment to scope the fix.",
 };
 
-export function assessmentUrlForBand(tier: string): string {
-  const band = tier.toLowerCase();
-  return `${ASSESSMENT_BASE_URL}?utm_campaign=${ASSESSMENT_CAMPAIGN}&band=${band}`;
+/** The one sentence a suppressed scan gets: a coverage limit, explicitly not a
+ *  clean bill of health, with a way to make the estate measurable. */
+export const SUPPRESSED_NEXT_STEP =
+  "The scan could not grade enough of the estate to publish a headline — that is a coverage limit, not a clean bill of health. Talk to us about what would make it measurable.";
+
+/** True when the sealed headline states no band verdict. `verdict` alone is
+ *  honoured so a re-sealed or hand-built envelope cannot claim a band. */
+export function isSuppressedHeadline(headline: AssessmentHeadline | null | undefined): boolean {
+  if (!headline) return false;
+  if (headline.suppressed === true) return true;
+  return String(headline.verdict ?? "").trim().toLowerCase() === ASSESSMENT_VERDICT;
 }
 
-export function assessmentCtaForBand(tier: string): string {
-  return BAND_CTA[tier] ?? BAND_CTA.Moderate;
+/**
+ * The single verdict-aware next step every surface consumes: CLI stdout,
+ * `report.html`, `report.md`, and the site's report band. A scored run carries
+ * `utm_campaign=cli-scan-v1&band=<tier>`; a suppressed run carries
+ * `utm_campaign=cli-scan-v1&verdict=insufficient-signal` and no `band`.
+ *
+ * An unknown or missing band throws rather than silently falling back to a
+ * band the report does not have.
+ */
+export function assessmentNextStep(
+  headline: AssessmentHeadline | null | undefined,
+): AssessmentNextStep {
+  if (isSuppressedHeadline(headline)) {
+    return {
+      sentence: SUPPRESSED_NEXT_STEP,
+      url: `${ASSESSMENT_BASE_URL}?utm_campaign=${ASSESSMENT_CAMPAIGN}&verdict=${ASSESSMENT_VERDICT}`,
+    };
+  }
+  const raw = String(headline?.tier ?? "").trim();
+  const band = raw === "" ? "" : raw[0].toUpperCase() + raw.slice(1).toLowerCase();
+  const sentence = Object.prototype.hasOwnProperty.call(BAND_CTA, band) ? BAND_CTA[band] : undefined;
+  if (sentence === undefined) {
+    throw new Error(
+      `assessmentNextStep: unknown or missing sealed band ${JSON.stringify(headline?.tier)} — refusing to guess a next step; a suppressed headline must carry the verdict instead`,
+    );
+  }
+  return {
+    sentence,
+    url: `${ASSESSMENT_BASE_URL}?utm_campaign=${ASSESSMENT_CAMPAIGN}&band=${band.toLowerCase()}`,
+  };
 }
 
 // ---------------------------------------------------------------------------

@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { bandPathBlock, type NextBandPath } from "@leapscore/contracts";
 import { BandPath } from "@/components/band-path";
 import { ReportView } from "@/components/report-view";
-import sampleEnvelope from "@/lib/fixtures/django__django__506fc82__2026-08-12T000000-000Z.json";
+import sampleEnvelope from "@/lib/fixtures/maven-multi-module__bce7fc0__2026-11-12T155107-061Z.json";
 import type { Report } from "@/lib/types";
 
 const fixture = (sampleEnvelope as unknown as { report: Report }).report;
@@ -16,16 +16,16 @@ const fixtureBlock = bandPathBlock(fixturePath, {
 
 describe("site next-band path block", () => {
   it("renders the persisted run's destination, distance, classes, arrival, and unreached count", () => {
-    expect(fixturePath.destination).toBe("Low");
-    expect(fixturePath.threshold).toBe(80);
-    expect(fixturePath.points_needed).toBe(22);
+    expect(fixturePath.destination).toBe("High");
+    expect(fixturePath.threshold).toBe(27);
+    expect(fixturePath.points_needed).toBe(21.29);
 
     const html = renderToStaticMarkup(<ReportView report={fixture} title="Sample report" />);
 
     // destination and distance, straight from the shared block model
     expect(html).toContain(fixtureBlock.heading);
     expect(html).toContain(fixtureBlock.statement);
-    expect(html).toContain("Reach Low — 22pp needed (band floor 80, sealed 58).");
+    expect(html).toContain("Reach High — 21.29pp needed (band floor 27, sealed 5.71).");
 
     // each class's tag, verification framing, totals, cumulative arrival, and its steps
     expect(fixtureBlock.classes.length).toBeGreaterThan(0);
@@ -40,12 +40,11 @@ describe("site next-band path block", () => {
         expect(html).toContain(s.verify);
       }
     }
-    // honest arrival is rendered, not smoothed: the cheapest class crosses
-    // alone, the next one still names its combined-only arrival
-    expect(fixtureBlock.classes[0].arrival).toBe("These rows alone reach Low");
-    expect(fixtureBlock.classes[1].arrival).toBe(
-      "These rows cross only with the classes before it",
-    );
+    // honest arrival is rendered, not smoothed: no class reaches the destination,
+    // and the block states the shortfall rather than inventing a crossing
+    expect(fixtureBlock.classes.every((c) => c.arrival === "These rows stay short of High")).toBe(true);
+    expect(fixtureBlock.shortfall).toContain("No combination of graded deductions reaches High");
+    expect(html).toContain(fixtureBlock.shortfall as string);
     // No surface borrows the retired calendar vocabulary.
     expect(html).not.toMatch(/Sprint|Quarter|Structural/);
 
@@ -73,7 +72,9 @@ describe("site next-band path block", () => {
     expect(steps.length).toBeGreaterThan(0);
     for (const s of steps) expect(graded.has(s.row)).toBe(true);
 
-    const html = renderToStaticMarkup(<BandPath path={fixturePath} tier="Moderate" score={58} />);
+    const html = renderToStaticMarkup(
+      <BandPath path={fixturePath} tier={fixture.headline.tier} score={fixture.headline.score} />,
+    );
     const hrefs = [...html.matchAll(/href="#row-([A-Z]+-\d+)"/g)].map((m) => m[1]);
     expect(hrefs).toHaveLength(steps.length);
     expect(new Set(hrefs)).toEqual(new Set(steps.map((s) => s.row)));
@@ -127,7 +128,7 @@ describe("site next-band path block", () => {
   });
 
   it("renders no block at all when the report carries no path", () => {
-    expect(renderToStaticMarkup(<BandPath path={undefined} tier="Moderate" score={58} />)).toBe("");
+    expect(renderToStaticMarkup(<BandPath path={undefined} tier={fixture.headline.tier} score={fixture.headline.score} />)).toBe("");
     const noPath: Report = { ...fixture, next_band_path: undefined };
     const html = renderToStaticMarkup(<ReportView report={noPath} title="Sample report" />);
     expect(html).not.toContain(fixtureBlock.heading);

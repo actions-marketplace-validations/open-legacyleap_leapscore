@@ -114,17 +114,23 @@ describe('sample seal matrix (report-envelope: self-description marker)', () => 
   });
 });
 
-describe('authored fixtures keep the marker', () => {
+describe('the committed site sample keeps the marker', () => {
   it('the site fixture envelope carries sample: true', () => {
-    const file = join(import.meta.dirname ?? '.', '../../../../site/lib/fixtures/django__django__506fc82__2026-08-12T000000-000Z.json');
+    const file = join(import.meta.dirname ?? '.', '../../../../site/lib/fixtures/maven-multi-module__bce7fc0__2026-11-12T155107-061Z.json');
     expect(existsSync(file)).toBe(true);
     const env = JSON.parse(readFileSync(file, 'utf8'));
     expect(env.report.sample).toBe(true);
+    // It is a real seal of a synthetic demo target, not an authored report:
+    // the engine and rubric are the release's own values.
+    expect(env.report.snapshot.engine_version).toMatch(/^\d+\.\d+\.\d+$/);
+    expect(env.report.snapshot.rubric_version).toBe('docs/rubric@tranche-a');
   });
 
-  it('the site sample provider marks its authored report', async () => {
+  it('the site provider has no second authored sample to disagree with', () => {
+    const seed = join(import.meta.dirname ?? '.', '../../../../site/lib/sample.ts');
+    expect(existsSync(seed)).toBe(false);
     const providerPath = join(import.meta.dirname ?? '.', '../../../../site/lib/provider.ts');
     const src = readFileSync(providerPath, 'utf8');
-    expect(src).toMatch(/sample:\s*true/);
+    expect(src).toContain('maven-multi-module__bce7fc0__2026-11-12T155107-061Z.json');
   });
 });

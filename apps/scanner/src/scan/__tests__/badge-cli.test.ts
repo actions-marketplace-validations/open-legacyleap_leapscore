@@ -66,8 +66,12 @@ describe('4.2 a sealed scan writes the badge and its snippet beside the trio', (
         expect(svg).toContain(`>${score} ${band}</text>`);
         expect(svg).toContain(`${pct}%`);
       }
-      expect(snippet).toContain('https://leapscore.dev/reports/');
+      // The CLI is a stateless deployment: the snippet is unlinked and never
+      // promises a per-run permalink it cannot resolve.
+      expect(snippet).not.toContain('https://leapscore.dev/reports/');
+      expect(snippet).not.toContain('<a href');
       expect(snippet).toContain(`alt="LeapScore badge:`);
+      expect(snippet).toContain('![LeapScore badge:');
     } finally {
       rmSync(dir, { recursive: true, force: true });
       rmSync(outDir, { recursive: true, force: true });
