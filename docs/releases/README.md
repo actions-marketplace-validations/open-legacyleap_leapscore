@@ -4,6 +4,14 @@ One annotated `vX.Y.Z` tag is the release identity. The npm package version, the
 `engine_version` stamped into the bundle, and the ref consumers resolve through the Action
 all derive from that tag in one workflow run.
 
+## Unreleased
+
+- **Badge snippets are unlinked by default.** The scanner is stateless and serves no
+  per-run report, so the emitted snippet no longer wraps the SVG in a permalink the
+  deployment cannot resolve. Existing linked snippets are not regenerated; the badge
+  remains a self-contained local static artifact. A deployment that actually hosts sealed
+  reports can opt in when rendering the snippet.
+
 ## Tag scheme
 
 - **`vX.Y.Z` is immutable.** It is created once, points at the released commit forever, and

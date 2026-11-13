@@ -1924,7 +1924,7 @@ var init_applicability = __esm({
 // ../../bin/scan.ts
 import { mkdir, writeFile, readFile } from "node:fs/promises";
 import { stat as stat5 } from "node:fs/promises";
-import { resolve as resolve2, basename, dirname } from "node:path";
+import { resolve as resolve2, basename as basename2, dirname } from "node:path";
 
 // ../../src/scan/budget.ts
 var KILLER_TIMEOUT_MS = 24e4;
@@ -3461,21 +3461,41 @@ __name(badgeViewModel, "badgeViewModel");
 var POSITIONING_LINE = "LeapScore sees the structure. The assessment understands what the code does.";
 var ASSESSMENT_BASE_URL = "https://leapscore.dev/assessment";
 var ASSESSMENT_CAMPAIGN = "cli-scan-v1";
+var ASSESSMENT_VERDICT = "insufficient-signal";
 var BAND_CTA = {
-  Low: "Keep this scan in CI to catch drift early \u2014 a $0 Assessment benchmarks you against peers.",
-  Moderate: "Risk is concentrated in a few areas \u2014 a $0 Assessment clarifies what to fix first.",
+  Low: "In reasonable shape. Keep the scan in CI to catch drift. The $0 Assessment is optional.",
+  Moderate: "Risk is concentrated in a few areas \u2014 the $0 Assessment shows which matter and why.",
   High: "Significant modernisation risk \u2014 book a $0 Assessment to scope the fix.",
   Critical: "Significant modernisation risk \u2014 book a $0 Assessment to scope the fix."
 };
-function assessmentUrlForBand(tier) {
-  const band = tier.toLowerCase();
-  return `${ASSESSMENT_BASE_URL}?utm_campaign=${ASSESSMENT_CAMPAIGN}&band=${band}`;
+var SUPPRESSED_NEXT_STEP = "The scan could not grade enough of the estate to publish a headline \u2014 that is a coverage limit, not a clean bill of health. Talk to us about what would make it measurable.";
+function isSuppressedHeadline(headline) {
+  if (!headline) return false;
+  if (headline.suppressed === true) return true;
+  return String(headline.verdict ?? "").trim().toLowerCase() === ASSESSMENT_VERDICT;
 }
-__name(assessmentUrlForBand, "assessmentUrlForBand");
-function assessmentCtaForBand(tier) {
-  return BAND_CTA[tier] ?? BAND_CTA.Moderate;
+__name(isSuppressedHeadline, "isSuppressedHeadline");
+function assessmentNextStep(headline) {
+  if (isSuppressedHeadline(headline)) {
+    return {
+      sentence: SUPPRESSED_NEXT_STEP,
+      url: `${ASSESSMENT_BASE_URL}?utm_campaign=${ASSESSMENT_CAMPAIGN}&verdict=${ASSESSMENT_VERDICT}`
+    };
+  }
+  const raw = String(headline?.tier ?? "").trim();
+  const band = raw === "" ? "" : raw[0].toUpperCase() + raw.slice(1).toLowerCase();
+  const sentence = Object.prototype.hasOwnProperty.call(BAND_CTA, band) ? BAND_CTA[band] : void 0;
+  if (sentence === void 0) {
+    throw new Error(
+      `assessmentNextStep: unknown or missing sealed band ${JSON.stringify(headline?.tier)} \u2014 refusing to guess a next step; a suppressed headline must carry the verdict instead`
+    );
+  }
+  return {
+    sentence,
+    url: `${ASSESSMENT_BASE_URL}?utm_campaign=${ASSESSMENT_CAMPAIGN}&band=${band.toLowerCase()}`
+  };
 }
-__name(assessmentCtaForBand, "assessmentCtaForBand");
+__name(assessmentNextStep, "assessmentNextStep");
 var BAND_PATH_CLASS_META = {
   sprint: { tag: "\u26A1", verify: "Verify in \u226430 min" },
   quarter: { tag: "\u{1F536}", verify: "Verify in 2\u20134 h" },
@@ -8854,7 +8874,7 @@ __name(runUnifiedScan, "runUnifiedScan");
 import { stat as stat4, readFile as fsReadFile2 } from "node:fs/promises";
 import { execFile as execFile3 } from "node:child_process";
 import { promisify as promisify3 } from "node:util";
-import { join as join14, resolve } from "node:path";
+import { basename, join as join14, resolve } from "node:path";
 
 // ../../src/scan/offline.ts
 var STRICT_OFFLINE_MESSAGE = "strict offline mode: network attempt aborted \u2014 detectors must use vendored snapshots and emit unknown with a re-run hint where live data would be needed";
@@ -9003,6 +9023,7 @@ function errorKindForFact2(f) {
 __name(errorKindForFact2, "errorKindForFact");
 async function* runLocalScan(targetPath, opts = {}) {
   const absPath = resolve(targetPath);
+  const subjectName = basename(absPath) || absPath;
   try {
     const st = await stat4(absPath);
     if (!st.isDirectory()) {
@@ -9084,7 +9105,7 @@ async function* runLocalScan(targetPath, opts = {}) {
   let identity;
   if (treeWalk) {
     const identityStart = Date.now();
-    const subject = { repo: absPath, commit: commitSha, scanned_at: scannedAt };
+    const subject = { repo: subjectName, commit: commitSha, scanned_at: scannedAt };
     try {
       const census = await cachedStackCensus(ctx, signal, { paths: treeWalk.paths });
       identity = await deriveIdentity({
@@ -9109,7 +9130,7 @@ async function* runLocalScan(targetPath, opts = {}) {
     yield { type: "trace", ts: elapsedMs, elapsedMs, label: `Identity \u2014 ${identity.size.files ?? 0} files \xB7 ${lineLabel} lines \xB7 ${identity.stack.languages.length} languages`, phase: "archetype", durationMs: Date.now() - identityStart };
   } else {
     identity = degradedIdentity(
-      { repo: absPath, commit: commitSha, scanned_at: scannedAt },
+      { repo: subjectName, commit: commitSha, scanned_at: scannedAt },
       "tree walk did not complete \u2014 identity could not be derived"
     );
   }
@@ -9218,12 +9239,11 @@ async function* runLocalScan(targetPath, opts = {}) {
     yield { type: "trace", ts: elapsedMs, elapsedMs, label: `Seal \u2014 ${status} \xB7 ${facts.filter((f) => !f.error).length}/${ids.length} measured`, phase: "seal", status };
   }
   const snapshot = {
-    repo: absPath,
+    repo: subjectName,
     scanned_at: scannedAt,
     engine_version: ENGINE_VERSION,
     rubric_version: "docs/rubric@tranche-a",
     scanned_commit: commitSha,
-    local_path: absPath,
     // Vendored-dataset version ids (detector-honesty 3.3): recorded in the report
     // provenance and joined into the fingerprint so a dataset refresh changes the
     // fingerprint while identical data does not.
@@ -10489,7 +10509,8 @@ function formatStdout(report, opts = {}) {
   const pathPart = report.next_band_path ? ` ${formatBandPathClause(report.next_band_path, report.headline.tier)}` : "";
   const capPart = report.headline.gate_capped ? ` gate-capped from ${report.headline.uncapped_tier ?? "a higher band"} by ${(report.headline.capped_by_gates ?? []).join("+") || "a proven gate"}` : "";
   const prefix = report.headline.suppressed ? `insufficient-signal ${gatePart} ${coveragePart}${thresholdPart}` : `${report.headline.score}/${report.headline.tier}${capPart} ${gatePart} ${coveragePart}${thresholdPart}${pathPart}`;
-  return `${prefix} \u2014 ${assessmentCtaForBand(report.headline.tier)} ${assessmentUrlForBand(report.headline.tier)}`;
+  const nextStep = assessmentNextStep(report.headline);
+  return `${prefix} \u2014 ${nextStep.sentence} ${nextStep.url}`;
 }
 __name(formatStdout, "formatStdout");
 function sealScan(input2) {
@@ -10690,10 +10711,14 @@ function renderPathMarkdown(path, tier, score) {
 }
 __name(renderPathMarkdown, "renderPathMarkdown");
 function renderHtml(r) {
-  const url = assessmentUrlForBand(r.tier);
-  const cta = assessmentCtaForBand(r.tier);
+  const nextStep = assessmentNextStep({
+    tier: r.tier,
+    suppressed: r.suppressed === true
+  });
+  const url = nextStep.url;
+  const cta = nextStep.sentence;
   const commitShort = r.repoSha && r.repoSha !== "unknown" ? r.repoSha.slice(0, 7) : "unknown";
-  const headline = r.suppressed ? `<h1><span class="score">insufficient signal</span> <span class="band">no headline</span></h1>` : `<h1><span class="score">${r.score}</span> <span class="band">${esc(r.tier)}</span></h1>`;
+  const headline = r.suppressed ? `<h1><span class="score">insufficient signal</span></h1>` : `<h1><span class="score">${r.score}</span> <span class="band">${esc(r.tier)}</span></h1>`;
   const risks = r.topBlockers.slice(0, 5).map((b) => {
     const evidence = b.evidence_file ? ` \u2014 evidence: ${esc(b.evidence_file)}` : "";
     const rule = b.rule ? ` (rule: ${esc(b.rule)})` : "";
@@ -10738,8 +10763,12 @@ ${r.nextBandPath ? `${renderPathHtml(r.nextBandPath, r.tier, r.score)}
 }
 __name(renderHtml, "renderHtml");
 function renderMarkdown(r) {
-  const url = assessmentUrlForBand(r.tier);
-  const cta = assessmentCtaForBand(r.tier);
+  const nextStep = assessmentNextStep({
+    tier: r.tier,
+    suppressed: r.suppressed === true
+  });
+  const url = nextStep.url;
+  const cta = nextStep.sentence;
   const commitShort = r.repoSha && r.repoSha !== "unknown" ? r.repoSha.slice(0, 7) : "unknown";
   const lines = [];
   if (r.identity) {
@@ -10913,6 +10942,12 @@ __name(escapeAttr, "escapeAttr");
 function renderBadgeSnippet(viewModel, opts) {
   const alt = viewModel.accessibleName;
   const mdAlt = alt.replace(/[[\]]/g, (ch) => `\\${ch}`);
+  if (opts.linkReport !== true) {
+    return {
+      markdown: `![${mdAlt}](${opts.svgPath})`,
+      html: `<img src="${escapeAttr(opts.svgPath)}" alt="${escapeAttr(alt)}">`
+    };
+  }
   const markdown = `[![${mdAlt}](${opts.svgPath})](${viewModel.permalink})`;
   const html = `<a href="${escapeAttr(viewModel.permalink)}"><img src="${escapeAttr(opts.svgPath)}" alt="${escapeAttr(alt)}"></a>`;
   return { markdown, html };
@@ -11799,7 +11834,7 @@ async function runLocalMain(targetPath, o) {
     o.stderr(`refused (bad_path): path does not exist: ${targetPath} \u2014 ${refusalHint("bad_path")}`);
     return EXIT_USAGE;
   }
-  o.trace.push({ ts: 0, elapsedMs: 0, label: `Starting local scan \u2014 ${absPath}`, type: "start" });
+  o.trace.push({ ts: 0, elapsedMs: 0, label: `Starting local scan \u2014 ${basename2(absPath)}`, type: "start" });
   let budgetMs = 0;
   let facts = [];
   let snapshot = null;
@@ -11866,9 +11901,10 @@ async function runLocalMain(targetPath, o) {
       throw new Error("no consumer-tree git");
     }, "execImpl"),
     scanId,
-    repo: absPath,
-    subjectSlug: localSlugFromPath(basename(absPath)),
-    repoUrl: `file://${absPath}`,
+    repo: basename2(absPath),
+    subjectSlug: localSlugFromPath(basename2(absPath)),
+    // Name-only: a local report must never publish the machine path (scan-local).
+    repoUrl: `file://${basename2(absPath)}`,
     strict: o.strict,
     scorePolicy: o.scorePolicy
   });

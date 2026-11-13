@@ -8,7 +8,7 @@ import { sealScan } from '../scoring/seal';
 import { computeScoreFingerprint } from '../scoring/fingerprint';
 import { renderHtml, renderMarkdown, type RenderInput } from '../render';
 import {
-  assessmentUrlForBand,
+  assessmentNextStep,
   bandPathBlock,
   bandThresholdFor,
   formatBandPathClause,
@@ -153,7 +153,7 @@ describe('3.4 stdout path clause', () => {
       expect(statusEnd).toBeGreaterThanOrEqual(0);
       expect(clauseAt).toBeGreaterThan(statusEnd); // after the status fields
       expect(clauseAt).toBeLessThan(sentenceAt); // before the band sentence
-      const url = assessmentUrlForBand(tier);
+      const url = assessmentNextStep({ tier }).url;
       expect(line.split(url)).toHaveLength(2);
       expect(line.endsWith(url)).toBe(true);
       expect(line.match(/utm_campaign=cli-scan-v1/g)).toHaveLength(1);
@@ -365,10 +365,11 @@ describe('6.1 one derivation serves every surface', () => {
       expect(html.indexOf(`<h2>${block.heading}</h2>`)).toBeLessThan(html.indexOf('<h2>Detail</h2>'));
       // The funnel grammar still closes both documents with a path block present:
       // methodology link → band CTA → positioning line, URL exactly once, final.
-      expect(html).toContain(assessmentUrlForBand(tier).replace(/&/g, '&amp;'));
-      expect(md).toContain(assessmentUrlForBand(tier));
+      const bandUrl = assessmentNextStep({ tier }).url;
+      expect(html).toContain(bandUrl.replace(/&/g, '&amp;'));
+      expect(md).toContain(bandUrl);
       expect(md.match(/utm_campaign=cli-scan-v1/g)).toHaveLength(1);
-      const mdOrder = [md.indexOf('Methodology:'), md.indexOf('> Next step:'), md.indexOf(assessmentUrlForBand(tier))];
+      const mdOrder = [md.indexOf('Methodology:'), md.indexOf('> Next step:'), md.indexOf(bandUrl)];
       expect(mdOrder[0]).toBeGreaterThanOrEqual(0);
       expect(mdOrder[0]).toBeLessThan(mdOrder[1]);
       expect(mdOrder[1]).toBeLessThan(mdOrder[2]);
@@ -446,8 +447,9 @@ describe('6.4 funnel grammar unchanged by the path block', () => {
       expect(html.match(/utm_campaign=cli-scan-v1/g)).toHaveLength(1);
       expect(md.match(/utm_campaign=cli-scan-v1/g)).toHaveLength(1);
       expect(line.match(/utm_campaign=cli-scan-v1/g)).toHaveLength(1);
-      expect(html).toContain(assessmentUrlForBand(tier).replace(/&/g, '&amp;'));
-      expect(line.endsWith(assessmentUrlForBand(tier))).toBe(true);
+      const bandUrl = assessmentNextStep({ tier }).url;
+      expect(html).toContain(bandUrl.replace(/&/g, '&amp;'));
+      expect(line.endsWith(bandUrl)).toBe(true);
 
       // Band vocabulary stays the public set; no legacy alias reaches a surface.
       const publicBands = ['Low', 'Moderate', 'High', 'Critical'];

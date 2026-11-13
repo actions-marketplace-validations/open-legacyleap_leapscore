@@ -4,6 +4,8 @@ LeapScore scans a codebase locally and reports structural legacy and maintainabi
 
 > LeapScore sees the structure. The assessment understands what the code does.
 
+**Coverage (v1.0.2, November 2026):** the rubric has 102 indicators. Up to 31 have a detector today, 25 on a local scan; the rest are disclosed as not implemented rather than scored as if they had run. **The score is not a peer benchmark.**
+
 ## Privacy by default
 
 A local path scan reads the target on your machine and makes no network requests. It sends no code, paths, or repository names, and sends no telemetry automatically. `--repo owner/repo` is a separate, explicit remote scan: it contacts GitHub's API and shallow-clones the public repository. A report's tracked assessment URL is plain text until clicked; the scan does not contact the assessment host. Only a user click opens that URL and carries its associated click tracking.

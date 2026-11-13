@@ -1,13 +1,14 @@
 /** report-identity 5.1–5.8 — the identity card on the site: contents, placement,
- * commit forms, sample marker, absent/suppressed degradation, and the live page. */
+ * commit forms, sample marker, absent/suppressed degradation, and the live page.
+ * The committed sample is a real v1.0.2 scan of the checked-in synthetic Maven
+ * fixture, so every value below is read from that envelope. */
 import { describe, it, expect } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { IdentityCard } from "@/components/identity-card";
 import { ReportView } from "@/components/report-view";
 import { SealedLiveReport } from "@/app/live/LiveReportClient";
-import { SAMPLE_IDENTITY } from "@/lib/sample";
-import sampleEnvelope from "@/lib/fixtures/django__django__506fc82__2026-08-12T000000-000Z.json";
+import sampleEnvelope from "@/lib/fixtures/maven-multi-module__bce7fc0__2026-11-12T155107-061Z.json";
 import type { Report } from "@/lib/types";
 
 const fixture = structuredClone((sampleEnvelope as unknown as { report: Report }).report);
@@ -25,30 +26,32 @@ function withoutIdentity(report: Report): Report {
 }
 
 describe("5.1 the card renders the sealed block through the contract helpers", () => {
-  it("states subject, shape, size, and stack", () => {
+  it("states subject, shape, size, and stack from the sealed scan", () => {
     const html = cardHtml(fixture);
-    expect(html).toContain("django/django");
-    expect(html).toContain("commit 506fc82");
-    expect(html).toContain("2026-08-12T00:00:00Z");
-    // Size: measured counts, one approximated magnitude from the contract helper.
-    expect(html).toContain("3128");
-    expect(html).toContain("412");
-    expect(html).toContain("~420k");
-    expect(html).not.toContain("420000");
+    expect(html).toContain("maven-multi-module");
+    expect(html).toContain("commit bce7fc0");
+    expect(html).toContain("2026-11-12T15:51:07.061Z");
+    // Size: measured counts and a measured line magnitude (no approximation marker).
+    expect(html).toContain("10");
+    expect(html).toContain("30");
+    expect(html).toContain("64");
+    expect(html).not.toContain("~64");
     expect(html).toContain("source-v1");
-    expect(html).toContain("sampled 40 of 1247 files");
+    expect(html).toContain("measured");
     // Stack: shares, primary language, ecosystems, framework names only.
     expect(html).toContain("primary");
-    expect(html).toContain("Python");
-    expect(html).toContain("72%");
-    expect(html).toContain("ecosystems: js, py");
-    expect(html).toContain("frameworks: Django");
-    expect(html).not.toMatch(/Django\s+\d/);
+    expect(html).toContain("Java");
+    expect(html).toContain("100%");
+    expect(html).toContain("ecosystems: java");
+    expect(html).toContain("frameworks: Spring");
+    expect(html).not.toMatch(/Spring\s+\d/);
   });
 
-  it("renders the fixture's unknown stage as not measured with its reason", () => {
+  it("renders the measured shape through the one sealed archetype", () => {
     const html = cardHtml(fixture);
-    expect(html).toMatch(/archetype not measured — authored sample/);
+    expect(html).toContain("mixed");
+    expect(html).toContain("(low)");
+    expect(html).toContain("planes: server · test");
   });
 
   it("has no filesystem or scanner access of its own", async () => {
@@ -66,7 +69,8 @@ describe("5.2 / 5.3 / 5.4 placement, commit identity, and the retained chip", ()
     next.snapshot.archetype_confidence = "medium";
     next.snapshot.scanned_commit = "abc1234567890";
     next.identity = {
-      ...structuredClone(SAMPLE_IDENTITY),
+      ...structuredClone(fixture.identity!),
+      subject: { ...fixture.identity!.subject, repo: "acme/claims", commit: "abc1234567890" },
       shape: { status: "measured", archetype: "service", confidence: "medium" },
     };
     return next;
@@ -90,7 +94,7 @@ describe("5.2 / 5.3 / 5.4 placement, commit identity, and the retained chip", ()
   it("links commit <short7> when the repo is a GitHub slug and the sha is known", () => {
     const html = renderToStaticMarkup(<IdentityCard report={withChip()} />);
     expect(html).toContain("commit abc1234");
-    expect(html).toContain('href="https://github.com/django/django/commit/abc1234567890"');
+    expect(html).toContain('href="https://github.com/acme/claims/commit/abc1234567890"');
   });
 
   it("renders commit unknown as plain text with no link", () => {
@@ -113,30 +117,20 @@ describe("5.2 / 5.3 / 5.4 placement, commit identity, and the retained chip", ()
   });
 });
 
-describe("7.1 the committed fixture and the sample agree, and one card shows all three forms", () => {
-  it("the fixture's identity block deep-equals the sample constant", () => {
-    expect((sampleEnvelope as unknown as { report: { identity: unknown } }).report.identity).toEqual(
-      SAMPLE_IDENTITY,
-    );
+describe("7.1 the committed sample's identity is the sealed one", () => {
+  it("the fixture's identity subject is the scanned directory name", () => {
+    expect(fixture.identity?.subject.repo).toBe(fixture.snapshot.repo);
+    expect(fixture.identity?.subject.repo).toBe("maven-multi-module");
+    expect(fixture.identity?.subject.commit).toBe("bce7fc006329ffc4ed69d80b6175cbe265a3d901");
   });
 
   it("the fixture block typechecks as a ReportIdentity", async () => {
     const { identityValueLabel } = await import("@leapscore/contracts");
     const id = fixture.identity!;
     expect(["measured", "estimated", "unknown"]).toContain(id.size.status);
-    expect(id.size.lines?.status).toBe("estimated");
-    expect(identityValueLabel(id.size.lines!)).toBe("~420k");
-    expect(id.stack.languages[0]).toMatchObject({ name: "Python" });
-  });
-
-  it("renders measured, estimated, and unknown forms in one card", () => {
-    const html = cardHtml(fixture);
-    // measured: a counted value, no approximation marker
-    expect(html).toContain("3128");
-    // estimated: the marker, derived at render
-    expect(html).toContain("~420k");
-    // unknown: stated as not measured with its reason
-    expect(html).toMatch(/archetype not measured — authored sample/);
+    expect(id.size.lines?.status).toBe("measured");
+    expect(identityValueLabel(id.size.lines!)).toBe("64");
+    expect(id.stack.languages[0]).toMatchObject({ name: "Java" });
   });
 });
 
@@ -145,13 +139,13 @@ describe("5.5 / 5.6 / 5.7 sample, absent block, and suppression", () => {
     const html = cardHtml(fixture);
     const card = html.slice(html.indexOf('data-testid="identity-card"'));
     expect(card).toMatch(/Illustrative sample/);
-    expect(card.indexOf("Illustrative sample")).toBeLessThan(card.indexOf("commit 506fc82"));
+    expect(card.indexOf("Illustrative sample")).toBeLessThan(card.indexOf("commit bce7fc0"));
   });
 
   it("renders no card and no error for a pre-change envelope", () => {
     const report = withoutIdentity(fixture);
     // A pre-change envelope still states its commit in the receipt.
-    report.snapshot.scanned_commit = "506fc82";
+    report.snapshot.scanned_commit = "bce7fc0";
     const html = renderToStaticMarkup(<ReportView report={report} title="Old run" />);
     expect(html).not.toContain('data-testid="identity-card"');
     expect(html).not.toMatch(/Illustrative sample/);
@@ -160,7 +154,7 @@ describe("5.5 / 5.6 / 5.7 sample, absent block, and suppression", () => {
     expect(html).toContain("All 102 indicators");
     // With no card to state the commit, the provenance receipt keeps it.
     expect(html).toContain("COMMIT");
-    expect(html).toContain("506fc82");
+    expect(html).toContain("bce7fc0");
   });
 
   it("renders the card in full when the headline is suppressed", () => {
@@ -173,8 +167,8 @@ describe("5.5 / 5.6 / 5.7 sample, absent block, and suppression", () => {
     };
     const html = renderToStaticMarkup(<ReportView report={report} title="Suppressed run" />);
     expect(html).toContain('data-testid="identity-card"');
-    expect(html).toContain("~420k");
-    expect(html).toContain("3128");
+    expect(html).toContain("64");
+    expect(html).toContain("10");
   });
 });
 
@@ -186,16 +180,16 @@ describe("5.8 the live page puts the same card above the revealed headline", () 
         traces={[]}
         elapsedMs={1_200}
         indicatorCount={31}
-        runId="django__django__506fc82__2026-08-12T000000-000Z"
+        runId="maven-multi-module__bce7fc0__2026-11-12T155107-061Z"
       />,
     );
     const card = html.indexOf('data-testid="identity-card"');
     const headline = html.indexOf("system score");
     expect(card).toBeGreaterThanOrEqual(0);
     expect(card).toBeLessThan(headline);
-    // No provenance value is chrome above the headline, and no duplicated
-    // "Detected:" line stands in for the card.
-    expect(html).not.toContain("Detected:");
+    // The card and the chip both derive from the same sealed archetype; the
+    // live page adds no second "Detected:" line of its own.
+    expect(html.match(/Detected:/g) ?? []).toHaveLength(1);
     expect(html.indexOf("SCHEMA")).toBeGreaterThan(headline);
     // The repo title appears once: the report body owns it, not the header.
     expect(html.match(/<h1/g) ?? []).toHaveLength(1);

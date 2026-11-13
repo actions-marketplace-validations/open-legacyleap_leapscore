@@ -4,7 +4,7 @@ import { listReportMetas } from "@/lib/reports";
 import { publicTierLabel } from "@/lib/scoring";
 
 export const metadata: Metadata = {
-  title: "Reports · LeapScore",
+  title: "Sample reports · LeapScore",
 };
 
 function relativeTime(iso: string): string {
@@ -42,14 +42,20 @@ export default async function ReportsPage() {
   if (metas.length === 0) {
     return (
       <div className="mx-auto max-w-5xl px-4 py-10">
-        <p className="text-xs tracking-wider text-faint uppercase">Reports</p>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight">No scans yet</h1>
+        <p className="text-xs tracking-wider text-faint uppercase">
+          Site-owned sample
+        </p>
+        <h1 className="mt-1 text-2xl font-semibold tracking-tight">
+          No illustrative sample retained
+        </h1>
         <p className="mt-2 text-sm text-muted">
-          Past scans appear here after you run one. Paste a repo on the{" "}
-          <Link href="/" className="underline underline-offset-2 hover:text-foreground">
-            home page
-          </Link>{" "}
-          or go to <Link href="/live?repo=vercel/next.js" className="underline underline-offset-2 hover:text-foreground">/live?repo=...</Link>.
+          This surface shows LeapScore&apos;s own committed illustrative sample.
+          It is not a store of visitor scans. Run the scan locally to produce
+          your own report, or see the{" "}
+          <Link href="/report/sample" className="underline underline-offset-2 hover:text-foreground">
+            sample report
+          </Link>
+          .
         </p>
       </div>
     );
@@ -59,9 +65,17 @@ export default async function ReportsPage() {
     <div className="mx-auto max-w-5xl px-4 py-10">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-xs tracking-wider text-faint uppercase">Reports</p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight">{metas.length} runs</h1>
-          <p className="mt-1 text-xs text-faint">Sorted by most recent · keep everything locally · new runs via /live</p>
+          <p className="text-xs tracking-wider text-faint uppercase">
+            Site-owned sample
+          </p>
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight">
+            Illustrative sample report
+          </h1>
+          <p className="mt-1 max-w-2xl text-xs text-faint">
+            A committed report from a real scan of a checked-in synthetic
+            legacy fixture. It is illustrative, not a scan of a visitor&apos;s
+            repository, and the reports page stores no visitor scans.
+          </p>
         </div>
         <Link href="/" className="text-sm underline underline-offset-2 hover:text-foreground">
           ← Home
@@ -86,7 +100,12 @@ export default async function ReportsPage() {
           <tbody className="divide-y divide-hairline">
             {metas.map((m) => (
               <tr key={m.runId} className="hover:bg-panel/30">
-                <td className="px-3 py-2 font-mono text-xs text-foreground">{m.repo}</td>
+                <td className="px-3 py-2 font-mono text-xs text-foreground">
+                  <span className="rounded border border-hairline px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-faint">
+                    illustrative sample
+                  </span>{" "}
+                  {m.repo}
+                </td>
                 <td className="px-3 py-2 font-mono tabular-nums">{m.score}</td>
                 <td className={`px-3 py-2 text-xs ${tierColor(m.tier)}`}>{publicTierLabel(m.tier) ?? m.tier}</td>
                 <td className="px-3 py-2 text-xs text-muted" title={m.ranAt}>
@@ -118,7 +137,7 @@ export default async function ReportsPage() {
                       href={`/live?repo=${encodeURIComponent(m.repo)}`}
                       className="rounded bg-foreground px-2 py-0.5 text-xs text-background hover:opacity-90"
                     >
-                      Rerun
+                      Rerun public demo
                     </Link>
                   </div>
                 </td>

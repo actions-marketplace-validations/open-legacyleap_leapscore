@@ -78,7 +78,7 @@ export function IdentityCard({ report }: { report: Report }) {
     >
       {report.sample ? (
         <p className="mb-3 text-xs font-medium text-tier-moderate">
-          Illustrative sample — these figures describe an authored demo, not a live scan.
+          Illustrative sample — these figures describe a checked-in synthetic demo target, not a customer scan.
         </p>
       ) : null}
 

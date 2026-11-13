@@ -27,6 +27,41 @@ function tierLabel(color: ReturnType<typeof tierForScore>["color"]): string {
   return map[color];
 }
 
+/** The measure paths a suppressed scan points to (design D2): the rows that
+ *  would make the estate gradeable, with the producer's stated measure path.
+ *  No band, no score — suppression is a result, not a low score. */
+function SuppressedMeasurePaths({ report }: { report: Report }) {
+  const rows = (report.full_table ?? [])
+    .filter((r) => r.status === "unknown" && !r.not_applicable)
+    .slice(0, 8);
+  return (
+    <div className="instrument-panel rounded-lg p-4" data-testid="measure-paths">
+      <h3 className="text-sm font-medium text-ink">What would make it measurable</h3>
+      <p className="mt-0.5 text-xs text-faint">
+        Unknown rows stay in the denominator as disclosed-unscored. Grading these
+        moves the scan above the coverage floor.
+      </p>
+      <ul className="mt-3 space-y-2">
+        {rows.map((r) => (
+          <li key={r.id} className="text-xs">
+            <span className="font-mono text-faint">{r.id}</span>{" "}
+            <span className="text-muted">{r.name}</span>
+            <span className="block pl-6 text-faint">
+              {r.unknown_measure_path ?? r.reason ?? "Not measured in this run."}
+            </span>
+          </li>
+        ))}
+        {rows.length === 0 && (
+          <li className="text-xs text-faint">
+            Every attempted row was graded; the headline was withheld for another
+            reason stated beside the verdict.
+          </li>
+        )}
+      </ul>
+    </div>
+  );
+}
+
 export function ReportView({
   report,
   title,
@@ -42,7 +77,13 @@ export function ReportView({
   headerActions?: React.ReactNode;
   persistedMeta?: ReportMeta;
 }) {
-  const tier = tierForScore(report.headline.score);
+  // Suppression is a presentation state, not a reference score (design D2): a
+  // suppressed headline never renders a dial, a number, a tier, or a CI band as
+  // a verdict. Only a scored headline computes a display tier.
+  const suppressed =
+    report.headline.suppressed === true ||
+    String(report.headline.verdict ?? "").trim().toLowerCase() === "insufficient-signal";
+  const tier = suppressed ? null : tierForScore(report.headline.score);
 
   // Provenance is demoted, never deleted (report-rendering): the instrument's
   // receipt renders in a collapsed band below the evidence sections. Only the
@@ -125,13 +166,30 @@ export function ReportView({
 
       <div className="grid gap-8 lg:grid-cols-[260px_minmax(0,1fr)]">
         <div className="flex flex-col items-center">
-          <DialGauge score={report.headline.score} tierColor={tier.color} label="system score" />
-          <div className="mt-2 text-center">
-            <div className="font-mono text-4xl font-semibold tabular-nums">{report.headline.score}</div>
-            <div className={`text-sm ${tierLabel(tier.color)}`}>{report.headline.tier}</div>
-            <div className="mt-1 text-xs text-faint">{report.headline.ci_band}</div>
-          </div>
-          {gateCapped && uncappedTier ? (
+          {suppressed ? (
+            <div
+              className="w-full rounded-lg border border-hairline bg-panel/40 p-4 text-center"
+              data-testid="suppressed-verdict"
+            >
+              <p className="text-xs font-medium uppercase tracking-wider text-faint">Verdict</p>
+              <p className="mt-2 font-mono text-lg font-semibold">insufficient signal</p>
+              <p className="mt-2 text-xs leading-relaxed text-muted">
+                The scan could not grade enough of the estate to publish a headline.
+                This is a coverage limit, not a clean bill of health — see the
+                measure paths beside it.
+              </p>
+            </div>
+          ) : (
+            <>
+              <DialGauge score={report.headline.score} tierColor={tier!.color} label="system score" />
+              <div className="mt-2 text-center">
+                <div className="font-mono text-4xl font-semibold tabular-nums">{report.headline.score}</div>
+                <div className={`text-sm ${tierLabel(tier!.color)}`}>{report.headline.tier}</div>
+                <div className="mt-1 text-xs text-faint">{report.headline.ci_band}</div>
+              </div>
+            </>
+          )}
+          {gateCapped && uncappedTier && !suppressed ? (
             <p
               className="mt-3 rounded-lg border border-tier-critical/40 bg-panel/40 p-2.5 text-xs leading-relaxed text-muted"
               role="note"
@@ -169,11 +227,15 @@ export function ReportView({
         </div>
         <div className="space-y-6">
           <TopBlockers blockers={report.top_blockers ?? []} />
-          <BandPath
-            path={report.next_band_path}
-            tier={report.headline.tier}
-            score={report.headline.score}
-          />
+          {suppressed ? (
+            <SuppressedMeasurePaths report={report} />
+          ) : (
+            <BandPath
+              path={report.next_band_path}
+              tier={report.headline.tier}
+              score={report.headline.score}
+            />
+          )}
         </div>
       </div>
 
@@ -246,7 +308,7 @@ export function ReportView({
         {subtitle ? <div className="mt-2 text-xs text-faint">{subtitle}</div> : null}
       </details>
 
-      <ReportNextStep tier={report.headline.tier} score={report.headline.score} />
+      <ReportNextStep headline={report.headline} />
     </div>
   );
 }

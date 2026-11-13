@@ -1,0 +1,4021 @@
+{
+  "report": {
+    "id": "ls_mwdq6986",
+    "snapshot": {
+      "repo": "maven-multi-module",
+      "scanned_at": "2026-11-12T15:51:07.061Z",
+      "engine_version": "1.0.2",
+      "rubric_version": "docs/rubric@tranche-a",
+      "scanned_commit": "bce7fc006329ffc4ed69d80b6175cbe265a3d901",
+      "snapshot_versions": {
+        "eol-snapshot": "eol-2026.10-1c0bd1337838",
+        "advisory-snapshot": "adv-2026.10-ad855d8189da"
+      },
+      "archetype": "mixed",
+      "archetype_confidence": "low",
+      "planeInventory": {
+        "has_server": true,
+        "has_data": false,
+        "has_deploy": false,
+        "has_client": false,
+        "has_test": true,
+        "evidence": {
+          "has_server": [
+            "orders-core/pom.xml: servlet/Struts",
+            "orders-web/pom.xml: servlet/Struts"
+          ],
+          "has_data": [
+            "tree scan: 0 matches for {migrations/, schema.sql, prisma/, db-drivers, EF/.sqlproj/.sql, Hibernate}",
+            "tree scan: 0 matches for {migrations/, schema.sql, prisma/, db-drivers, EF/.sqlproj/.sql, Hibernate}"
+          ],
+          "has_deploy": [
+            "tree scan: 0 matches for {Dockerfile, k8s/, *.tf, serverless.yml, Chart.yaml}",
+            "tree scan: 0 matches for {Dockerfile, k8s/, *.tf, serverless.yml, Chart.yaml}"
+          ],
+          "has_client": [
+            "tree scan: 0 matches for {client deps, src/components/, WinForms/WPF, VB6/Delphi forms}",
+            "tree scan: 0 matches for {client deps, src/components/, WinForms/WPF, VB6/Delphi forms}"
+          ],
+          "has_test": [
+            "orders-core/src/test/",
+            "pom.xml: JUnit"
+          ]
+        }
+      },
+      "archetype_evidence": [
+        ".: service",
+        "orders-batch: unknown",
+        "orders-core: service",
+        "orders-web: service"
+      ],
+      "perRoot": [
+        {
+          "root": ".",
+          "archetype": "service",
+          "confidence": "medium",
+          "planeInventory": {
+            "has_server": true,
+            "has_data": false,
+            "has_deploy": false,
+            "has_client": false,
+            "has_test": true,
+            "evidence": {
+              "has_server": [
+                "orders-core/pom.xml: servlet/Struts",
+                "orders-web/pom.xml: servlet/Struts"
+              ],
+              "has_data": [
+                "tree scan: 0 matches for {migrations/, schema.sql, prisma/, db-drivers, EF/.sqlproj/.sql, Hibernate}"
+              ],
+              "has_deploy": [
+                "tree scan: 0 matches for {Dockerfile, k8s/, *.tf, serverless.yml, Chart.yaml}"
+              ],
+              "has_client": [
+                "tree scan: 0 matches for {client deps, src/components/, WinForms/WPF, VB6/Delphi forms}"
+              ],
+              "has_test": [
+                "orders-core/src/test/",
+                "pom.xml: JUnit",
+                "orders-core/pom.xml: JUnit"
+              ]
+            }
+          },
+          "evidencePointers": [
+            "orders-core/pom.xml: servlet/Struts"
+          ]
+        },
+        {
+          "root": "orders-batch",
+          "archetype": "unknown",
+          "confidence": "low",
+          "planeInventory": {
+            "has_server": false,
+            "has_data": false,
+            "has_deploy": false,
+            "has_client": false,
+            "has_test": false,
+            "evidence": {
+              "has_server": [
+                "tree scan: 0 matches for {server deps, server.* entrypoints, .NET web / Java servlet signatures}"
+              ],
+              "has_data": [
+                "tree scan: 0 matches for {migrations/, schema.sql, prisma/, db-drivers, EF/.sqlproj/.sql, Hibernate}"
+              ],
+              "has_deploy": [
+                "tree scan: 0 matches for {Dockerfile, k8s/, *.tf, serverless.yml, Chart.yaml}"
+              ],
+              "has_client": [
+                "tree scan: 0 matches for {client deps, src/components/, WinForms/WPF, VB6/Delphi forms}"
+              ],
+              "has_test": [
+                "tree scan: 0 matches for {__tests__/, tests/, *.test.*, jest/pyproject test config, MSTest/NUnit/xUnit/JUnit}"
+              ]
+            }
+          },
+          "evidencePointers": [
+            "ambiguous — default unknown"
+          ]
+        },
+        {
+          "root": "orders-core",
+          "archetype": "service",
+          "confidence": "medium",
+          "planeInventory": {
+            "has_server": true,
+            "has_data": false,
+            "has_deploy": false,
+            "has_client": false,
+            "has_test": true,
+            "evidence": {
+              "has_server": [
+                "pom.xml: servlet/Struts"
+              ],
+              "has_data": [
+                "tree scan: 0 matches for {migrations/, schema.sql, prisma/, db-drivers, EF/.sqlproj/.sql, Hibernate}"
+              ],
+              "has_deploy": [
+                "tree scan: 0 matches for {Dockerfile, k8s/, *.tf, serverless.yml, Chart.yaml}"
+              ],
+              "has_client": [
+                "tree scan: 0 matches for {client deps, src/components/, WinForms/WPF, VB6/Delphi forms}"
+              ],
+              "has_test": [
+                "src/test/",
+                "pom.xml: JUnit"
+              ]
+            }
+          },
+          "evidencePointers": [
+            "pom.xml: servlet/Struts"
+          ]
+        },
+        {
+          "root": "orders-web",
+          "archetype": "service",
+          "confidence": "medium",
+          "planeInventory": {
+            "has_server": true,
+            "has_data": false,
+            "has_deploy": false,
+            "has_client": false,
+            "has_test": false,
+            "evidence": {
+              "has_server": [
+                "src/main/webapp/index.jsp",
+                "pom.xml: servlet/Struts"
+              ],
+              "has_data": [
+                "tree scan: 0 matches for {migrations/, schema.sql, prisma/, db-drivers, EF/.sqlproj/.sql, Hibernate}"
+              ],
+              "has_deploy": [
+                "tree scan: 0 matches for {Dockerfile, k8s/, *.tf, serverless.yml, Chart.yaml}"
+              ],
+              "has_client": [
+                "tree scan: 0 matches for {client deps, src/components/, WinForms/WPF, VB6/Delphi forms}"
+              ],
+              "has_test": [
+                "tree scan: 0 matches for {__tests__/, tests/, *.test.*, jest/pyproject test config, MSTest/NUnit/xUnit/JUnit}"
+              ]
+            }
+          },
+          "evidencePointers": [
+            "src/main/webapp/index.jsp"
+          ]
+        }
+      ],
+      "archetype_source": "auto"
+    },
+    "headline": {
+      "score": 5.71,
+      "canonical_score": 5.71,
+      "renormalized_score": 24.69,
+      "score_policy": "frozen",
+      "suppressed": false,
+      "tier": "Critical",
+      "tier_legacy": "Critical",
+      "ci_band": "degraded"
+    },
+    "categories": [
+      {
+        "id": "VEL",
+        "name": "Developer Velocity & Operational Drag",
+        "weight": 10,
+        "canonical_weight": 10,
+        "applicable": 4,
+        "scored_sum": 0,
+        "category_score": 0,
+        "renormalized_category_score": null,
+        "weighted_contribution": 0,
+        "legacy_weighted_contribution": 0,
+        "status_counts": {
+          "measured": 0,
+          "estimated": 0,
+          "unknown": 4,
+          "not_applicable": 0,
+          "not_implemented": 8
+        },
+        "indicator_rows": [
+          {
+            "id": "VEL-06",
+            "name": "Bus factor",
+            "category_id": "VEL",
+            "status": "unknown",
+            "unknown_measure_path": "what it takes: gh-api VEL-06 failed (no facts)",
+            "effort": "⚡ ≤30 min"
+          },
+          {
+            "id": "VEL-09",
+            "name": "PR & code-review hygiene",
+            "category_id": "VEL",
+            "status": "unknown",
+            "unknown_measure_path": "what it takes: gh-api VEL-09 failed (no facts)",
+            "effort": "⚡ ≤30 min"
+          },
+          {
+            "id": "VEL-08",
+            "name": "Manual release steps",
+            "category_id": "VEL",
+            "status": "unknown",
+            "unknown_measure_path": "what it takes: gh-api VEL-08 failed (no facts)",
+            "effort": "🔶 ~2–4 h"
+          },
+          {
+            "id": "VEL-10",
+            "name": "Branching topology",
+            "category_id": "VEL",
+            "status": "unknown",
+            "unknown_measure_path": "what it takes: gh-api VEL-10 failed (no facts)",
+            "effort": "⚡ ≤30 min"
+          },
+          {
+            "id": "VEL-01",
+            "name": "CI/CD Build Duration",
+            "category_id": "VEL",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — VEL-01 requires a detector (see rubric)",
+            "effort": "⚡ ≤30 min",
+            "not_applicable": false
+          },
+          {
+            "id": "VEL-02",
+            "name": "Local Dev Setup Time & Friction",
+            "category_id": "VEL",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — VEL-02 requires a detector (see rubric)",
+            "effort": "🔶 ~2–4 h",
+            "not_applicable": false
+          },
+          {
+            "id": "VEL-03",
+            "name": "Deployment Failure Rate (CFR)",
+            "category_id": "VEL",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — VEL-03 requires a detector (see rubric)",
+            "effort": "🔶 ~2–4 h",
+            "not_applicable": false
+          },
+          {
+            "id": "VEL-04",
+            "name": "Deployment Frequency & Lead Time",
+            "category_id": "VEL",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — VEL-04 requires a detector (see rubric)",
+            "effort": "🔶 ~2–4 h",
+            "not_applicable": false
+          },
+          {
+            "id": "VEL-05",
+            "name": "Onboarding Lead Time to First Production PR",
+            "category_id": "VEL",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — VEL-05 requires a detector (see rubric)",
+            "effort": "🔶 ~2–4 h",
+            "not_applicable": false
+          },
+          {
+            "id": "VEL-07",
+            "name": "Environment Reproducibility / Works-on-My-Machine",
+            "category_id": "VEL",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — VEL-07 requires a detector (see rubric)",
+            "effort": "🔶 ~2–4 h",
+            "not_applicable": false
+          },
+          {
+            "id": "VEL-11",
+            "name": "Developer Experience Tooling",
+            "category_id": "VEL",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — VEL-11 requires a detector (see rubric)",
+            "effort": "🔷 ~1–2 days",
+            "not_applicable": false
+          },
+          {
+            "id": "VEL-12",
+            "name": "Incident Recovery / MTTR",
+            "category_id": "VEL",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — VEL-12 requires a detector (see rubric)",
+            "effort": "🔷 ~1–2 days",
+            "not_applicable": false
+          }
+        ]
+      },
+      {
+        "id": "SEC",
+        "name": "Security, Compliance & Vulnerability",
+        "weight": 20,
+        "canonical_weight": 20,
+        "applicable": 6,
+        "scored_sum": 2,
+        "category_score": 11.11111111111111,
+        "renormalized_category_score": 22.22222222222222,
+        "weighted_contribution": 2.2222222222222223,
+        "legacy_weighted_contribution": 9.876543209876543,
+        "status_counts": {
+          "measured": 3,
+          "estimated": 0,
+          "unknown": 3,
+          "not_applicable": 0,
+          "not_implemented": 4
+        },
+        "indicator_rows": [
+          {
+            "id": "SEC-07",
+            "name": "Patch cadence & update workflow",
+            "category_id": "SEC",
+            "status": "unknown",
+            "unknown_measure_path": "what it takes: gh-api SEC-07 failed (no facts)",
+            "effort": "⚡ ≤30 min"
+          },
+          {
+            "id": "SEC-01",
+            "name": "Unpatched Vulnerabilities",
+            "category_id": "SEC",
+            "status": "unknown",
+            "unknown_measure_path": "resolve locked dependency versions and join them to a known-vulnerability source (the vendored advisory snapshot covers a curated subset; an uncovered ecosystem needs advisory data the snapshot lacks); no lockfile found — versions are unpinned so advisories cannot be matched",
+            "effort": "🔶 ~2–4 h"
+          },
+          {
+            "id": "SEC-06",
+            "name": "Insecure Transitive Chains",
+            "category_id": "SEC",
+            "status": "unknown",
+            "unknown_measure_path": "resolve depth≥2 transitive chains out of the lockfile against an advisory source with import-closure reachability — the offline release ships no transitive-chain resolver (depth≤1 vulns are SEC-01)",
+            "effort": "🔶 ~2–4 h"
+          },
+          {
+            "id": "SEC-02",
+            "name": "Hardcoded Secrets & Credentials",
+            "category_id": "SEC",
+            "status": "measured",
+            "score": 2,
+            "reason": "clean tree; 1 history-only finding(s) — per SEC-02 Yellow flag: rotated secrets in history — score 2.",
+            "evidence": {
+              "tool": "secret-rules",
+              "tool_version": "1.0",
+              "pointers": [
+                {
+                  "endpoint": "git",
+                  "detail": "git log -p --all over bounded history; history_scanned_full=true"
+                }
+              ],
+              "facts": {
+                "tree_findings": [],
+                "history_only_findings": 1,
+                "history_only_findings_list": [
+                  {
+                    "rule": "aws-access-token",
+                    "file": "apps/scanner/src/scan/__tests__/detector-honesty.test.ts",
+                    "commit": "085bb36511e50ced65ef13d928e6034366f7ca42"
+                  }
+                ],
+                "verified_live": 0,
+                "history_scanned_full": true,
+                "history_scanned": true,
+                "rules_applied": [
+                  "aws-access-token",
+                  "github-pat",
+                  "google-api-key",
+                  "slack-token",
+                  "stripe-secret-key",
+                  "private-key",
+                  "jwt",
+                  "basic-auth-url",
+                  "generic-secret-assignment"
+                ],
+                "wider_scanners_run": [],
+                "wider_scanners_declared": [],
+                "files_scanned": 10
+              }
+            },
+            "effort": "⚡ ≤30 min",
+            "remediation": {
+              "quick_win": "rotate EVERY leaked credential immediately (the exposure window starts at commit time, not discovery time), remove from current tree, switch to env vars.",
+              "structural": "adopt a secret manager + injection (Vault, Secrets Manager), ban secrets in code via CI scanners on every commit *and* a history scrub, least-privilege per environment, kill the \"secrets in docs\" habit.",
+              "gold_standard": "Zero secrets in the tree or history; secrets injected at runtime from a manager; CI blocks secret commits; rotation drill run annually.",
+              "effort": "⚡ ≤30 min"
+            }
+          },
+          {
+            "id": "SEC-09",
+            "name": "Input Robustness & Fuzzing",
+            "category_id": "SEC",
+            "status": "measured",
+            "score": 0,
+            "reason": "Parsing surface unknown surface; zero harnesses; no sanitizers — per SEC-09 Red: input robustness untested — score 0 (presence-only caveat).",
+            "evidence": {
+              "tool": "fuzz-inventory",
+              "tool_version": "1.1",
+              "pointers": [
+                {
+                  "detail": "no fuzz harness"
+                }
+              ],
+              "facts": {
+                "harnesses": [],
+                "sanitizers_in_build": false,
+                "continuous_fuzzing": {
+                  "oss_fuzz": false,
+                  "scheduled_workflow": false
+                },
+                "parser_surface_detected": []
+              }
+            },
+            "effort": "🔷 ~1–2 days",
+            "remediation": {
+              "quick_win": "stand up fuzz harnesses for the top 3 untrusted parsers, run sanitizer builds, harden validation at those boundaries (limits, types, structure).",
+              "structural": "fuzz-in-CI for parser-adjacent code, migrate memory-unsafe parsers, input-validation as a platform concern, adversarial corpus maintenance.",
+              "gold_standard": "Every untrusted parser fuzzed in CI with sanitizers, zero standing crashes, validation layers reject early and clearly.",
+              "effort": "🔷 ~1–2 days"
+            }
+          },
+          {
+            "id": "SEC-10",
+            "name": "Security Testing in CI",
+            "category_id": "SEC",
+            "status": "measured",
+            "score": 0,
+            "reason": "No security CI jobs — classes none; jobs none — per SEC-10 Red: no SAST/deps/secret/image gates — score 0.",
+            "evidence": {
+              "tool": "sec-ci-inventory",
+              "tool_version": "1.1",
+              "pointers": [
+                {
+                  "detail": "no security CI",
+                  "file": ".github/workflows"
+                }
+              ],
+              "facts": {
+                "security_jobs": [],
+                "classes_present": [],
+                "secret_scan_covers_history": false,
+                "image_scan_on_build": false,
+                "workflow_permissions_hardened": false
+              }
+            },
+            "effort": "🔷 ~1–2 days",
+            "remediation": {
+              "quick_win": "add Semgrep/CodeQL failing gates, secret scan on history + CI, TRIVY on images — this week.",
+              "structural": "a security-as-quality pipeline (SAST, deps, secrets, container, DAST on staging, threat modelling for new features), a findings tracking loop (owner, SLA, retest), and a hard \"no gate-less merge\" rule.",
+              "gold_standard": "Five scan categories failing in CI, findings tracked to closure within SLA, DAST regularly scheduled, threat modelling on all new boundaries.",
+              "effort": "🔷 ~1–2 days"
+            }
+          },
+          {
+            "id": "SEC-03",
+            "name": "Missing Web Security Controls",
+            "category_id": "SEC",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — SEC-03 requires a detector (see rubric)",
+            "effort": "🔶 ~2–4 h",
+            "not_applicable": false
+          },
+          {
+            "id": "SEC-04",
+            "name": "Authentication & Authorization Weaknesses",
+            "category_id": "SEC",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — SEC-04 requires a detector (see rubric)",
+            "effort": "🔶 ~2–4 h",
+            "not_applicable": false
+          },
+          {
+            "id": "SEC-05",
+            "name": "Audit Logging Deficits",
+            "category_id": "SEC",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — SEC-05 requires a detector (see rubric)",
+            "effort": "🔶 ~2–4 h",
+            "not_applicable": false
+          },
+          {
+            "id": "SEC-08",
+            "name": "Compliance Drift",
+            "category_id": "SEC",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — SEC-08 requires a detector (see rubric)",
+            "effort": "🔶 ~2–4 h",
+            "not_applicable": false
+          }
+        ]
+      },
+      {
+        "id": "TEST",
+        "name": "Testing & Quality Engineering",
+        "weight": 10,
+        "canonical_weight": 10,
+        "applicable": 3,
+        "scored_sum": 1,
+        "category_score": 11.11111111111111,
+        "renormalized_category_score": 33.33333333333333,
+        "weighted_contribution": 1.1111111111111112,
+        "legacy_weighted_contribution": 7.4074074074074066,
+        "status_counts": {
+          "measured": 1,
+          "estimated": 0,
+          "unknown": 2,
+          "not_applicable": 0,
+          "not_implemented": 7
+        },
+        "indicator_rows": [
+          {
+            "id": "TEST-08",
+            "name": "Quality gates in CI",
+            "category_id": "TEST",
+            "status": "unknown",
+            "unknown_measure_path": "what it takes: gh-api TEST-08 failed (no facts)",
+            "effort": "⚡ ≤30 min"
+          },
+          {
+            "id": "TEST-03",
+            "name": "Test Pyramid Inversion",
+            "category_id": "TEST",
+            "status": "unknown",
+            "unknown_measure_path": "only 0% of 1 test files could be tier-classified (<60%) — enumerate test files and classify each by path/framework markers — needs an enumerable tree with test files (per-file tier assignment is a heuristic, so this row is `estimated`, never `measured`)",
+            "effort": "🔶 ~2–4 h"
+          },
+          {
+            "id": "TEST-05",
+            "name": "Skipped / Disabled Tests",
+            "category_id": "TEST",
+            "status": "measured",
+            "score": 1,
+            "reason": "1/2 skipped (50%, oldest 25d) — per TEST-05 Red flag: >10% skipped or skips aged >6mo — score 1.",
+            "evidence": {
+              "tool": "test-scan",
+              "tool_version": "1.1",
+              "pointers": [
+                {
+                  "file": "orders-core/src/test/java/com/acme/orders/LedgerTest.java",
+                  "detail": "1 skip marker(s) at line(s) 15"
+                },
+                {
+                  "endpoint": "git",
+                  "detail": "git blame -L for 1 skip marker(s)"
+                }
+              ],
+              "facts": {
+                "total_tests_est": 2,
+                "skipped_total": 1,
+                "skip_ratio": 0.5,
+                "aged_skips": [
+                  {
+                    "file": "orders-core/src/test/java/com/acme/orders/LedgerTest.java",
+                    "age_days": 25
+                  }
+                ],
+                "ci_exclusions": []
+              }
+            },
+            "effort": "⚡ ≤30 min",
+            "remediation": {
+              "quick_win": "re-enable or delete each skip deliberately (delete-with-justification or fix-with-test); no skips without a linked ticket and owner.",
+              "structural": "CI gate that fails on new skips without a ticket; a monthly \"skip inventory\" review; fix the top skipped module's root cause.",
+              "gold_standard": "< 2% skipped, all with tickets + owners, none older than a sprint; new skips auto-blocked.",
+              "effort": "⚡ ≤30 min"
+            }
+          },
+          {
+            "id": "TEST-01",
+            "name": "Code Coverage Degradation",
+            "category_id": "TEST",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — TEST-01 requires a detector (see rubric)",
+            "effort": "⚡ ≤30 min",
+            "not_applicable": false
+          },
+          {
+            "id": "TEST-02",
+            "name": "Flaky Test Rate",
+            "category_id": "TEST",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — TEST-02 requires a detector (see rubric)",
+            "effort": "🔶 ~2–4 h",
+            "not_applicable": false
+          },
+          {
+            "id": "TEST-04",
+            "name": "Test Run Time",
+            "category_id": "TEST",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — TEST-04 requires a detector (see rubric)",
+            "effort": "⚡ ≤30 min",
+            "not_applicable": false
+          },
+          {
+            "id": "TEST-06",
+            "name": "Core Domain Untested",
+            "category_id": "TEST",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — TEST-06 requires a detector (see rubric)",
+            "effort": "🔶 ~2–4 h",
+            "not_applicable": false
+          },
+          {
+            "id": "TEST-07",
+            "name": "Test Isolation & Hermeticity",
+            "category_id": "TEST",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — TEST-07 requires a detector (see rubric)",
+            "effort": "🔶 ~2–4 h",
+            "not_applicable": false
+          },
+          {
+            "id": "TEST-09",
+            "name": "Mutation Testing Score",
+            "category_id": "TEST",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — TEST-09 requires a detector (see rubric)",
+            "effort": "🔷 ~1–2 days",
+            "not_applicable": false
+          },
+          {
+            "id": "TEST-10",
+            "name": "Test Maintenance Burden",
+            "category_id": "TEST",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — TEST-10 requires a detector (see rubric)",
+            "effort": "🔷 ~1–2 days",
+            "not_applicable": false
+          }
+        ]
+      },
+      {
+        "id": "ECOS",
+        "name": "Dependency & Ecosystem Health",
+        "weight": 10,
+        "canonical_weight": 10,
+        "applicable": 7,
+        "scored_sum": 5,
+        "category_score": 23.809523809523807,
+        "renormalized_category_score": 33.33333333333333,
+        "weighted_contribution": 2.380952380952381,
+        "legacy_weighted_contribution": 7.4074074074074066,
+        "status_counts": {
+          "measured": 4,
+          "estimated": 1,
+          "unknown": 2,
+          "not_applicable": 0,
+          "not_implemented": 3
+        },
+        "indicator_rows": [
+          {
+            "id": "ECOS-01",
+            "name": "Runtime/Language EOL",
+            "category_id": "ECOS",
+            "status": "measured",
+            "score": 1,
+            "reason": "java@1.7 (cycle 7, EOL PASSED, pin pom.xml); EOL runtime confined outside core — per ECOS-01 Yellow flag: EOL in an isolated path — score 1.",
+            "evidence": {
+              "tool": "eol-snapshot",
+              "tool_version": "1.1",
+              "pointers": [
+                {
+                  "file": "pom.xml",
+                  "detail": "java 1.7 → cycle 7, EOL 2022-07-19 (-1578d)"
+                },
+                {
+                  "endpoint": "eol-snapshot",
+                  "detail": "vendored eol dataset eol-2026.10-1c0bd1337838"
+                }
+              ],
+              "facts": {
+                "runtimes": [
+                  {
+                    "product": "java",
+                    "version": "1.7",
+                    "cycle": "7",
+                    "pin_source": "pom.xml",
+                    "eol_date": "2022-07-19",
+                    "days_until_eol": -1578,
+                    "is_past_eol": true
+                  }
+                ],
+                "conflict": false,
+                "unmapped_pins": [],
+                "lookup_ok": true
+              }
+            },
+            "effort": "⚡ ≤30 min",
+            "remediation": {
+              "quick_win": "document the gap, create the upgrade ticket with a date.",
+              "structural": "parallel runtime upgrade plan — run new runtime in CI behind a feature gate, migrate one service at a time, dual-run in prod. For truly stuck runtimes, isolate behind a facade and treat like a rewrite candidate.",
+              "gold_standard": "Every production runtime within its vendor-supported window; CI builds a canary job on the current runtime; a deprecation calendar exists and is reviewed quarterly.",
+              "effort": "⚡ ≤30 min"
+            }
+          },
+          {
+            "id": "ECOS-02",
+            "name": "Major Package Drift",
+            "category_id": "ECOS",
+            "status": "measured",
+            "score": 0,
+            "reason": "33.3% ≥1 major behind, 33.3% ≥2; worst core gap org.apache.struts:struts2-core 4 major(s) — per ECOS-02 Red flag: core framework stuck ≥2 majors — score 0.",
+            "evidence": {
+              "tool": "lockfile-parse",
+              "tool_version": "1.1",
+              "pointers": [
+                {
+                  "endpoint": "lockfile-parse",
+                  "detail": "package metadata snapshot eol-2026.10-1c0bd1337838"
+                }
+              ],
+              "facts": {
+                "direct_deps_total": 7,
+                "unresolvable": 1,
+                "unresolvable_names": [
+                  "com.acme:mystery-report-lib"
+                ],
+                "resolvable_ratio": 0.857,
+                "pct_behind_1plus_major": 33.3,
+                "pct_behind_2plus_major": 33.3,
+                "core_framework_gaps": [
+                  {
+                    "name": "org.apache.struts:struts2-core",
+                    "current": "2.3.30",
+                    "latest_major": 6,
+                    "majors_behind": 4
+                  }
+                ]
+              }
+            },
+            "effort": "⚡ ≤30 min",
+            "remediation": {
+              "quick_win": "enable Dependabot/Renovate with major-update grouping and a monthly budget.",
+              "structural": "\"upgrade train\" — pick one major hop per quarter, keep intermediate commits shippable, use the dependency graph from tools to sequence hops (don't skip majors). Establish a \"never more than 1 major behind\" policy for core deps.",
+              "gold_standard": "Core framework within 1 major of current; < 30% of direct deps behind by a major; automatic update PRs flowing weekly; majors scheduled explicitly on the roadmap.",
+              "effort": "⚡ ≤30 min"
+            }
+          },
+          {
+            "id": "ECOS-03",
+            "name": "Abandoned / Unmaintained Libraries",
+            "category_id": "ECOS",
+            "status": "unknown",
+            "unknown_measure_path": "resolve each load-bearing dependency to its last-release date from a package-metadata source (the vendored snapshot ships last_release for a curated subset); no lockfile found — pin your dependencies so per-version abandonment is knowable",
+            "effort": "⚡ ≤30 min"
+          },
+          {
+            "id": "ECOS-05",
+            "name": "License Compliance Risk",
+            "category_id": "ECOS",
+            "status": "estimated",
+            "score": 1,
+            "reason": "1 unknown-license + 0 strong-copyleft of 7 direct deps — per ECOS-05 Yellow flag: unknown/copyleft present — score 1 (estimated clamp [1,2]).",
+            "evidence": {
+              "tool": "lockfile-parse",
+              "tool_version": "1.1",
+              "pointers": [
+                {
+                  "file": "manifest:java",
+                  "detail": "com.acme:mystery-report-lib license classified from package metadata"
+                },
+                {
+                  "file": "manifest:java",
+                  "detail": "commons-io:commons-io license classified from package metadata"
+                },
+                {
+                  "file": "manifest:java",
+                  "detail": "log4j:log4j license classified from package metadata"
+                },
+                {
+                  "file": "manifest:java",
+                  "detail": "org.apache.commons:commons-lang3 license classified from package metadata"
+                },
+                {
+                  "endpoint": "eol-snapshot",
+                  "detail": "license metadata from snapshot eol-2026.10-1c0bd1337838"
+                }
+              ],
+              "facts": {
+                "packages_total": 7,
+                "license_unknown_count": 1,
+                "license_unknown_names": [
+                  "com.acme:mystery-report-lib"
+                ],
+                "copyleft_strong": [],
+                "copyleft_weak_count": 0,
+                "sbom_present_in_repo": false,
+                "ci_license_gate_present": false,
+                "closed_source_distribution_likely": false
+              }
+            },
+            "effort": "🔶 ~2–4 h",
+            "remediation": {
+              "quick_win": "generate an SBOM (`syft . > sbom.json`), wire it into CI, publish attribution files.",
+              "structural": "add a license gate to CI (fail on GPL in closed-source), replace copyleft deps, retire unknown-license packages, review vendored code for stripped notices.",
+              "gold_standard": "SBOM generated and attested on every release; license policy enforced in CI; zero unknown licenses; copyleft list reviewed quarterly and signed off.",
+              "effort": "🔶 ~2–4 h"
+            }
+          },
+          {
+            "id": "ECOS-07",
+            "name": "Build Reproducibility & Lockfile Integrity",
+            "category_id": "ECOS",
+            "status": "measured",
+            "score": 0,
+            "reason": "no lockfile; pin_ratio 88.9% — per ECOS-07 Red flag: no lockfile or floating pins — score 0.",
+            "evidence": {
+              "tool": "lockfile-parse",
+              "tool_version": "1.1",
+              "pointers": [
+                {
+                  "endpoint": "lockfile-parse",
+                  "detail": "no lockfile mechanism for java:pom.xml — absence is structural, not a coverage gap; pinning is assessed from the manifest declarations"
+                },
+                {
+                  "endpoint": "git",
+                  "detail": "lockfile staleness from git last-commit dates"
+                }
+              ],
+              "facts": {
+                "lockfiles": [],
+                "lockfile_mechanism_absent": [
+                  "java:pom.xml"
+                ],
+                "pin_ratio": 88.9,
+                "ci_immutable_install": {
+                  "enforced": false,
+                  "evidence": "no immutable install command found in CI"
+                },
+                "mutable_install_sites": [],
+                "manifests_total": 4
+              }
+            },
+            "effort": "⚡ ≤30 min",
+            "remediation": {
+              "quick_win": "commit the lockfile, switch CI to `npm ci`/`pip install --require-hashes`/`--frozen-lockfile`, add a \"lockfile up-to-date\" CI check.",
+              "structural": "adopt content-hash pinning, build from clean containers, produce provenance attestations (SLSA level 1→2), verify registry integrity.",
+              "gold_standard": "Lockfile committed and current; CI immutable install; two clean builds produce byte-identical artifacts; SLSA provenance generated per release.",
+              "effort": "⚡ ≤30 min"
+            }
+          },
+          {
+            "id": "ECOS-06",
+            "name": "Dependency Bloat",
+            "category_id": "ECOS",
+            "status": "unknown",
+            "unknown_measure_path": "parse the lockfile graph for transitive counts and duplicate versions (unused-direct detection needs a dead-dependency analyser this build does not run); no lockfile found — transitive counts are unknowable",
+            "effort": "⚡ ≤30 min"
+          },
+          {
+            "id": "ECOS-08",
+            "name": "Framework Lock-in & Monoculture Risk",
+            "category_id": "ECOS",
+            "status": "measured",
+            "score": 3,
+            "reason": "struts2@2.3.30 active; all active — per ECOS-08 Green: supported lifecycle — score 3.",
+            "evidence": {
+              "tool": "eol-snapshot",
+              "tool_version": "1.1",
+              "pointers": [
+                {
+                  "file": "manifest:java",
+                  "detail": "framework dependency declared here"
+                },
+                {
+                  "endpoint": "eol-snapshot",
+                  "detail": "framework lifecycle from snapshot eol-2026.10-1c0bd1337838"
+                }
+              ],
+              "facts": {
+                "frameworks": [
+                  {
+                    "name": "struts2",
+                    "version": "2.3.30",
+                    "support_status": "active",
+                    "eol_date": null
+                  }
+                ],
+                "coupling_share": 0,
+                "facade_layer_detected": false,
+                "fork_pinned": false
+              }
+            },
+            "effort": "⚡ ≤30 min",
+            "remediation": {
+              "quick_win": "quantify the coupling (which modules touch framework-specific APIs directly) and freeze scope on framework-dependent features.",
+              "structural": "extract the framework behind a facade at the boundaries (ports & adapters), migrate incrementally module-by-module on the critical path, keep the system runnable through the whole migration.",
+              "gold_standard": "Framework either current-and-supported, or the core logic is framework-independent behind an interface with an active migration plan.",
+              "effort": "⚡ ≤30 min"
+            }
+          },
+          {
+            "id": "ECOS-04",
+            "name": "Deprecated API Usage",
+            "category_id": "ECOS",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — ECOS-04 requires a detector (see rubric)",
+            "effort": "⚡ ≤30 min",
+            "not_applicable": false
+          },
+          {
+            "id": "ECOS-09",
+            "name": "Version Skew Across Services",
+            "category_id": "ECOS",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — ECOS-09 requires a detector (see rubric)",
+            "effort": "🔷 ~1–2 days",
+            "not_applicable": false
+          },
+          {
+            "id": "ECOS-10",
+            "name": "Supply-Chain: Typosquatting, Malware, & Registry Risk",
+            "category_id": "ECOS",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — ECOS-10 requires a detector (see rubric)",
+            "effort": "🔷 ~1–2 days",
+            "not_applicable": false
+          }
+        ]
+      },
+      {
+        "id": "ARCH",
+        "name": "Architecture & Code Quality",
+        "weight": 15,
+        "canonical_weight": 15,
+        "applicable": 3,
+        "scored_sum": 0,
+        "category_score": 0,
+        "renormalized_category_score": null,
+        "weighted_contribution": 0,
+        "legacy_weighted_contribution": 0,
+        "status_counts": {
+          "measured": 0,
+          "estimated": 0,
+          "unknown": 3,
+          "not_applicable": 0,
+          "not_implemented": 9
+        },
+        "indicator_rows": [
+          {
+            "id": "ARCH-01",
+            "name": "Cognitive Complexity & God Classes",
+            "category_id": "ARCH",
+            "status": "unknown",
+            "unknown_measure_path": "run a complexity analyzer (cyclomatic complexity + LOC per method, e.g. lizard/radon) over non-vendored source and join offenders to the core-path set — the offline release ships no such analyzer",
+            "effort": "🔶 ~2–4 h"
+          },
+          {
+            "id": "ARCH-08",
+            "name": "Duplication Debt",
+            "category_id": "ARCH",
+            "status": "unknown",
+            "unknown_measure_path": "run a token-based duplication analyzer (min-tokens 50, e.g. jscpd) over non-vendored source to compute duplication_pct and security-critical duplicate clusters — the offline release ships no such analyzer",
+            "effort": "🔶 ~2–4 h"
+          },
+          {
+            "id": "ARCH-05",
+            "name": "Code Churn vs. Defect Hot Spots",
+            "category_id": "ARCH",
+            "status": "unknown",
+            "unknown_measure_path": "history too thin: 90 commits / 75d (< 200 commits or < 180d) — run a git hot-spot analysis over ≥200 commits and ≥6 months of history (git log --name-only + bugfix subject correlation)",
+            "effort": "🔶 ~2–4 h"
+          },
+          {
+            "id": "ARCH-02",
+            "name": "Coupling & Cohesion",
+            "category_id": "ARCH",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — ARCH-02 requires a detector (see rubric)",
+            "effort": "🔶 ~2–4 h",
+            "not_applicable": false
+          },
+          {
+            "id": "ARCH-03",
+            "name": "Layer & Boundary Violations",
+            "category_id": "ARCH",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — ARCH-03 requires a detector (see rubric)",
+            "effort": "🔶 ~2–4 h",
+            "not_applicable": false
+          },
+          {
+            "id": "ARCH-04",
+            "name": "Dead & Orphaned Code",
+            "category_id": "ARCH",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — ARCH-04 requires a detector (see rubric)",
+            "effort": "⚡ ≤30 min",
+            "not_applicable": false
+          },
+          {
+            "id": "ARCH-06",
+            "name": "Architectural Era / Framework Generation",
+            "category_id": "ARCH",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — ARCH-06 requires a detector (see rubric)",
+            "effort": "🔶 ~2–4 h",
+            "not_applicable": false
+          },
+          {
+            "id": "ARCH-07",
+            "name": "Global Mutable State & Hidden Dependencies",
+            "category_id": "ARCH",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — ARCH-07 requires a detector (see rubric)",
+            "effort": "🔶 ~2–4 h",
+            "not_applicable": false
+          },
+          {
+            "id": "ARCH-09",
+            "name": "Agentic Operability (AI/LLM Codebase-Readiness)",
+            "category_id": "ARCH",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — ARCH-09 requires a detector (see rubric)",
+            "effort": "🔶 ~2–4 h",
+            "not_applicable": false
+          },
+          {
+            "id": "ARCH-10",
+            "name": "Feature-Flag & Configuration Debt",
+            "category_id": "ARCH",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — ARCH-10 requires a detector (see rubric)",
+            "effort": "⚡ ≤30 min",
+            "not_applicable": false
+          },
+          {
+            "id": "ARCH-11",
+            "name": "Nullable/Untyped Code & Runtime Error Density",
+            "category_id": "ARCH",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — ARCH-11 requires a detector (see rubric)",
+            "effort": "🔷 ~1–2 days",
+            "not_applicable": false
+          },
+          {
+            "id": "ARCH-12",
+            "name": "Duplicated Cross-Cutting Concerns (auth, logging, error handling, transactions)",
+            "category_id": "ARCH",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — ARCH-12 requires a detector (see rubric)",
+            "effort": "🔷 ~1–2 days",
+            "not_applicable": false
+          }
+        ]
+      },
+      {
+        "id": "DOCS",
+        "name": "Documentation & Knowledge Continuity",
+        "weight": 5,
+        "canonical_weight": 5,
+        "applicable": 5,
+        "scored_sum": 0,
+        "category_score": 0,
+        "renormalized_category_score": 0,
+        "weighted_contribution": 0,
+        "legacy_weighted_contribution": 0,
+        "status_counts": {
+          "measured": 5,
+          "estimated": 0,
+          "unknown": 0,
+          "not_applicable": 0,
+          "not_implemented": 5
+        },
+        "indicator_rows": [
+          {
+            "id": "DOCS-01",
+            "name": "Missing Architectural Decision Records (ADRs)",
+            "category_id": "DOCS",
+            "status": "measured",
+            "score": 0,
+            "reason": "No decision records — no ADR directory found; architecture changes are undocumented — per DOCS-01 Red flag: decisions live only in heads, onboarding requires a listening tour — score 0.",
+            "evidence": {
+              "tool": "adr-inventory",
+              "tool_version": "1.1",
+              "pointers": [
+                {
+                  "detail": "no ADR dir found"
+                }
+              ],
+              "facts": {
+                "adr_dir": null,
+                "adr_count": 0,
+                "newest_adr_days": null
+              }
+            },
+            "effort": "🔶 ~2–4 h",
+            "remediation": {
+              "quick_win": "write ADRs for the top 10 load-bearing decisions (interview the oldest engineers, mine git/past docs), establish a template + PR requirement for consequential choices.",
+              "structural": "ADR convention in the repo (ADR-NNN, status, decision, context, alternatives considered), decisions now documented at review time, an \"explain every load-bearing choice\" refactoring task.",
+              "gold_standard": "Every consequential decision has an ADR with alternatives; new decisions document as standard practice; teams can revisit a decision on evidence, not memory.",
+              "effort": "🔶 ~2–4 h"
+            }
+          },
+          {
+            "id": "DOCS-03",
+            "name": "Missing Runbooks & Operational Docs",
+            "category_id": "DOCS",
+            "status": "measured",
+            "score": 0,
+            "reason": "No runbooks — searched searched docs/runbooks, runbooks, docs/operations etc.; zero files found — per DOCS-03 Red flag: incidents recovered by heroics, every lesson repeated — score 0.",
+            "evidence": {
+              "tool": "runbook-inventory",
+              "tool_version": "1.1",
+              "pointers": [
+                {
+                  "detail": "no runbooks"
+                }
+              ],
+              "facts": {
+                "runbook_dir": null,
+                "count": 0,
+                "topics_covered": [],
+                "restore_doc_present": false,
+                "newest_days": null
+              }
+            },
+            "effort": "🔶 ~2–4 h",
+            "remediation": {
+              "quick_win": "write runbooks for the top 5 incident classes today (postmortem-driven), make them linkable from alert dashboards, add \"runme at the first sign\" steps.",
+              "structural": "runbook-as-product (owned, tested, games rehearsed), alert→runbook binding, postmortem = runbook update, drill the top runbook quarterly.",
+              "gold_standard": "Every incident class has a current, tested runbook; on-call executes procedures not improv; incident time is dominated by execution, not discovery.",
+              "effort": "🔶 ~2–4 h"
+            }
+          },
+          {
+            "id": "DOCS-04",
+            "name": "No Onboarding Guide / Developer Setup Docs",
+            "category_id": "DOCS",
+            "status": "measured",
+            "score": 0,
+            "reason": "No onboarding guide — no CONTRIBUTING.md / GETTING_STARTED.md and README has no setup section; stages missing: setup, run, test — per DOCS-04 Red flag: no documentation, new hires rely on tribal knowledge — score 0.",
+            "evidence": {
+              "tool": "onboarding-inventory",
+              "tool_version": "1.0",
+              "pointers": [
+                {
+                  "detail": "no onboarding docs"
+                }
+              ],
+              "facts": {
+                "docs_present": [],
+                "stages_covered": [],
+                "stages_missing": [
+                  "setup",
+                  "run",
+                  "test"
+                ],
+                "undefined_commands": [],
+                "last_verified_days": null
+              }
+            },
+            "effort": "⚡ ≤30 min",
+            "remediation": {
+              "quick_win": "write the golden path (clone → setup → run → test → first PR) and verify every command executes, add CONTRIBUTING.md.",
+              "structural": "golden path CI-verified (fresh container proves it — DOCS-09), onboarding checklist wired into the ticket system, \"setup docs break\" = blame-the-repo not the human.",
+              "gold_standard": "A new hire takes < 2 hours to a working local env entirely from docs; the setup guide is CI-tested and always current.",
+              "effort": "⚡ ≤30 min"
+            }
+          },
+          {
+            "id": "DOCS-08",
+            "name": "No Release Communication / Changelog",
+            "category_id": "DOCS",
+            "status": "measured",
+            "score": 0,
+            "reason": "No CHANGELOG.md found at any of 6 candidate paths; 0% of 0 sampled releases carry notes — per DOCS-08 Red flag: breaking changes ship unannounced, consumers learn from failures — score 0.",
+            "evidence": {
+              "tool": "changelog-inventory",
+              "tool_version": "1.0",
+              "pointers": [
+                {
+                  "detail": "no changelog"
+                }
+              ],
+              "facts": {
+                "changelog_present": false,
+                "changelog_current": false,
+                "releases_sampled": 0,
+                "with_notes_pct": 0,
+                "breaking_with_migration_guide": {
+                  "total_breaking": 0,
+                  "documented": 0
+                },
+                "release_tooling": null
+              }
+            },
+            "effort": "🔶 ~2–4 h",
+            "remediation": {
+              "quick_win": "adopt a CHANGELOG process (Keep-a-Changelog, auto-generated from commits/PRs), publish release notes for the top consumers, write migration guides for open breaking changes (backfill).",
+              "structural": "semantic-release automation (version + changelog + notes automated), a release-communication channel (port status page + email), \"breaking = migration guide in same MR\" rule.",
+              "gold_standard": "Every release has automated notes; every breaking change has a migration guide published with the change; consumers hear first, break never (silently).",
+              "effort": "🔶 ~2–4 h"
+            }
+          },
+          {
+            "id": "DOCS-09",
+            "name": "Docs-as-Code & Automation",
+            "category_id": "DOCS",
+            "status": "measured",
+            "score": 0,
+            "reason": "No docs-as-code automation — zero CI steps; no link-check; no API generation — per DOCS-09 Red flag: docs are wiki-only, drift unverified — score 0.",
+            "evidence": {
+              "tool": "docs-ci-inventory",
+              "tool_version": "1.1",
+              "pointers": [
+                {
+                  "detail": "no docs CI",
+                  "file": ".github/workflows"
+                }
+              ],
+              "facts": {
+                "doc_ci_steps": [],
+                "link_checker": false,
+                "api_gen_wired": false,
+                "staleness_gate": false
+              }
+            },
+            "effort": "🔷 ~1–2 days",
+            "remediation": {
+              "quick_win": "wire docs generation into CI (spec → reference), add links/lint checks for markdown, CI-verify the top setup commands (fresh container).",
+              "structural": "full docs-as-code — generate what's generatable, verify what's actionable, staleness gates (docs touch-required on code change), docs failures block merge like code failures.",
+              "gold_standard": "Docs build like code, generate from truth, verify their own commands, and fail CI on rot — the knowledge layer is as maintained as the code.",
+              "effort": "🔷 ~1–2 days"
+            }
+          },
+          {
+            "id": "DOCS-02",
+            "name": "Stale / Drifted Documentation",
+            "category_id": "DOCS",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — DOCS-02 requires a detector (see rubric)",
+            "effort": "⚡ ≤30 min",
+            "not_applicable": false
+          },
+          {
+            "id": "DOCS-05",
+            "name": "Tribal Knowledge & Oral Tradition",
+            "category_id": "DOCS",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — DOCS-05 requires a detector (see rubric)",
+            "effort": "🔶 ~2–4 h",
+            "not_applicable": false
+          },
+          {
+            "id": "DOCS-06",
+            "name": "Comment Debt & Self-Documenting Code Imbalance",
+            "category_id": "DOCS",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — DOCS-06 requires a detector (see rubric)",
+            "effort": "🔶 ~2–4 h",
+            "not_applicable": false
+          },
+          {
+            "id": "DOCS-07",
+            "name": "Missing API Documentation",
+            "category_id": "DOCS",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — DOCS-07 requires a detector (see rubric)",
+            "effort": "🔶 ~2–4 h",
+            "not_applicable": false
+          },
+          {
+            "id": "DOCS-10",
+            "name": "Knowledge Exit & Documentation Ownership",
+            "category_id": "DOCS",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — DOCS-10 requires a detector (see rubric)",
+            "effort": "🔷 ~1–2 days",
+            "not_applicable": false
+          }
+        ]
+      },
+      {
+        "id": "PERF",
+        "name": "Performance & Cloud/Infrastructure Fit",
+        "weight": 10,
+        "canonical_weight": 10,
+        "applicable": 0,
+        "scored_sum": 0,
+        "category_score": null,
+        "renormalized_category_score": null,
+        "weighted_contribution": 0,
+        "legacy_weighted_contribution": 0,
+        "status_counts": {
+          "measured": 0,
+          "estimated": 0,
+          "unknown": 0,
+          "not_applicable": 2,
+          "not_implemented": 8
+        },
+        "indicator_rows": [
+          {
+            "id": "PERF-02",
+            "name": "Legacy Deployment Model",
+            "category_id": "PERF",
+            "status": "not_applicable",
+            "unknown_measure_path": "no deploy plane detected (no has_deploy evidence, archetype mixed)",
+            "effort": "🔶 ~2–4 h",
+            "not_applicable": true,
+            "reason": "no deploy plane detected (no has_deploy evidence, archetype mixed)"
+          },
+          {
+            "id": "PERF-06",
+            "name": "Missing IaC / Config Drift",
+            "category_id": "PERF",
+            "status": "not_applicable",
+            "unknown_measure_path": "no deploy plane detected (no has_deploy evidence, archetype mixed)",
+            "effort": "🔶 ~2–4 h",
+            "not_applicable": true,
+            "reason": "no deploy plane detected (no has_deploy evidence, archetype mixed)"
+          },
+          {
+            "id": "PERF-01",
+            "name": "Observability Gaps",
+            "category_id": "PERF",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — PERF-01 requires a detector (see rubric)",
+            "effort": "🔶 ~2–4 h",
+            "not_applicable": false
+          },
+          {
+            "id": "PERF-03",
+            "name": "Resource Waste / Leakage",
+            "category_id": "PERF",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — PERF-03 requires a detector (see rubric)",
+            "effort": "🔷 ~1–2 days",
+            "not_applicable": false
+          },
+          {
+            "id": "PERF-04",
+            "name": "Monolithic Scaling Bottleneck",
+            "category_id": "PERF",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — PERF-04 requires a detector (see rubric)",
+            "effort": "🔷 ~1–2 days",
+            "not_applicable": false
+          },
+          {
+            "id": "PERF-05",
+            "name": "No Auto-Scaling / Capacity Planning",
+            "category_id": "PERF",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — PERF-05 requires a detector (see rubric)",
+            "effort": "🔶 ~2–4 h",
+            "not_applicable": false
+          },
+          {
+            "id": "PERF-07",
+            "name": "No SLOs / Performance Budgets",
+            "category_id": "PERF",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — PERF-07 requires a detector (see rubric)",
+            "effort": "🔶 ~2–4 h",
+            "not_applicable": false
+          },
+          {
+            "id": "PERF-08",
+            "name": "Runtime Waste & Startup Latency",
+            "category_id": "PERF",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — PERF-08 requires a detector (see rubric)",
+            "effort": "🔶 ~2–4 h",
+            "not_applicable": false
+          },
+          {
+            "id": "PERF-09",
+            "name": "Cost Efficiency / FinOps",
+            "category_id": "PERF",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — PERF-09 requires a detector (see rubric)",
+            "effort": "🔷 ~1–2 days",
+            "not_applicable": false
+          },
+          {
+            "id": "PERF-10",
+            "name": "Disaster Recovery & Resiliency",
+            "category_id": "PERF",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — PERF-10 requires a detector (see rubric)",
+            "effort": "🔷 ~1–2 days",
+            "not_applicable": false
+          }
+        ]
+      },
+      {
+        "id": "DATA",
+        "name": "Data & Schema Evolution",
+        "weight": 10,
+        "canonical_weight": 10,
+        "applicable": 0,
+        "scored_sum": 0,
+        "category_score": null,
+        "renormalized_category_score": null,
+        "weighted_contribution": 0,
+        "legacy_weighted_contribution": 0,
+        "status_counts": {
+          "measured": 0,
+          "estimated": 0,
+          "unknown": 0,
+          "not_applicable": 1,
+          "not_implemented": 9
+        },
+        "indicator_rows": [
+          {
+            "id": "DATA-01",
+            "name": "Schema Migration Backlog / \"Migration Hell\"",
+            "category_id": "DATA",
+            "status": "not_applicable",
+            "unknown_measure_path": "no data plane detected (no has_data evidence, archetype mixed)",
+            "effort": "🔶 ~2–4 h",
+            "not_applicable": true,
+            "reason": "no data plane detected (no has_data evidence, archetype mixed)"
+          },
+          {
+            "id": "DATA-02",
+            "name": "Database Coupling & Hidden Dependencies",
+            "category_id": "DATA",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — DATA-02 requires a detector (see rubric)",
+            "effort": "🔶 ~2–4 h",
+            "not_applicable": false
+          },
+          {
+            "id": "DATA-03",
+            "name": "Data Integrity & Constraint Degradation",
+            "category_id": "DATA",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — DATA-03 requires a detector (see rubric)",
+            "effort": "🔶 ~2–4 h",
+            "not_applicable": false
+          },
+          {
+            "id": "DATA-04",
+            "name": "Legacy Storage Technology",
+            "category_id": "DATA",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — DATA-04 requires a detector (see rubric)",
+            "effort": "🔷 ~1–2 days",
+            "not_applicable": false
+          },
+          {
+            "id": "DATA-05",
+            "name": "Lock Contention & Scaling Bottleneck",
+            "category_id": "DATA",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — DATA-05 requires a detector (see rubric)",
+            "effort": "🔷 ~1–2 days",
+            "not_applicable": false
+          },
+          {
+            "id": "DATA-06",
+            "name": "Data Lifecycle Management Deficits",
+            "category_id": "DATA",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — DATA-06 requires a detector (see rubric)",
+            "effort": "⚡ ≤30 min",
+            "not_applicable": false
+          },
+          {
+            "id": "DATA-07",
+            "name": "ORM / Query Performance Smells",
+            "category_id": "DATA",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — DATA-07 requires a detector (see rubric)",
+            "effort": "🔶 ~2–4 h",
+            "not_applicable": false
+          },
+          {
+            "id": "DATA-08",
+            "name": "Schema Overfitting & Model Rigidity",
+            "category_id": "DATA",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — DATA-08 requires a detector (see rubric)",
+            "effort": "🔶 ~2–4 h",
+            "not_applicable": false
+          },
+          {
+            "id": "DATA-09",
+            "name": "Event Sourcing / Audit Readiness",
+            "category_id": "DATA",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — DATA-09 requires a detector (see rubric)",
+            "effort": "🔷 ~1–2 days",
+            "not_applicable": false
+          },
+          {
+            "id": "DATA-10",
+            "name": "Environment Schema Drift",
+            "category_id": "DATA",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — DATA-10 requires a detector (see rubric)",
+            "effort": "🔷 ~1–2 days",
+            "not_applicable": false
+          }
+        ]
+      },
+      {
+        "id": "API",
+        "name": "API & Integration Surface",
+        "weight": 10,
+        "canonical_weight": 10,
+        "applicable": 0,
+        "scored_sum": 0,
+        "category_score": null,
+        "renormalized_category_score": null,
+        "weighted_contribution": 0,
+        "legacy_weighted_contribution": 0,
+        "status_counts": {
+          "measured": 0,
+          "estimated": 0,
+          "unknown": 0,
+          "not_applicable": 0,
+          "not_implemented": 10
+        },
+        "indicator_rows": [
+          {
+            "id": "API-01",
+            "name": "API Contract Drift",
+            "category_id": "API",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — API-01 requires a detector (see rubric)",
+            "effort": "🔶 ~2–4 h",
+            "not_applicable": false
+          },
+          {
+            "id": "API-02",
+            "name": "Versioning & Breaking-Change Discipline",
+            "category_id": "API",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — API-02 requires a detector (see rubric)",
+            "effort": "⚡ ≤30 min",
+            "not_applicable": false
+          },
+          {
+            "id": "API-03",
+            "name": "Integration Point Bloat",
+            "category_id": "API",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — API-03 requires a detector (see rubric)",
+            "effort": "🔶 ~2–4 h",
+            "not_applicable": false
+          },
+          {
+            "id": "API-04",
+            "name": "Synchronous Coupling & Chatty Interfaces",
+            "category_id": "API",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — API-04 requires a detector (see rubric)",
+            "effort": "🔶 ~2–4 h",
+            "not_applicable": false
+          },
+          {
+            "id": "API-05",
+            "name": "Third-Party & Vendor API Dependency Risk",
+            "category_id": "API",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — API-05 requires a detector (see rubric)",
+            "effort": "🔶 ~2–4 h",
+            "not_applicable": false
+          },
+          {
+            "id": "API-06",
+            "name": "Protocol & Data-Format Legaciness",
+            "category_id": "API",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — API-06 requires a detector (see rubric)",
+            "effort": "🔶 ~2–4 h",
+            "not_applicable": false
+          },
+          {
+            "id": "API-07",
+            "name": "Error Handling & API Observability Semantics",
+            "category_id": "API",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — API-07 requires a detector (see rubric)",
+            "effort": "🔶 ~2–4 h",
+            "not_applicable": false
+          },
+          {
+            "id": "API-08",
+            "name": "Consumer Blindness & Backward Compatibility",
+            "category_id": "API",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — API-08 requires a detector (see rubric)",
+            "effort": "🔶 ~2–4 h",
+            "not_applicable": false
+          },
+          {
+            "id": "API-09",
+            "name": "Idempotency & Retry Semantics",
+            "category_id": "API",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — API-09 requires a detector (see rubric)",
+            "effort": "🔷 ~1–2 days",
+            "not_applicable": false
+          },
+          {
+            "id": "API-10",
+            "name": "Contract Schema Evolution Process",
+            "category_id": "API",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — API-10 requires a detector (see rubric)",
+            "effort": "🔷 ~1–2 days",
+            "not_applicable": false
+          }
+        ]
+      },
+      {
+        "id": "FE",
+        "name": "FE",
+        "weight": 0,
+        "canonical_weight": 0,
+        "applicable": 0,
+        "scored_sum": 0,
+        "category_score": null,
+        "renormalized_category_score": null,
+        "weighted_contribution": 0,
+        "legacy_weighted_contribution": 0,
+        "status_counts": {
+          "measured": 0,
+          "estimated": 0,
+          "unknown": 0,
+          "not_applicable": 0,
+          "not_implemented": 8
+        },
+        "indicator_rows": [
+          {
+            "id": "FE-01",
+            "name": "UI Framework / Stack EOL & Deprecation",
+            "category_id": "FE",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — FE-01 requires a detector (see rubric)",
+            "effort": "⚡ ≤30 min",
+            "not_applicable": false
+          },
+          {
+            "id": "FE-02",
+            "name": "Bundle Size & Load Performance",
+            "category_id": "FE",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — FE-02 requires a detector (see rubric)",
+            "effort": "🔶 ~2–4 h",
+            "not_applicable": false
+          },
+          {
+            "id": "FE-03",
+            "name": "Accessibility Deficits",
+            "category_id": "FE",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — FE-03 requires a detector (see rubric)",
+            "effort": "🔶 ~2–4 h",
+            "not_applicable": false
+          },
+          {
+            "id": "FE-04",
+            "name": "Browser / Platform Support Drift",
+            "category_id": "FE",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — FE-04 requires a detector (see rubric)",
+            "effort": "🔶 ~2–4 h",
+            "not_applicable": false
+          },
+          {
+            "id": "FE-05",
+            "name": "Client-Side Architecture Debt",
+            "category_id": "FE",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — FE-05 requires a detector (see rubric)",
+            "effort": "🔶 ~2–4 h",
+            "not_applicable": false
+          },
+          {
+            "id": "FE-06",
+            "name": "Design System / UI Consistency Drift",
+            "category_id": "FE",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — FE-06 requires a detector (see rubric)",
+            "effort": "🔶 ~2–4 h",
+            "not_applicable": false
+          },
+          {
+            "id": "FE-07",
+            "name": "Internationalization / Localization Debt",
+            "category_id": "FE",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — FE-07 requires a detector (see rubric)",
+            "effort": "🔷 ~1–2 days",
+            "not_applicable": false
+          },
+          {
+            "id": "FE-08",
+            "name": "Mobile / Responsive Adaptation & Offline Support",
+            "category_id": "FE",
+            "status": "not_implemented",
+            "reason": "detector not implemented in this slice",
+            "unknown_measure_path": "Not implemented — FE-08 requires a detector (see rubric)",
+            "effort": "🔷 ~1–2 days",
+            "not_applicable": false
+          }
+        ]
+      }
+    ],
+    "coverage": {
+      "measured": 13,
+      "estimated": 1,
+      "unknown": 14,
+      "not_applicable": 3,
+      "not_implemented": 71,
+      "measured_pct": "46%",
+      "estimated_pct": "4%",
+      "unknown_pct": "50%",
+      "not_applicable_pct": "3%",
+      "not_implemented_pct": "70%"
+    },
+    "status": "degraded",
+    "gates": [
+      {
+        "id": "G1",
+        "name": "Credential exposure",
+        "status": "needs-verification",
+        "source_rows": [
+          "SEC-02"
+        ],
+        "note": "findings present but history truncated or verification unavailable"
+      },
+      {
+        "id": "G2",
+        "name": "Crit CVE > 14d",
+        "status": "unevaluable",
+        "source_rows": [
+          "SEC-01"
+        ],
+        "note": "needs SCA + reachability (no lockfile fact) — unevaluable: source row unknown — unevaluable: source row(s) unknown"
+      },
+      {
+        "id": "G3",
+        "name": "Runtime EOL",
+        "status": "proven",
+        "source_rows": [
+          "ECOS-01"
+        ],
+        "note": "past EOL: java@1.7"
+      },
+      {
+        "id": "G8",
+        "name": "Copyleft in core",
+        "status": "not-proven",
+        "source_rows": [
+          "ECOS-05"
+        ],
+        "note": "no strong copyleft"
+      },
+      {
+        "id": "G6",
+        "name": "Delivery is on fire",
+        "status": "unevaluable",
+        "source_rows": [
+          "VEL-03",
+          "VEL-08"
+        ],
+        "note": "needs deploy data (no VEL-08 fact) — unevaluable: source row unknown — unevaluable: source row(s) unknown"
+      },
+      {
+        "id": "G4",
+        "name": "OWASP Top-10 reachable",
+        "status": "unevaluable",
+        "source_rows": [
+          "SEC-03",
+          "SEC-04"
+        ],
+        "note": "detector not implemented in this slice — gate unevaluable"
+      },
+      {
+        "id": "G5",
+        "name": "Untested core",
+        "status": "unevaluable",
+        "source_rows": [
+          "TEST-06"
+        ],
+        "note": "detector not implemented in this slice — gate unevaluable"
+      },
+      {
+        "id": "G7",
+        "name": "Data-rescue risk",
+        "status": "unevaluable",
+        "source_rows": [
+          "DATA-06"
+        ],
+        "note": "detector not implemented in this slice — gate unevaluable"
+      }
+    ],
+    "provenance": {
+      "tool_manifest": [
+        {
+          "tool": "adr-inventory",
+          "version": "1.1"
+        },
+        {
+          "tool": "changelog-inventory",
+          "version": "1.0"
+        },
+        {
+          "tool": "docs-ci-inventory",
+          "version": "1.1"
+        },
+        {
+          "tool": "eol-snapshot",
+          "version": "1.1"
+        },
+        {
+          "tool": "fuzz-inventory",
+          "version": "1.1"
+        },
+        {
+          "tool": "lockfile-parse",
+          "version": "1.1"
+        },
+        {
+          "tool": "onboarding-inventory",
+          "version": "1.0"
+        },
+        {
+          "tool": "runbook-inventory",
+          "version": "1.1"
+        },
+        {
+          "tool": "sec-ci-inventory",
+          "version": "1.1"
+        },
+        {
+          "tool": "secret-rules",
+          "version": "1.0"
+        },
+        {
+          "tool": "test-scan",
+          "version": "1.1"
+        }
+      ],
+      "snapshot_versions": {
+        "eol-snapshot": "eol-2026.10-1c0bd1337838",
+        "advisory-snapshot": "adv-2026.10-ad855d8189da"
+      }
+    },
+    "top_blockers": [
+      {
+        "row": "SEC-09",
+        "name": "Input Robustness & Fuzzing",
+        "points_lost": 3,
+        "weight_pp": "3.33pp",
+        "summary": "Parsing surface unknown surface; zero harnesses; no sanitizers — per SEC-09 Red: input robustness untested — score 0 (presence-only caveat).",
+        "evidence_file": "no fuzz harness",
+        "rule": "fuzz-inventory"
+      },
+      {
+        "row": "SEC-10",
+        "name": "Security Testing in CI",
+        "points_lost": 3,
+        "weight_pp": "3.33pp",
+        "summary": "No security CI jobs — classes none; jobs none — per SEC-10 Red: no SAST/deps/secret/image gates — score 0.",
+        "evidence_file": ".github/workflows",
+        "rule": "sec-ci-inventory"
+      },
+      {
+        "row": "TEST-05",
+        "name": "Skipped / Disabled Tests",
+        "points_lost": 2,
+        "weight_pp": "2.22pp",
+        "summary": "1/2 skipped (50%, oldest 25d) — per TEST-05 Red flag: >10% skipped or skips aged >6mo — score 1.",
+        "evidence_file": "orders-core/src/test/java/com/acme/orders/LedgerTest.java",
+        "rule": "test-scan"
+      },
+      {
+        "row": "ECOS-02",
+        "name": "Major Package Drift",
+        "points_lost": 3,
+        "weight_pp": "1.43pp",
+        "summary": "33.3% ≥1 major behind, 33.3% ≥2; worst core gap org.apache.struts:struts2-core 4 major(s) — per ECOS-02 Red flag: core framework stuck ≥2 majors — score 0.",
+        "evidence_file": "package metadata snapshot eol-2026.10-1c0bd1337838",
+        "rule": "lockfile-parse"
+      },
+      {
+        "row": "ECOS-07",
+        "name": "Build Reproducibility & Lockfile Integrity",
+        "points_lost": 3,
+        "weight_pp": "1.43pp",
+        "summary": "no lockfile; pin_ratio 88.9% — per ECOS-07 Red flag: no lockfile or floating pins — score 0.",
+        "evidence_file": "no lockfile mechanism for java:pom.xml — absence is structural, not a coverage gap; pinning is assessed from the manifest declarations",
+        "rule": "lockfile-parse"
+      }
+    ],
+    "deep_dive_scope": [
+      {
+        "row": "VEL-06",
+        "name": "Bus factor",
+        "what_it_takes": "what it takes: gh-api VEL-06 failed (no facts)"
+      },
+      {
+        "row": "VEL-09",
+        "name": "PR & code-review hygiene",
+        "what_it_takes": "what it takes: gh-api VEL-09 failed (no facts)"
+      },
+      {
+        "row": "VEL-08",
+        "name": "Manual release steps",
+        "what_it_takes": "what it takes: gh-api VEL-08 failed (no facts)"
+      },
+      {
+        "row": "VEL-10",
+        "name": "Branching topology",
+        "what_it_takes": "what it takes: gh-api VEL-10 failed (no facts)"
+      },
+      {
+        "row": "SEC-07",
+        "name": "Patch cadence & update workflow",
+        "what_it_takes": "what it takes: gh-api SEC-07 failed (no facts)"
+      },
+      {
+        "row": "TEST-08",
+        "name": "Quality gates in CI",
+        "what_it_takes": "what it takes: gh-api TEST-08 failed (no facts)"
+      },
+      {
+        "row": "ECOS-03",
+        "name": "Abandoned / Unmaintained Libraries",
+        "what_it_takes": "resolve each load-bearing dependency to its last-release date from a package-metadata source (the vendored snapshot ships last_release for a curated subset); no lockfile found — pin your dependencies so per-version abandonment is knowable"
+      },
+      {
+        "row": "SEC-01",
+        "name": "Unpatched Vulnerabilities",
+        "what_it_takes": "resolve locked dependency versions and join them to a known-vulnerability source (the vendored advisory snapshot covers a curated subset; an uncovered ecosystem needs advisory data the snapshot lacks); no lockfile found — versions are unpinned so advisories cannot be matched"
+      },
+      {
+        "row": "SEC-06",
+        "name": "Insecure Transitive Chains",
+        "what_it_takes": "resolve depth≥2 transitive chains out of the lockfile against an advisory source with import-closure reachability — the offline release ships no transitive-chain resolver (depth≤1 vulns are SEC-01)"
+      },
+      {
+        "row": "ARCH-01",
+        "name": "Cognitive Complexity & God Classes",
+        "what_it_takes": "run a complexity analyzer (cyclomatic complexity + LOC per method, e.g. lizard/radon) over non-vendored source and join offenders to the core-path set — the offline release ships no such analyzer"
+      },
+      {
+        "row": "ARCH-08",
+        "name": "Duplication Debt",
+        "what_it_takes": "run a token-based duplication analyzer (min-tokens 50, e.g. jscpd) over non-vendored source to compute duplication_pct and security-critical duplicate clusters — the offline release ships no such analyzer"
+      },
+      {
+        "row": "ARCH-05",
+        "name": "Code Churn vs. Defect Hot Spots",
+        "what_it_takes": "history too thin: 90 commits / 75d (< 200 commits or < 180d) — run a git hot-spot analysis over ≥200 commits and ≥6 months of history (git log --name-only + bugfix subject correlation)"
+      },
+      {
+        "row": "TEST-03",
+        "name": "Test Pyramid Inversion",
+        "what_it_takes": "only 0% of 1 test files could be tier-classified (<60%) — enumerate test files and classify each by path/framework markers — needs an enumerable tree with test files (per-file tier assignment is a heuristic, so this row is `estimated`, never `measured`)"
+      },
+      {
+        "row": "ECOS-06",
+        "name": "Dependency Bloat",
+        "what_it_takes": "parse the lockfile graph for transitive counts and duplicate versions (unused-direct detection needs a dead-dependency analyser this build does not run); no lockfile found — transitive counts are unknowable"
+      }
+    ],
+    "full_table": [
+      {
+        "id": "VEL-06",
+        "name": "Bus factor",
+        "category_id": "VEL",
+        "status": "unknown",
+        "unknown_measure_path": "what it takes: gh-api VEL-06 failed (no facts)",
+        "effort": "⚡ ≤30 min"
+      },
+      {
+        "id": "VEL-09",
+        "name": "PR & code-review hygiene",
+        "category_id": "VEL",
+        "status": "unknown",
+        "unknown_measure_path": "what it takes: gh-api VEL-09 failed (no facts)",
+        "effort": "⚡ ≤30 min"
+      },
+      {
+        "id": "VEL-08",
+        "name": "Manual release steps",
+        "category_id": "VEL",
+        "status": "unknown",
+        "unknown_measure_path": "what it takes: gh-api VEL-08 failed (no facts)",
+        "effort": "🔶 ~2–4 h"
+      },
+      {
+        "id": "VEL-10",
+        "name": "Branching topology",
+        "category_id": "VEL",
+        "status": "unknown",
+        "unknown_measure_path": "what it takes: gh-api VEL-10 failed (no facts)",
+        "effort": "⚡ ≤30 min"
+      },
+      {
+        "id": "SEC-07",
+        "name": "Patch cadence & update workflow",
+        "category_id": "SEC",
+        "status": "unknown",
+        "unknown_measure_path": "what it takes: gh-api SEC-07 failed (no facts)",
+        "effort": "⚡ ≤30 min"
+      },
+      {
+        "id": "TEST-08",
+        "name": "Quality gates in CI",
+        "category_id": "TEST",
+        "status": "unknown",
+        "unknown_measure_path": "what it takes: gh-api TEST-08 failed (no facts)",
+        "effort": "⚡ ≤30 min"
+      },
+      {
+        "id": "ECOS-01",
+        "name": "Runtime/Language EOL",
+        "category_id": "ECOS",
+        "status": "measured",
+        "score": 1,
+        "reason": "java@1.7 (cycle 7, EOL PASSED, pin pom.xml); EOL runtime confined outside core — per ECOS-01 Yellow flag: EOL in an isolated path — score 1.",
+        "evidence": {
+          "tool": "eol-snapshot",
+          "tool_version": "1.1",
+          "pointers": [
+            {
+              "file": "pom.xml",
+              "detail": "java 1.7 → cycle 7, EOL 2022-07-19 (-1578d)"
+            },
+            {
+              "endpoint": "eol-snapshot",
+              "detail": "vendored eol dataset eol-2026.10-1c0bd1337838"
+            }
+          ],
+          "facts": {
+            "runtimes": [
+              {
+                "product": "java",
+                "version": "1.7",
+                "cycle": "7",
+                "pin_source": "pom.xml",
+                "eol_date": "2022-07-19",
+                "days_until_eol": -1578,
+                "is_past_eol": true
+              }
+            ],
+            "conflict": false,
+            "unmapped_pins": [],
+            "lookup_ok": true
+          }
+        },
+        "effort": "⚡ ≤30 min",
+        "remediation": {
+          "quick_win": "document the gap, create the upgrade ticket with a date.",
+          "structural": "parallel runtime upgrade plan — run new runtime in CI behind a feature gate, migrate one service at a time, dual-run in prod. For truly stuck runtimes, isolate behind a facade and treat like a rewrite candidate.",
+          "gold_standard": "Every production runtime within its vendor-supported window; CI builds a canary job on the current runtime; a deprecation calendar exists and is reviewed quarterly.",
+          "effort": "⚡ ≤30 min"
+        }
+      },
+      {
+        "id": "ECOS-02",
+        "name": "Major Package Drift",
+        "category_id": "ECOS",
+        "status": "measured",
+        "score": 0,
+        "reason": "33.3% ≥1 major behind, 33.3% ≥2; worst core gap org.apache.struts:struts2-core 4 major(s) — per ECOS-02 Red flag: core framework stuck ≥2 majors — score 0.",
+        "evidence": {
+          "tool": "lockfile-parse",
+          "tool_version": "1.1",
+          "pointers": [
+            {
+              "endpoint": "lockfile-parse",
+              "detail": "package metadata snapshot eol-2026.10-1c0bd1337838"
+            }
+          ],
+          "facts": {
+            "direct_deps_total": 7,
+            "unresolvable": 1,
+            "unresolvable_names": [
+              "com.acme:mystery-report-lib"
+            ],
+            "resolvable_ratio": 0.857,
+            "pct_behind_1plus_major": 33.3,
+            "pct_behind_2plus_major": 33.3,
+            "core_framework_gaps": [
+              {
+                "name": "org.apache.struts:struts2-core",
+                "current": "2.3.30",
+                "latest_major": 6,
+                "majors_behind": 4
+              }
+            ]
+          }
+        },
+        "effort": "⚡ ≤30 min",
+        "remediation": {
+          "quick_win": "enable Dependabot/Renovate with major-update grouping and a monthly budget.",
+          "structural": "\"upgrade train\" — pick one major hop per quarter, keep intermediate commits shippable, use the dependency graph from tools to sequence hops (don't skip majors). Establish a \"never more than 1 major behind\" policy for core deps.",
+          "gold_standard": "Core framework within 1 major of current; < 30% of direct deps behind by a major; automatic update PRs flowing weekly; majors scheduled explicitly on the roadmap.",
+          "effort": "⚡ ≤30 min"
+        }
+      },
+      {
+        "id": "ECOS-03",
+        "name": "Abandoned / Unmaintained Libraries",
+        "category_id": "ECOS",
+        "status": "unknown",
+        "unknown_measure_path": "resolve each load-bearing dependency to its last-release date from a package-metadata source (the vendored snapshot ships last_release for a curated subset); no lockfile found — pin your dependencies so per-version abandonment is knowable",
+        "effort": "⚡ ≤30 min"
+      },
+      {
+        "id": "ECOS-05",
+        "name": "License Compliance Risk",
+        "category_id": "ECOS",
+        "status": "estimated",
+        "score": 1,
+        "reason": "1 unknown-license + 0 strong-copyleft of 7 direct deps — per ECOS-05 Yellow flag: unknown/copyleft present — score 1 (estimated clamp [1,2]).",
+        "evidence": {
+          "tool": "lockfile-parse",
+          "tool_version": "1.1",
+          "pointers": [
+            {
+              "file": "manifest:java",
+              "detail": "com.acme:mystery-report-lib license classified from package metadata"
+            },
+            {
+              "file": "manifest:java",
+              "detail": "commons-io:commons-io license classified from package metadata"
+            },
+            {
+              "file": "manifest:java",
+              "detail": "log4j:log4j license classified from package metadata"
+            },
+            {
+              "file": "manifest:java",
+              "detail": "org.apache.commons:commons-lang3 license classified from package metadata"
+            },
+            {
+              "endpoint": "eol-snapshot",
+              "detail": "license metadata from snapshot eol-2026.10-1c0bd1337838"
+            }
+          ],
+          "facts": {
+            "packages_total": 7,
+            "license_unknown_count": 1,
+            "license_unknown_names": [
+              "com.acme:mystery-report-lib"
+            ],
+            "copyleft_strong": [],
+            "copyleft_weak_count": 0,
+            "sbom_present_in_repo": false,
+            "ci_license_gate_present": false,
+            "closed_source_distribution_likely": false
+          }
+        },
+        "effort": "🔶 ~2–4 h",
+        "remediation": {
+          "quick_win": "generate an SBOM (`syft . > sbom.json`), wire it into CI, publish attribution files.",
+          "structural": "add a license gate to CI (fail on GPL in closed-source), replace copyleft deps, retire unknown-license packages, review vendored code for stripped notices.",
+          "gold_standard": "SBOM generated and attested on every release; license policy enforced in CI; zero unknown licenses; copyleft list reviewed quarterly and signed off.",
+          "effort": "🔶 ~2–4 h"
+        }
+      },
+      {
+        "id": "ECOS-07",
+        "name": "Build Reproducibility & Lockfile Integrity",
+        "category_id": "ECOS",
+        "status": "measured",
+        "score": 0,
+        "reason": "no lockfile; pin_ratio 88.9% — per ECOS-07 Red flag: no lockfile or floating pins — score 0.",
+        "evidence": {
+          "tool": "lockfile-parse",
+          "tool_version": "1.1",
+          "pointers": [
+            {
+              "endpoint": "lockfile-parse",
+              "detail": "no lockfile mechanism for java:pom.xml — absence is structural, not a coverage gap; pinning is assessed from the manifest declarations"
+            },
+            {
+              "endpoint": "git",
+              "detail": "lockfile staleness from git last-commit dates"
+            }
+          ],
+          "facts": {
+            "lockfiles": [],
+            "lockfile_mechanism_absent": [
+              "java:pom.xml"
+            ],
+            "pin_ratio": 88.9,
+            "ci_immutable_install": {
+              "enforced": false,
+              "evidence": "no immutable install command found in CI"
+            },
+            "mutable_install_sites": [],
+            "manifests_total": 4
+          }
+        },
+        "effort": "⚡ ≤30 min",
+        "remediation": {
+          "quick_win": "commit the lockfile, switch CI to `npm ci`/`pip install --require-hashes`/`--frozen-lockfile`, add a \"lockfile up-to-date\" CI check.",
+          "structural": "adopt content-hash pinning, build from clean containers, produce provenance attestations (SLSA level 1→2), verify registry integrity.",
+          "gold_standard": "Lockfile committed and current; CI immutable install; two clean builds produce byte-identical artifacts; SLSA provenance generated per release.",
+          "effort": "⚡ ≤30 min"
+        }
+      },
+      {
+        "id": "SEC-01",
+        "name": "Unpatched Vulnerabilities",
+        "category_id": "SEC",
+        "status": "unknown",
+        "unknown_measure_path": "resolve locked dependency versions and join them to a known-vulnerability source (the vendored advisory snapshot covers a curated subset; an uncovered ecosystem needs advisory data the snapshot lacks); no lockfile found — versions are unpinned so advisories cannot be matched",
+        "effort": "🔶 ~2–4 h"
+      },
+      {
+        "id": "SEC-06",
+        "name": "Insecure Transitive Chains",
+        "category_id": "SEC",
+        "status": "unknown",
+        "unknown_measure_path": "resolve depth≥2 transitive chains out of the lockfile against an advisory source with import-closure reachability — the offline release ships no transitive-chain resolver (depth≤1 vulns are SEC-01)",
+        "effort": "🔶 ~2–4 h"
+      },
+      {
+        "id": "SEC-02",
+        "name": "Hardcoded Secrets & Credentials",
+        "category_id": "SEC",
+        "status": "measured",
+        "score": 2,
+        "reason": "clean tree; 1 history-only finding(s) — per SEC-02 Yellow flag: rotated secrets in history — score 2.",
+        "evidence": {
+          "tool": "secret-rules",
+          "tool_version": "1.0",
+          "pointers": [
+            {
+              "endpoint": "git",
+              "detail": "git log -p --all over bounded history; history_scanned_full=true"
+            }
+          ],
+          "facts": {
+            "tree_findings": [],
+            "history_only_findings": 1,
+            "history_only_findings_list": [
+              {
+                "rule": "aws-access-token",
+                "file": "apps/scanner/src/scan/__tests__/detector-honesty.test.ts",
+                "commit": "085bb36511e50ced65ef13d928e6034366f7ca42"
+              }
+            ],
+            "verified_live": 0,
+            "history_scanned_full": true,
+            "history_scanned": true,
+            "rules_applied": [
+              "aws-access-token",
+              "github-pat",
+              "google-api-key",
+              "slack-token",
+              "stripe-secret-key",
+              "private-key",
+              "jwt",
+              "basic-auth-url",
+              "generic-secret-assignment"
+            ],
+            "wider_scanners_run": [],
+            "wider_scanners_declared": [],
+            "files_scanned": 10
+          }
+        },
+        "effort": "⚡ ≤30 min",
+        "remediation": {
+          "quick_win": "rotate EVERY leaked credential immediately (the exposure window starts at commit time, not discovery time), remove from current tree, switch to env vars.",
+          "structural": "adopt a secret manager + injection (Vault, Secrets Manager), ban secrets in code via CI scanners on every commit *and* a history scrub, least-privilege per environment, kill the \"secrets in docs\" habit.",
+          "gold_standard": "Zero secrets in the tree or history; secrets injected at runtime from a manager; CI blocks secret commits; rotation drill run annually.",
+          "effort": "⚡ ≤30 min"
+        }
+      },
+      {
+        "id": "ARCH-01",
+        "name": "Cognitive Complexity & God Classes",
+        "category_id": "ARCH",
+        "status": "unknown",
+        "unknown_measure_path": "run a complexity analyzer (cyclomatic complexity + LOC per method, e.g. lizard/radon) over non-vendored source and join offenders to the core-path set — the offline release ships no such analyzer",
+        "effort": "🔶 ~2–4 h"
+      },
+      {
+        "id": "ARCH-08",
+        "name": "Duplication Debt",
+        "category_id": "ARCH",
+        "status": "unknown",
+        "unknown_measure_path": "run a token-based duplication analyzer (min-tokens 50, e.g. jscpd) over non-vendored source to compute duplication_pct and security-critical duplicate clusters — the offline release ships no such analyzer",
+        "effort": "🔶 ~2–4 h"
+      },
+      {
+        "id": "ARCH-05",
+        "name": "Code Churn vs. Defect Hot Spots",
+        "category_id": "ARCH",
+        "status": "unknown",
+        "unknown_measure_path": "history too thin: 90 commits / 75d (< 200 commits or < 180d) — run a git hot-spot analysis over ≥200 commits and ≥6 months of history (git log --name-only + bugfix subject correlation)",
+        "effort": "🔶 ~2–4 h"
+      },
+      {
+        "id": "TEST-03",
+        "name": "Test Pyramid Inversion",
+        "category_id": "TEST",
+        "status": "unknown",
+        "unknown_measure_path": "only 0% of 1 test files could be tier-classified (<60%) — enumerate test files and classify each by path/framework markers — needs an enumerable tree with test files (per-file tier assignment is a heuristic, so this row is `estimated`, never `measured`)",
+        "effort": "🔶 ~2–4 h"
+      },
+      {
+        "id": "TEST-05",
+        "name": "Skipped / Disabled Tests",
+        "category_id": "TEST",
+        "status": "measured",
+        "score": 1,
+        "reason": "1/2 skipped (50%, oldest 25d) — per TEST-05 Red flag: >10% skipped or skips aged >6mo — score 1.",
+        "evidence": {
+          "tool": "test-scan",
+          "tool_version": "1.1",
+          "pointers": [
+            {
+              "file": "orders-core/src/test/java/com/acme/orders/LedgerTest.java",
+              "detail": "1 skip marker(s) at line(s) 15"
+            },
+            {
+              "endpoint": "git",
+              "detail": "git blame -L for 1 skip marker(s)"
+            }
+          ],
+          "facts": {
+            "total_tests_est": 2,
+            "skipped_total": 1,
+            "skip_ratio": 0.5,
+            "aged_skips": [
+              {
+                "file": "orders-core/src/test/java/com/acme/orders/LedgerTest.java",
+                "age_days": 25
+              }
+            ],
+            "ci_exclusions": []
+          }
+        },
+        "effort": "⚡ ≤30 min",
+        "remediation": {
+          "quick_win": "re-enable or delete each skip deliberately (delete-with-justification or fix-with-test); no skips without a linked ticket and owner.",
+          "structural": "CI gate that fails on new skips without a ticket; a monthly \"skip inventory\" review; fix the top skipped module's root cause.",
+          "gold_standard": "< 2% skipped, all with tickets + owners, none older than a sprint; new skips auto-blocked.",
+          "effort": "⚡ ≤30 min"
+        }
+      },
+      {
+        "id": "DOCS-01",
+        "name": "Missing Architectural Decision Records (ADRs)",
+        "category_id": "DOCS",
+        "status": "measured",
+        "score": 0,
+        "reason": "No decision records — no ADR directory found; architecture changes are undocumented — per DOCS-01 Red flag: decisions live only in heads, onboarding requires a listening tour — score 0.",
+        "evidence": {
+          "tool": "adr-inventory",
+          "tool_version": "1.1",
+          "pointers": [
+            {
+              "detail": "no ADR dir found"
+            }
+          ],
+          "facts": {
+            "adr_dir": null,
+            "adr_count": 0,
+            "newest_adr_days": null
+          }
+        },
+        "effort": "🔶 ~2–4 h",
+        "remediation": {
+          "quick_win": "write ADRs for the top 10 load-bearing decisions (interview the oldest engineers, mine git/past docs), establish a template + PR requirement for consequential choices.",
+          "structural": "ADR convention in the repo (ADR-NNN, status, decision, context, alternatives considered), decisions now documented at review time, an \"explain every load-bearing choice\" refactoring task.",
+          "gold_standard": "Every consequential decision has an ADR with alternatives; new decisions document as standard practice; teams can revisit a decision on evidence, not memory.",
+          "effort": "🔶 ~2–4 h"
+        }
+      },
+      {
+        "id": "DOCS-03",
+        "name": "Missing Runbooks & Operational Docs",
+        "category_id": "DOCS",
+        "status": "measured",
+        "score": 0,
+        "reason": "No runbooks — searched searched docs/runbooks, runbooks, docs/operations etc.; zero files found — per DOCS-03 Red flag: incidents recovered by heroics, every lesson repeated — score 0.",
+        "evidence": {
+          "tool": "runbook-inventory",
+          "tool_version": "1.1",
+          "pointers": [
+            {
+              "detail": "no runbooks"
+            }
+          ],
+          "facts": {
+            "runbook_dir": null,
+            "count": 0,
+            "topics_covered": [],
+            "restore_doc_present": false,
+            "newest_days": null
+          }
+        },
+        "effort": "🔶 ~2–4 h",
+        "remediation": {
+          "quick_win": "write runbooks for the top 5 incident classes today (postmortem-driven), make them linkable from alert dashboards, add \"runme at the first sign\" steps.",
+          "structural": "runbook-as-product (owned, tested, games rehearsed), alert→runbook binding, postmortem = runbook update, drill the top runbook quarterly.",
+          "gold_standard": "Every incident class has a current, tested runbook; on-call executes procedures not improv; incident time is dominated by execution, not discovery.",
+          "effort": "🔶 ~2–4 h"
+        }
+      },
+      {
+        "id": "DOCS-04",
+        "name": "No Onboarding Guide / Developer Setup Docs",
+        "category_id": "DOCS",
+        "status": "measured",
+        "score": 0,
+        "reason": "No onboarding guide — no CONTRIBUTING.md / GETTING_STARTED.md and README has no setup section; stages missing: setup, run, test — per DOCS-04 Red flag: no documentation, new hires rely on tribal knowledge — score 0.",
+        "evidence": {
+          "tool": "onboarding-inventory",
+          "tool_version": "1.0",
+          "pointers": [
+            {
+              "detail": "no onboarding docs"
+            }
+          ],
+          "facts": {
+            "docs_present": [],
+            "stages_covered": [],
+            "stages_missing": [
+              "setup",
+              "run",
+              "test"
+            ],
+            "undefined_commands": [],
+            "last_verified_days": null
+          }
+        },
+        "effort": "⚡ ≤30 min",
+        "remediation": {
+          "quick_win": "write the golden path (clone → setup → run → test → first PR) and verify every command executes, add CONTRIBUTING.md.",
+          "structural": "golden path CI-verified (fresh container proves it — DOCS-09), onboarding checklist wired into the ticket system, \"setup docs break\" = blame-the-repo not the human.",
+          "gold_standard": "A new hire takes < 2 hours to a working local env entirely from docs; the setup guide is CI-tested and always current.",
+          "effort": "⚡ ≤30 min"
+        }
+      },
+      {
+        "id": "DOCS-08",
+        "name": "No Release Communication / Changelog",
+        "category_id": "DOCS",
+        "status": "measured",
+        "score": 0,
+        "reason": "No CHANGELOG.md found at any of 6 candidate paths; 0% of 0 sampled releases carry notes — per DOCS-08 Red flag: breaking changes ship unannounced, consumers learn from failures — score 0.",
+        "evidence": {
+          "tool": "changelog-inventory",
+          "tool_version": "1.0",
+          "pointers": [
+            {
+              "detail": "no changelog"
+            }
+          ],
+          "facts": {
+            "changelog_present": false,
+            "changelog_current": false,
+            "releases_sampled": 0,
+            "with_notes_pct": 0,
+            "breaking_with_migration_guide": {
+              "total_breaking": 0,
+              "documented": 0
+            },
+            "release_tooling": null
+          }
+        },
+        "effort": "🔶 ~2–4 h",
+        "remediation": {
+          "quick_win": "adopt a CHANGELOG process (Keep-a-Changelog, auto-generated from commits/PRs), publish release notes for the top consumers, write migration guides for open breaking changes (backfill).",
+          "structural": "semantic-release automation (version + changelog + notes automated), a release-communication channel (port status page + email), \"breaking = migration guide in same MR\" rule.",
+          "gold_standard": "Every release has automated notes; every breaking change has a migration guide published with the change; consumers hear first, break never (silently).",
+          "effort": "🔶 ~2–4 h"
+        }
+      },
+      {
+        "id": "DOCS-09",
+        "name": "Docs-as-Code & Automation",
+        "category_id": "DOCS",
+        "status": "measured",
+        "score": 0,
+        "reason": "No docs-as-code automation — zero CI steps; no link-check; no API generation — per DOCS-09 Red flag: docs are wiki-only, drift unverified — score 0.",
+        "evidence": {
+          "tool": "docs-ci-inventory",
+          "tool_version": "1.1",
+          "pointers": [
+            {
+              "detail": "no docs CI",
+              "file": ".github/workflows"
+            }
+          ],
+          "facts": {
+            "doc_ci_steps": [],
+            "link_checker": false,
+            "api_gen_wired": false,
+            "staleness_gate": false
+          }
+        },
+        "effort": "🔷 ~1–2 days",
+        "remediation": {
+          "quick_win": "wire docs generation into CI (spec → reference), add links/lint checks for markdown, CI-verify the top setup commands (fresh container).",
+          "structural": "full docs-as-code — generate what's generatable, verify what's actionable, staleness gates (docs touch-required on code change), docs failures block merge like code failures.",
+          "gold_standard": "Docs build like code, generate from truth, verify their own commands, and fail CI on rot — the knowledge layer is as maintained as the code.",
+          "effort": "🔷 ~1–2 days"
+        }
+      },
+      {
+        "id": "PERF-02",
+        "name": "Legacy Deployment Model",
+        "category_id": "PERF",
+        "status": "not_applicable",
+        "unknown_measure_path": "no deploy plane detected (no has_deploy evidence, archetype mixed)",
+        "effort": "🔶 ~2–4 h",
+        "not_applicable": true,
+        "reason": "no deploy plane detected (no has_deploy evidence, archetype mixed)"
+      },
+      {
+        "id": "PERF-06",
+        "name": "Missing IaC / Config Drift",
+        "category_id": "PERF",
+        "status": "not_applicable",
+        "unknown_measure_path": "no deploy plane detected (no has_deploy evidence, archetype mixed)",
+        "effort": "🔶 ~2–4 h",
+        "not_applicable": true,
+        "reason": "no deploy plane detected (no has_deploy evidence, archetype mixed)"
+      },
+      {
+        "id": "DATA-01",
+        "name": "Schema Migration Backlog / \"Migration Hell\"",
+        "category_id": "DATA",
+        "status": "not_applicable",
+        "unknown_measure_path": "no data plane detected (no has_data evidence, archetype mixed)",
+        "effort": "🔶 ~2–4 h",
+        "not_applicable": true,
+        "reason": "no data plane detected (no has_data evidence, archetype mixed)"
+      },
+      {
+        "id": "ECOS-06",
+        "name": "Dependency Bloat",
+        "category_id": "ECOS",
+        "status": "unknown",
+        "unknown_measure_path": "parse the lockfile graph for transitive counts and duplicate versions (unused-direct detection needs a dead-dependency analyser this build does not run); no lockfile found — transitive counts are unknowable",
+        "effort": "⚡ ≤30 min"
+      },
+      {
+        "id": "ECOS-08",
+        "name": "Framework Lock-in & Monoculture Risk",
+        "category_id": "ECOS",
+        "status": "measured",
+        "score": 3,
+        "reason": "struts2@2.3.30 active; all active — per ECOS-08 Green: supported lifecycle — score 3.",
+        "evidence": {
+          "tool": "eol-snapshot",
+          "tool_version": "1.1",
+          "pointers": [
+            {
+              "file": "manifest:java",
+              "detail": "framework dependency declared here"
+            },
+            {
+              "endpoint": "eol-snapshot",
+              "detail": "framework lifecycle from snapshot eol-2026.10-1c0bd1337838"
+            }
+          ],
+          "facts": {
+            "frameworks": [
+              {
+                "name": "struts2",
+                "version": "2.3.30",
+                "support_status": "active",
+                "eol_date": null
+              }
+            ],
+            "coupling_share": 0,
+            "facade_layer_detected": false,
+            "fork_pinned": false
+          }
+        },
+        "effort": "⚡ ≤30 min",
+        "remediation": {
+          "quick_win": "quantify the coupling (which modules touch framework-specific APIs directly) and freeze scope on framework-dependent features.",
+          "structural": "extract the framework behind a facade at the boundaries (ports & adapters), migrate incrementally module-by-module on the critical path, keep the system runnable through the whole migration.",
+          "gold_standard": "Framework either current-and-supported, or the core logic is framework-independent behind an interface with an active migration plan.",
+          "effort": "⚡ ≤30 min"
+        }
+      },
+      {
+        "id": "SEC-09",
+        "name": "Input Robustness & Fuzzing",
+        "category_id": "SEC",
+        "status": "measured",
+        "score": 0,
+        "reason": "Parsing surface unknown surface; zero harnesses; no sanitizers — per SEC-09 Red: input robustness untested — score 0 (presence-only caveat).",
+        "evidence": {
+          "tool": "fuzz-inventory",
+          "tool_version": "1.1",
+          "pointers": [
+            {
+              "detail": "no fuzz harness"
+            }
+          ],
+          "facts": {
+            "harnesses": [],
+            "sanitizers_in_build": false,
+            "continuous_fuzzing": {
+              "oss_fuzz": false,
+              "scheduled_workflow": false
+            },
+            "parser_surface_detected": []
+          }
+        },
+        "effort": "🔷 ~1–2 days",
+        "remediation": {
+          "quick_win": "stand up fuzz harnesses for the top 3 untrusted parsers, run sanitizer builds, harden validation at those boundaries (limits, types, structure).",
+          "structural": "fuzz-in-CI for parser-adjacent code, migrate memory-unsafe parsers, input-validation as a platform concern, adversarial corpus maintenance.",
+          "gold_standard": "Every untrusted parser fuzzed in CI with sanitizers, zero standing crashes, validation layers reject early and clearly.",
+          "effort": "🔷 ~1–2 days"
+        }
+      },
+      {
+        "id": "SEC-10",
+        "name": "Security Testing in CI",
+        "category_id": "SEC",
+        "status": "measured",
+        "score": 0,
+        "reason": "No security CI jobs — classes none; jobs none — per SEC-10 Red: no SAST/deps/secret/image gates — score 0.",
+        "evidence": {
+          "tool": "sec-ci-inventory",
+          "tool_version": "1.1",
+          "pointers": [
+            {
+              "detail": "no security CI",
+              "file": ".github/workflows"
+            }
+          ],
+          "facts": {
+            "security_jobs": [],
+            "classes_present": [],
+            "secret_scan_covers_history": false,
+            "image_scan_on_build": false,
+            "workflow_permissions_hardened": false
+          }
+        },
+        "effort": "🔷 ~1–2 days",
+        "remediation": {
+          "quick_win": "add Semgrep/CodeQL failing gates, secret scan on history + CI, TRIVY on images — this week.",
+          "structural": "a security-as-quality pipeline (SAST, deps, secrets, container, DAST on staging, threat modelling for new features), a findings tracking loop (owner, SLA, retest), and a hard \"no gate-less merge\" rule.",
+          "gold_standard": "Five scan categories failing in CI, findings tracked to closure within SLA, DAST regularly scheduled, threat modelling on all new boundaries.",
+          "effort": "🔷 ~1–2 days"
+        }
+      },
+      {
+        "id": "ECOS-04",
+        "name": "Deprecated API Usage",
+        "category_id": "ECOS",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — ECOS-04 requires a detector (see rubric)",
+        "effort": "⚡ ≤30 min",
+        "not_applicable": false
+      },
+      {
+        "id": "ECOS-09",
+        "name": "Version Skew Across Services",
+        "category_id": "ECOS",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — ECOS-09 requires a detector (see rubric)",
+        "effort": "🔷 ~1–2 days",
+        "not_applicable": false
+      },
+      {
+        "id": "ECOS-10",
+        "name": "Supply-Chain: Typosquatting, Malware, & Registry Risk",
+        "category_id": "ECOS",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — ECOS-10 requires a detector (see rubric)",
+        "effort": "🔷 ~1–2 days",
+        "not_applicable": false
+      },
+      {
+        "id": "ARCH-02",
+        "name": "Coupling & Cohesion",
+        "category_id": "ARCH",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — ARCH-02 requires a detector (see rubric)",
+        "effort": "🔶 ~2–4 h",
+        "not_applicable": false
+      },
+      {
+        "id": "ARCH-03",
+        "name": "Layer & Boundary Violations",
+        "category_id": "ARCH",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — ARCH-03 requires a detector (see rubric)",
+        "effort": "🔶 ~2–4 h",
+        "not_applicable": false
+      },
+      {
+        "id": "ARCH-04",
+        "name": "Dead & Orphaned Code",
+        "category_id": "ARCH",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — ARCH-04 requires a detector (see rubric)",
+        "effort": "⚡ ≤30 min",
+        "not_applicable": false
+      },
+      {
+        "id": "ARCH-06",
+        "name": "Architectural Era / Framework Generation",
+        "category_id": "ARCH",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — ARCH-06 requires a detector (see rubric)",
+        "effort": "🔶 ~2–4 h",
+        "not_applicable": false
+      },
+      {
+        "id": "ARCH-07",
+        "name": "Global Mutable State & Hidden Dependencies",
+        "category_id": "ARCH",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — ARCH-07 requires a detector (see rubric)",
+        "effort": "🔶 ~2–4 h",
+        "not_applicable": false
+      },
+      {
+        "id": "ARCH-09",
+        "name": "Agentic Operability (AI/LLM Codebase-Readiness)",
+        "category_id": "ARCH",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — ARCH-09 requires a detector (see rubric)",
+        "effort": "🔶 ~2–4 h",
+        "not_applicable": false
+      },
+      {
+        "id": "ARCH-10",
+        "name": "Feature-Flag & Configuration Debt",
+        "category_id": "ARCH",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — ARCH-10 requires a detector (see rubric)",
+        "effort": "⚡ ≤30 min",
+        "not_applicable": false
+      },
+      {
+        "id": "ARCH-11",
+        "name": "Nullable/Untyped Code & Runtime Error Density",
+        "category_id": "ARCH",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — ARCH-11 requires a detector (see rubric)",
+        "effort": "🔷 ~1–2 days",
+        "not_applicable": false
+      },
+      {
+        "id": "ARCH-12",
+        "name": "Duplicated Cross-Cutting Concerns (auth, logging, error handling, transactions)",
+        "category_id": "ARCH",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — ARCH-12 requires a detector (see rubric)",
+        "effort": "🔷 ~1–2 days",
+        "not_applicable": false
+      },
+      {
+        "id": "TEST-01",
+        "name": "Code Coverage Degradation",
+        "category_id": "TEST",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — TEST-01 requires a detector (see rubric)",
+        "effort": "⚡ ≤30 min",
+        "not_applicable": false
+      },
+      {
+        "id": "TEST-02",
+        "name": "Flaky Test Rate",
+        "category_id": "TEST",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — TEST-02 requires a detector (see rubric)",
+        "effort": "🔶 ~2–4 h",
+        "not_applicable": false
+      },
+      {
+        "id": "TEST-04",
+        "name": "Test Run Time",
+        "category_id": "TEST",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — TEST-04 requires a detector (see rubric)",
+        "effort": "⚡ ≤30 min",
+        "not_applicable": false
+      },
+      {
+        "id": "TEST-06",
+        "name": "Core Domain Untested",
+        "category_id": "TEST",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — TEST-06 requires a detector (see rubric)",
+        "effort": "🔶 ~2–4 h",
+        "not_applicable": false
+      },
+      {
+        "id": "TEST-07",
+        "name": "Test Isolation & Hermeticity",
+        "category_id": "TEST",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — TEST-07 requires a detector (see rubric)",
+        "effort": "🔶 ~2–4 h",
+        "not_applicable": false
+      },
+      {
+        "id": "TEST-09",
+        "name": "Mutation Testing Score",
+        "category_id": "TEST",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — TEST-09 requires a detector (see rubric)",
+        "effort": "🔷 ~1–2 days",
+        "not_applicable": false
+      },
+      {
+        "id": "TEST-10",
+        "name": "Test Maintenance Burden",
+        "category_id": "TEST",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — TEST-10 requires a detector (see rubric)",
+        "effort": "🔷 ~1–2 days",
+        "not_applicable": false
+      },
+      {
+        "id": "SEC-03",
+        "name": "Missing Web Security Controls",
+        "category_id": "SEC",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — SEC-03 requires a detector (see rubric)",
+        "effort": "🔶 ~2–4 h",
+        "not_applicable": false
+      },
+      {
+        "id": "SEC-04",
+        "name": "Authentication & Authorization Weaknesses",
+        "category_id": "SEC",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — SEC-04 requires a detector (see rubric)",
+        "effort": "🔶 ~2–4 h",
+        "not_applicable": false
+      },
+      {
+        "id": "SEC-05",
+        "name": "Audit Logging Deficits",
+        "category_id": "SEC",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — SEC-05 requires a detector (see rubric)",
+        "effort": "🔶 ~2–4 h",
+        "not_applicable": false
+      },
+      {
+        "id": "SEC-08",
+        "name": "Compliance Drift",
+        "category_id": "SEC",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — SEC-08 requires a detector (see rubric)",
+        "effort": "🔶 ~2–4 h",
+        "not_applicable": false
+      },
+      {
+        "id": "DATA-02",
+        "name": "Database Coupling & Hidden Dependencies",
+        "category_id": "DATA",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — DATA-02 requires a detector (see rubric)",
+        "effort": "🔶 ~2–4 h",
+        "not_applicable": false
+      },
+      {
+        "id": "DATA-03",
+        "name": "Data Integrity & Constraint Degradation",
+        "category_id": "DATA",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — DATA-03 requires a detector (see rubric)",
+        "effort": "🔶 ~2–4 h",
+        "not_applicable": false
+      },
+      {
+        "id": "DATA-04",
+        "name": "Legacy Storage Technology",
+        "category_id": "DATA",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — DATA-04 requires a detector (see rubric)",
+        "effort": "🔷 ~1–2 days",
+        "not_applicable": false
+      },
+      {
+        "id": "DATA-05",
+        "name": "Lock Contention & Scaling Bottleneck",
+        "category_id": "DATA",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — DATA-05 requires a detector (see rubric)",
+        "effort": "🔷 ~1–2 days",
+        "not_applicable": false
+      },
+      {
+        "id": "DATA-06",
+        "name": "Data Lifecycle Management Deficits",
+        "category_id": "DATA",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — DATA-06 requires a detector (see rubric)",
+        "effort": "⚡ ≤30 min",
+        "not_applicable": false
+      },
+      {
+        "id": "DATA-07",
+        "name": "ORM / Query Performance Smells",
+        "category_id": "DATA",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — DATA-07 requires a detector (see rubric)",
+        "effort": "🔶 ~2–4 h",
+        "not_applicable": false
+      },
+      {
+        "id": "DATA-08",
+        "name": "Schema Overfitting & Model Rigidity",
+        "category_id": "DATA",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — DATA-08 requires a detector (see rubric)",
+        "effort": "🔶 ~2–4 h",
+        "not_applicable": false
+      },
+      {
+        "id": "DATA-09",
+        "name": "Event Sourcing / Audit Readiness",
+        "category_id": "DATA",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — DATA-09 requires a detector (see rubric)",
+        "effort": "🔷 ~1–2 days",
+        "not_applicable": false
+      },
+      {
+        "id": "DATA-10",
+        "name": "Environment Schema Drift",
+        "category_id": "DATA",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — DATA-10 requires a detector (see rubric)",
+        "effort": "🔷 ~1–2 days",
+        "not_applicable": false
+      },
+      {
+        "id": "API-01",
+        "name": "API Contract Drift",
+        "category_id": "API",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — API-01 requires a detector (see rubric)",
+        "effort": "🔶 ~2–4 h",
+        "not_applicable": false
+      },
+      {
+        "id": "API-02",
+        "name": "Versioning & Breaking-Change Discipline",
+        "category_id": "API",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — API-02 requires a detector (see rubric)",
+        "effort": "⚡ ≤30 min",
+        "not_applicable": false
+      },
+      {
+        "id": "API-03",
+        "name": "Integration Point Bloat",
+        "category_id": "API",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — API-03 requires a detector (see rubric)",
+        "effort": "🔶 ~2–4 h",
+        "not_applicable": false
+      },
+      {
+        "id": "API-04",
+        "name": "Synchronous Coupling & Chatty Interfaces",
+        "category_id": "API",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — API-04 requires a detector (see rubric)",
+        "effort": "🔶 ~2–4 h",
+        "not_applicable": false
+      },
+      {
+        "id": "API-05",
+        "name": "Third-Party & Vendor API Dependency Risk",
+        "category_id": "API",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — API-05 requires a detector (see rubric)",
+        "effort": "🔶 ~2–4 h",
+        "not_applicable": false
+      },
+      {
+        "id": "API-06",
+        "name": "Protocol & Data-Format Legaciness",
+        "category_id": "API",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — API-06 requires a detector (see rubric)",
+        "effort": "🔶 ~2–4 h",
+        "not_applicable": false
+      },
+      {
+        "id": "API-07",
+        "name": "Error Handling & API Observability Semantics",
+        "category_id": "API",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — API-07 requires a detector (see rubric)",
+        "effort": "🔶 ~2–4 h",
+        "not_applicable": false
+      },
+      {
+        "id": "API-08",
+        "name": "Consumer Blindness & Backward Compatibility",
+        "category_id": "API",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — API-08 requires a detector (see rubric)",
+        "effort": "🔶 ~2–4 h",
+        "not_applicable": false
+      },
+      {
+        "id": "API-09",
+        "name": "Idempotency & Retry Semantics",
+        "category_id": "API",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — API-09 requires a detector (see rubric)",
+        "effort": "🔷 ~1–2 days",
+        "not_applicable": false
+      },
+      {
+        "id": "API-10",
+        "name": "Contract Schema Evolution Process",
+        "category_id": "API",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — API-10 requires a detector (see rubric)",
+        "effort": "🔷 ~1–2 days",
+        "not_applicable": false
+      },
+      {
+        "id": "VEL-01",
+        "name": "CI/CD Build Duration",
+        "category_id": "VEL",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — VEL-01 requires a detector (see rubric)",
+        "effort": "⚡ ≤30 min",
+        "not_applicable": false
+      },
+      {
+        "id": "VEL-02",
+        "name": "Local Dev Setup Time & Friction",
+        "category_id": "VEL",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — VEL-02 requires a detector (see rubric)",
+        "effort": "🔶 ~2–4 h",
+        "not_applicable": false
+      },
+      {
+        "id": "VEL-03",
+        "name": "Deployment Failure Rate (CFR)",
+        "category_id": "VEL",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — VEL-03 requires a detector (see rubric)",
+        "effort": "🔶 ~2–4 h",
+        "not_applicable": false
+      },
+      {
+        "id": "VEL-04",
+        "name": "Deployment Frequency & Lead Time",
+        "category_id": "VEL",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — VEL-04 requires a detector (see rubric)",
+        "effort": "🔶 ~2–4 h",
+        "not_applicable": false
+      },
+      {
+        "id": "VEL-05",
+        "name": "Onboarding Lead Time to First Production PR",
+        "category_id": "VEL",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — VEL-05 requires a detector (see rubric)",
+        "effort": "🔶 ~2–4 h",
+        "not_applicable": false
+      },
+      {
+        "id": "VEL-07",
+        "name": "Environment Reproducibility / Works-on-My-Machine",
+        "category_id": "VEL",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — VEL-07 requires a detector (see rubric)",
+        "effort": "🔶 ~2–4 h",
+        "not_applicable": false
+      },
+      {
+        "id": "VEL-11",
+        "name": "Developer Experience Tooling",
+        "category_id": "VEL",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — VEL-11 requires a detector (see rubric)",
+        "effort": "🔷 ~1–2 days",
+        "not_applicable": false
+      },
+      {
+        "id": "VEL-12",
+        "name": "Incident Recovery / MTTR",
+        "category_id": "VEL",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — VEL-12 requires a detector (see rubric)",
+        "effort": "🔷 ~1–2 days",
+        "not_applicable": false
+      },
+      {
+        "id": "PERF-01",
+        "name": "Observability Gaps",
+        "category_id": "PERF",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — PERF-01 requires a detector (see rubric)",
+        "effort": "🔶 ~2–4 h",
+        "not_applicable": false
+      },
+      {
+        "id": "PERF-03",
+        "name": "Resource Waste / Leakage",
+        "category_id": "PERF",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — PERF-03 requires a detector (see rubric)",
+        "effort": "🔷 ~1–2 days",
+        "not_applicable": false
+      },
+      {
+        "id": "PERF-04",
+        "name": "Monolithic Scaling Bottleneck",
+        "category_id": "PERF",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — PERF-04 requires a detector (see rubric)",
+        "effort": "🔷 ~1–2 days",
+        "not_applicable": false
+      },
+      {
+        "id": "PERF-05",
+        "name": "No Auto-Scaling / Capacity Planning",
+        "category_id": "PERF",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — PERF-05 requires a detector (see rubric)",
+        "effort": "🔶 ~2–4 h",
+        "not_applicable": false
+      },
+      {
+        "id": "PERF-07",
+        "name": "No SLOs / Performance Budgets",
+        "category_id": "PERF",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — PERF-07 requires a detector (see rubric)",
+        "effort": "🔶 ~2–4 h",
+        "not_applicable": false
+      },
+      {
+        "id": "PERF-08",
+        "name": "Runtime Waste & Startup Latency",
+        "category_id": "PERF",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — PERF-08 requires a detector (see rubric)",
+        "effort": "🔶 ~2–4 h",
+        "not_applicable": false
+      },
+      {
+        "id": "PERF-09",
+        "name": "Cost Efficiency / FinOps",
+        "category_id": "PERF",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — PERF-09 requires a detector (see rubric)",
+        "effort": "🔷 ~1–2 days",
+        "not_applicable": false
+      },
+      {
+        "id": "PERF-10",
+        "name": "Disaster Recovery & Resiliency",
+        "category_id": "PERF",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — PERF-10 requires a detector (see rubric)",
+        "effort": "🔷 ~1–2 days",
+        "not_applicable": false
+      },
+      {
+        "id": "DOCS-02",
+        "name": "Stale / Drifted Documentation",
+        "category_id": "DOCS",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — DOCS-02 requires a detector (see rubric)",
+        "effort": "⚡ ≤30 min",
+        "not_applicable": false
+      },
+      {
+        "id": "DOCS-05",
+        "name": "Tribal Knowledge & Oral Tradition",
+        "category_id": "DOCS",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — DOCS-05 requires a detector (see rubric)",
+        "effort": "🔶 ~2–4 h",
+        "not_applicable": false
+      },
+      {
+        "id": "DOCS-06",
+        "name": "Comment Debt & Self-Documenting Code Imbalance",
+        "category_id": "DOCS",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — DOCS-06 requires a detector (see rubric)",
+        "effort": "🔶 ~2–4 h",
+        "not_applicable": false
+      },
+      {
+        "id": "DOCS-07",
+        "name": "Missing API Documentation",
+        "category_id": "DOCS",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — DOCS-07 requires a detector (see rubric)",
+        "effort": "🔶 ~2–4 h",
+        "not_applicable": false
+      },
+      {
+        "id": "DOCS-10",
+        "name": "Knowledge Exit & Documentation Ownership",
+        "category_id": "DOCS",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — DOCS-10 requires a detector (see rubric)",
+        "effort": "🔷 ~1–2 days",
+        "not_applicable": false
+      },
+      {
+        "id": "FE-01",
+        "name": "UI Framework / Stack EOL & Deprecation",
+        "category_id": "FE",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — FE-01 requires a detector (see rubric)",
+        "effort": "⚡ ≤30 min",
+        "not_applicable": false
+      },
+      {
+        "id": "FE-02",
+        "name": "Bundle Size & Load Performance",
+        "category_id": "FE",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — FE-02 requires a detector (see rubric)",
+        "effort": "🔶 ~2–4 h",
+        "not_applicable": false
+      },
+      {
+        "id": "FE-03",
+        "name": "Accessibility Deficits",
+        "category_id": "FE",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — FE-03 requires a detector (see rubric)",
+        "effort": "🔶 ~2–4 h",
+        "not_applicable": false
+      },
+      {
+        "id": "FE-04",
+        "name": "Browser / Platform Support Drift",
+        "category_id": "FE",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — FE-04 requires a detector (see rubric)",
+        "effort": "🔶 ~2–4 h",
+        "not_applicable": false
+      },
+      {
+        "id": "FE-05",
+        "name": "Client-Side Architecture Debt",
+        "category_id": "FE",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — FE-05 requires a detector (see rubric)",
+        "effort": "🔶 ~2–4 h",
+        "not_applicable": false
+      },
+      {
+        "id": "FE-06",
+        "name": "Design System / UI Consistency Drift",
+        "category_id": "FE",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — FE-06 requires a detector (see rubric)",
+        "effort": "🔶 ~2–4 h",
+        "not_applicable": false
+      },
+      {
+        "id": "FE-07",
+        "name": "Internationalization / Localization Debt",
+        "category_id": "FE",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — FE-07 requires a detector (see rubric)",
+        "effort": "🔷 ~1–2 days",
+        "not_applicable": false
+      },
+      {
+        "id": "FE-08",
+        "name": "Mobile / Responsive Adaptation & Offline Support",
+        "category_id": "FE",
+        "status": "not_implemented",
+        "reason": "detector not implemented in this slice",
+        "unknown_measure_path": "Not implemented — FE-08 requires a detector (see rubric)",
+        "effort": "🔷 ~1–2 days",
+        "not_applicable": false
+      }
+    ],
+    "next_band_path": {
+      "destination": "High",
+      "threshold": 27,
+      "points_needed": 21.29,
+      "classes": [
+        {
+          "class": "sprint",
+          "pp": 8.142857142857144,
+          "cumulative_pp": 8.142857142857144,
+          "arrival": "not-reached",
+          "steps": [
+            {
+              "row": "TEST-05",
+              "name": "Skipped / Disabled Tests",
+              "recoverable_pp": 2.2222222222222223,
+              "effort": "⚡ ≤30 min",
+              "quick_win": "re-enable or delete each skip deliberately (delete-with-justification or fix-with-test); no skips without a linked ticket and owner."
+            },
+            {
+              "row": "ECOS-02",
+              "name": "Major Package Drift",
+              "recoverable_pp": 1.4285714285714286,
+              "effort": "⚡ ≤30 min",
+              "quick_win": "enable Dependabot/Renovate with major-update grouping and a monthly budget."
+            },
+            {
+              "row": "ECOS-07",
+              "name": "Build Reproducibility & Lockfile Integrity",
+              "recoverable_pp": 1.4285714285714286,
+              "effort": "⚡ ≤30 min",
+              "quick_win": "commit the lockfile, switch CI to `npm ci`/`pip install --require-hashes`/`--frozen-lockfile`, add a \"lockfile up-to-date\" CI check."
+            },
+            {
+              "row": "SEC-02",
+              "name": "Hardcoded Secrets & Credentials",
+              "recoverable_pp": 1.1111111111111112,
+              "effort": "⚡ ≤30 min",
+              "quick_win": "rotate EVERY leaked credential immediately (the exposure window starts at commit time, not discovery time), remove from current tree, switch to env vars."
+            },
+            {
+              "row": "DOCS-04",
+              "name": "No Onboarding Guide / Developer Setup Docs",
+              "recoverable_pp": 1,
+              "effort": "⚡ ≤30 min",
+              "quick_win": "write the golden path (clone → setup → run → test → first PR) and verify every command executes, add CONTRIBUTING.md."
+            },
+            {
+              "row": "ECOS-01",
+              "name": "Runtime/Language EOL",
+              "recoverable_pp": 0.9523809523809523,
+              "effort": "⚡ ≤30 min",
+              "quick_win": "document the gap, create the upgrade ticket with a date."
+            }
+          ]
+        },
+        {
+          "class": "quarter",
+          "pp": 3.9523809523809526,
+          "cumulative_pp": 12.095238095238097,
+          "arrival": "not-reached",
+          "steps": [
+            {
+              "row": "DOCS-01",
+              "name": "Missing Architectural Decision Records (ADRs)",
+              "recoverable_pp": 1,
+              "effort": "🔶 ~2–4 h",
+              "quick_win": "write ADRs for the top 10 load-bearing decisions (interview the oldest engineers, mine git/past docs), establish a template + PR requirement for consequential choices."
+            },
+            {
+              "row": "DOCS-03",
+              "name": "Missing Runbooks & Operational Docs",
+              "recoverable_pp": 1,
+              "effort": "🔶 ~2–4 h",
+              "quick_win": "write runbooks for the top 5 incident classes today (postmortem-driven), make them linkable from alert dashboards, add \"runme at the first sign\" steps."
+            },
+            {
+              "row": "DOCS-08",
+              "name": "No Release Communication / Changelog",
+              "recoverable_pp": 1,
+              "effort": "🔶 ~2–4 h",
+              "quick_win": "adopt a CHANGELOG process (Keep-a-Changelog, auto-generated from commits/PRs), publish release notes for the top consumers, write migration guides for open breaking changes (backfill)."
+            },
+            {
+              "row": "ECOS-05",
+              "name": "License Compliance Risk",
+              "recoverable_pp": 0.9523809523809523,
+              "effort": "🔶 ~2–4 h",
+              "quick_win": "generate an SBOM (`syft . > sbom.json`), wire it into CI, publish attribution files."
+            }
+          ]
+        },
+        {
+          "class": "structural",
+          "pp": 7.666666666666667,
+          "cumulative_pp": 19.761904761904763,
+          "arrival": "not-reached",
+          "steps": [
+            {
+              "row": "SEC-09",
+              "name": "Input Robustness & Fuzzing",
+              "recoverable_pp": 3.3333333333333335,
+              "effort": "🔷 ~1–2 days",
+              "quick_win": "stand up fuzz harnesses for the top 3 untrusted parsers, run sanitizer builds, harden validation at those boundaries (limits, types, structure)."
+            },
+            {
+              "row": "SEC-10",
+              "name": "Security Testing in CI",
+              "recoverable_pp": 3.3333333333333335,
+              "effort": "🔷 ~1–2 days",
+              "quick_win": "add Semgrep/CodeQL failing gates, secret scan on history + CI, TRIVY on images — this week."
+            },
+            {
+              "row": "DOCS-09",
+              "name": "Docs-as-Code & Automation",
+              "recoverable_pp": 1,
+              "effort": "🔷 ~1–2 days",
+              "quick_win": "wire docs generation into CI (spec → reference), add links/lint checks for markdown, CI-verify the top setup commands (fresh container)."
+            }
+          ]
+        }
+      ],
+      "unreached_rows": 85,
+      "terminal": false
+    },
+    "identity": {
+      "subject": {
+        "repo": "maven-multi-module",
+        "commit": "bce7fc006329ffc4ed69d80b6175cbe265a3d901",
+        "scanned_at": "2026-11-12T15:51:07.061Z"
+      },
+      "shape": {
+        "status": "measured",
+        "archetype": "mixed",
+        "confidence": "low",
+        "planes": {
+          "has_server": true,
+          "has_data": false,
+          "has_deploy": false,
+          "has_client": false,
+          "has_test": true
+        },
+        "plane_evidence": {
+          "has_server": [
+            "orders-core/pom.xml: servlet/Struts",
+            "orders-web/pom.xml: servlet/Struts"
+          ],
+          "has_data": [
+            "tree scan: 0 matches for {migrations/, schema.sql, prisma/, db-drivers, EF/.sqlproj/.sql, Hibernate}",
+            "tree scan: 0 matches for {migrations/, schema.sql, prisma/, db-drivers, EF/.sqlproj/.sql, Hibernate}"
+          ],
+          "has_deploy": [
+            "tree scan: 0 matches for {Dockerfile, k8s/, *.tf, serverless.yml, Chart.yaml}",
+            "tree scan: 0 matches for {Dockerfile, k8s/, *.tf, serverless.yml, Chart.yaml}"
+          ],
+          "has_client": [
+            "tree scan: 0 matches for {client deps, src/components/, WinForms/WPF, VB6/Delphi forms}",
+            "tree scan: 0 matches for {client deps, src/components/, WinForms/WPF, VB6/Delphi forms}"
+          ],
+          "has_test": [
+            "orders-core/src/test/",
+            "pom.xml: JUnit"
+          ]
+        },
+        "per_root": [
+          {
+            "root": ".",
+            "archetype": "service",
+            "confidence": "medium",
+            "planes": {
+              "has_server": true,
+              "has_data": false,
+              "has_deploy": false,
+              "has_client": false,
+              "has_test": true
+            }
+          },
+          {
+            "root": "orders-batch",
+            "archetype": "unknown",
+            "confidence": "low",
+            "planes": {
+              "has_server": false,
+              "has_data": false,
+              "has_deploy": false,
+              "has_client": false,
+              "has_test": false
+            }
+          },
+          {
+            "root": "orders-core",
+            "archetype": "service",
+            "confidence": "medium",
+            "planes": {
+              "has_server": true,
+              "has_data": false,
+              "has_deploy": false,
+              "has_client": false,
+              "has_test": true
+            }
+          },
+          {
+            "root": "orders-web",
+            "archetype": "service",
+            "confidence": "medium",
+            "planes": {
+              "has_server": true,
+              "has_data": false,
+              "has_deploy": false,
+              "has_client": false,
+              "has_test": false
+            }
+          }
+        ]
+      },
+      "size": {
+        "status": "measured",
+        "files": 10,
+        "directories": 30,
+        "lines": {
+          "status": "measured",
+          "value": 64,
+          "method": "read-all",
+          "covered": {
+            "files_read": 4,
+            "files_in_scope": 4
+          },
+          "scope": "source-v1"
+        }
+      },
+      "stack": {
+        "status": "measured",
+        "languages": [
+          {
+            "name": "Java",
+            "files": 4,
+            "share": 1
+          }
+        ],
+        "primary_language": "Java",
+        "ecosystems": [
+          "java"
+        ],
+        "frameworks": [
+          "Spring"
+        ],
+        "legacy_stacks": [
+          {
+            "id": "vb6",
+            "detected": false,
+            "files": 0
+          },
+          {
+            "id": "delphi",
+            "detected": false,
+            "files": 0
+          }
+        ]
+      }
+    },
+    "report_schema": "1",
+    "sample": true
+  },
+  "meta": {
+    "repo": "maven-multi-module",
+    "repoUrl": "file://maven-multi-module",
+    "repoSlug": "maven-multi-module",
+    "engineSha7": "bce7fc0",
+    "runId": "maven-multi-module__bce7fc0__2026-11-12T155107-061Z",
+    "ranAt": "2026-11-12T15:51:07.061Z",
+    "durationMs": 1285,
+    "budgetMs": 240000,
+    "repoSha": "bce7fc006329ffc4ed69d80b6175cbe265a3d901",
+    "score": 5.71,
+    "tier": "Critical",
+    "tier_legacy": "Critical",
+    "status": "degraded",
+    "engine_version": "1.0.2",
+    "rubric_version": "docs/rubric@tranche-a",
+    "filename": "maven-multi-module__bce7fc0__2026-11-12T155107-061Z.json",
+    "coverage": {
+      "measured": 13,
+      "estimated": 1,
+      "unknown": 14,
+      "not_applicable": 3,
+      "not_implemented": 71,
+      "measured_pct": "46%",
+      "estimated_pct": "4%",
+      "unknown_pct": "50%",
+      "not_applicable_pct": "3%",
+      "not_implemented_pct": "70%"
+    },
+    "contractVersion": 1,
+    "score_fingerprint": "769f7de989b5230df696480f3325ecfd7f2240da28b3f52760a7b73e97548457",
+    "fingerprint_version": 3,
+    "requested_indicators": [
+      "ARCH-01",
+      "ARCH-05",
+      "ARCH-08",
+      "DATA-01",
+      "DOCS-01",
+      "DOCS-03",
+      "DOCS-04",
+      "DOCS-08",
+      "DOCS-09",
+      "ECOS-01",
+      "ECOS-02",
+      "ECOS-03",
+      "ECOS-05",
+      "ECOS-06",
+      "ECOS-07",
+      "ECOS-08",
+      "PERF-02",
+      "PERF-06",
+      "SEC-01",
+      "SEC-02",
+      "SEC-06",
+      "SEC-07",
+      "SEC-09",
+      "SEC-10",
+      "TEST-03",
+      "TEST-05",
+      "TEST-08",
+      "VEL-06",
+      "VEL-08",
+      "VEL-09",
+      "VEL-10"
+    ],
+    "score_policy": "frozen"
+  },
+  "trace": [
+    {
+      "ts": 0,
+      "elapsedMs": 0,
+      "label": "Starting local scan — maven-multi-module",
+      "type": "start"
+    },
+    {
+      "ts": 2,
+      "elapsedMs": 2,
+      "label": "Budget 240s · 25 indicators (local)",
+      "type": "meta"
+    },
+    {
+      "ts": 1,
+      "elapsedMs": 1,
+      "label": "Budget 240s · 25 indicators (local, no clone)",
+      "type": "trace"
+    },
+    {
+      "ts": 19,
+      "elapsedMs": 19,
+      "label": "Tree walk — 10 files, sampleN full (canonical sorted order)",
+      "type": "trace"
+    },
+    {
+      "ts": 23,
+      "elapsedMs": 23,
+      "label": "Sniff — 4 ecosystems (local, no clone)",
+      "type": "trace"
+    },
+    {
+      "ts": 32,
+      "elapsedMs": 32,
+      "label": "Archetype — mixed (low)",
+      "type": "trace"
+    },
+    {
+      "ts": 43,
+      "elapsedMs": 43,
+      "label": "Identity — 10 files · 64 lines · 1 languages",
+      "type": "trace"
+    },
+    {
+      "ts": 43,
+      "elapsedMs": 43,
+      "label": "Skipped not_applicable: PERF-02, PERF-06, DATA-01",
+      "type": "trace"
+    },
+    {
+      "ts": 1281,
+      "elapsedMs": 1281,
+      "label": "ECOS-01 — 23ms · measured",
+      "type": "trace"
+    },
+    {
+      "ts": 1281,
+      "elapsedMs": 1281,
+      "label": "ECOS-02 — 11ms · measured",
+      "type": "trace"
+    },
+    {
+      "ts": 1281,
+      "elapsedMs": 1281,
+      "label": "ECOS-03 — 11ms · unknown (cap)",
+      "type": "trace"
+    },
+    {
+      "ts": 1281,
+      "elapsedMs": 1281,
+      "label": "ECOS-05 — 32ms · estimated",
+      "type": "trace"
+    },
+    {
+      "ts": 1281,
+      "elapsedMs": 1281,
+      "label": "ECOS-07 — 33ms · measured",
+      "type": "trace"
+    },
+    {
+      "ts": 1281,
+      "elapsedMs": 1281,
+      "label": "SEC-01 — 11ms · unknown (cap)",
+      "type": "trace"
+    },
+    {
+      "ts": 1281,
+      "elapsedMs": 1281,
+      "label": "SEC-06 — 4ms · unknown (cap)",
+      "type": "trace"
+    },
+    {
+      "ts": 1281,
+      "elapsedMs": 1281,
+      "label": "SEC-02 — 1238ms · measured",
+      "type": "trace"
+    },
+    {
+      "ts": 1281,
+      "elapsedMs": 1281,
+      "label": "ARCH-01 — 4ms · unknown (cap)",
+      "type": "trace"
+    },
+    {
+      "ts": 1281,
+      "elapsedMs": 1281,
+      "label": "ARCH-08 — 4ms · unknown (cap)",
+      "type": "trace"
+    },
+    {
+      "ts": 1281,
+      "elapsedMs": 1281,
+      "label": "ARCH-05 — 37ms · unknown (cap)",
+      "type": "trace"
+    },
+    {
+      "ts": 1281,
+      "elapsedMs": 1281,
+      "label": "TEST-03 — 18ms · unknown (cap)",
+      "type": "trace"
+    },
+    {
+      "ts": 1281,
+      "elapsedMs": 1281,
+      "label": "TEST-05 — 57ms · measured",
+      "type": "trace"
+    },
+    {
+      "ts": 1281,
+      "elapsedMs": 1281,
+      "label": "DOCS-01 — 7ms · measured",
+      "type": "trace"
+    },
+    {
+      "ts": 1281,
+      "elapsedMs": 1281,
+      "label": "DOCS-03 — 7ms · measured",
+      "type": "trace"
+    },
+    {
+      "ts": 1281,
+      "elapsedMs": 1281,
+      "label": "DOCS-04 — 7ms · measured",
+      "type": "trace"
+    },
+    {
+      "ts": 1281,
+      "elapsedMs": 1281,
+      "label": "DOCS-08 — 7ms · measured",
+      "type": "trace"
+    },
+    {
+      "ts": 1281,
+      "elapsedMs": 1281,
+      "label": "DOCS-09 — 4ms · measured",
+      "type": "trace"
+    },
+    {
+      "ts": 1281,
+      "elapsedMs": 1281,
+      "label": "ECOS-06 — 12ms · unknown (cap)",
+      "type": "trace"
+    },
+    {
+      "ts": 1281,
+      "elapsedMs": 1281,
+      "label": "ECOS-08 — 29ms · measured",
+      "type": "trace"
+    },
+    {
+      "ts": 1281,
+      "elapsedMs": 1281,
+      "label": "SEC-09 — 7ms · measured",
+      "type": "trace"
+    },
+    {
+      "ts": 1281,
+      "elapsedMs": 1281,
+      "label": "SEC-10 — 4ms · measured",
+      "type": "trace"
+    },
+    {
+      "ts": 1282,
+      "elapsedMs": 1282,
+      "label": "Local detectors — 14/22 complete",
+      "type": "progress"
+    },
+    {
+      "ts": 1281,
+      "elapsedMs": 1281,
+      "label": "Local detectors — 14/22 complete",
+      "type": "trace"
+    },
+    {
+      "ts": 1282,
+      "elapsedMs": 1282,
+      "label": "Scoring — gates evaluated",
+      "type": "progress"
+    },
+    {
+      "ts": 1281,
+      "elapsedMs": 1281,
+      "label": "Scoring — gates evaluated",
+      "type": "trace"
+    },
+    {
+      "ts": 1281,
+      "elapsedMs": 1281,
+      "label": "Seal — degraded · 14/25 measured",
+      "type": "trace"
+    },
+    {
+      "ts": 1285,
+      "elapsedMs": 1285,
+      "label": "Scoring — gates evaluated",
+      "type": "scoring"
+    },
+    {
+      "ts": 1285,
+      "elapsedMs": 1285,
+      "label": "Sealed — degraded · 13/28 measured",
+      "type": "sealed",
+      "pct": 100
+    }
+  ],
+  "contractVersion": 1
+}

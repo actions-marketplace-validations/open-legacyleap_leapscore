@@ -142,17 +142,28 @@ function escapeAttr(s: string): string {
 
 /**
  * Render the embed snippet. An SVG referenced by `<img>` cannot link anywhere
- * and does not surface its `<title>`, so the host page supplies the permalink
- * and the full sentence becomes the image's alternative text (D9). The link is
+ * and does not surface its `<title>`, so the host page supplies the link and
+ * the full sentence becomes the image's alternative text (D9).
+ *
+ * Linking to the sealed report is an explicit capability, not a default: only
+ * an emitting deployment that actually hosts sealed reports may set
+ * `linkReport`. The CLI's deployment is stateless and emits the unlinked form,
+ * so a snippet can never promise a permalink that does not resolve. The link is
  * a citation to the sealed report — deliberately no assessment campaign
  * parameters.
  */
 export function renderBadgeSnippet(
   viewModel: BadgeViewModel,
-  opts: { svgPath: string },
+  opts: { svgPath: string; linkReport?: boolean },
 ): BadgeSnippet {
   const alt = viewModel.accessibleName;
   const mdAlt = alt.replace(/[[\]]/g, (ch) => `\\${ch}`);
+  if (opts.linkReport !== true) {
+    return {
+      markdown: `![${mdAlt}](${opts.svgPath})`,
+      html: `<img src="${escapeAttr(opts.svgPath)}" alt="${escapeAttr(alt)}">`,
+    };
+  }
   const markdown = `[![${mdAlt}](${opts.svgPath})](${viewModel.permalink})`;
   const html = `<a href="${escapeAttr(viewModel.permalink)}"><img src="${escapeAttr(opts.svgPath)}" alt="${escapeAttr(alt)}"></a>`;
   return { markdown, html };

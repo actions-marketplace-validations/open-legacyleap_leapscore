@@ -1,7 +1,6 @@
 /** apps/scanner/src/scan/render.ts — self-contained HTML + Markdown emitters (spec: report-rendering) */
 import {
-  assessmentUrlForBand,
-  assessmentCtaForBand,
+  assessmentNextStep,
   bandPathBlock,
   gateCapStatement,
   identityValueLabel,
@@ -115,11 +114,15 @@ function renderPathMarkdown(path: NextBandPath, tier: string, score: number): st
 
 /** Self-contained HTML: inline CSS only, no external assets, no CDN, no scripts. */
 export function renderHtml(r: RenderInput): string {
-  const url = assessmentUrlForBand(r.tier);
-  const cta = assessmentCtaForBand(r.tier);
+  const nextStep = assessmentNextStep({
+    tier: r.tier,
+    suppressed: r.suppressed === true,
+  });
+  const url = nextStep.url;
+  const cta = nextStep.sentence;
   const commitShort = r.repoSha && r.repoSha !== 'unknown' ? r.repoSha.slice(0, 7) : 'unknown';
   const headline = r.suppressed
-    ? `<h1><span class="score">insufficient signal</span> <span class="band">no headline</span></h1>`
+    ? `<h1><span class="score">insufficient signal</span></h1>`
     : `<h1><span class="score">${r.score}</span> <span class="band">${esc(r.tier)}</span></h1>`;
   const risks = r.topBlockers.slice(0, 5).map((b) => {
     const evidence = b.evidence_file ? ` — evidence: ${esc(b.evidence_file)}` : '';
@@ -166,8 +169,12 @@ ${r.nextBandPath ? `${renderPathHtml(r.nextBandPath, r.tier, r.score)}\n` : ''}<
 
 /** Markdown: readable in two minutes, pasteable into a PR or ticket. */
 export function renderMarkdown(r: RenderInput): string {
-  const url = assessmentUrlForBand(r.tier);
-  const cta = assessmentCtaForBand(r.tier);
+  const nextStep = assessmentNextStep({
+    tier: r.tier,
+    suppressed: r.suppressed === true,
+  });
+  const url = nextStep.url;
+  const cta = nextStep.sentence;
   const commitShort = r.repoSha && r.repoSha !== 'unknown' ? r.repoSha.slice(0, 7) : 'unknown';
   const lines: string[] = [];
   if (r.identity) {

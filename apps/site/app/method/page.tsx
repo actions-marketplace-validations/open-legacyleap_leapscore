@@ -16,9 +16,10 @@ export default function MethodPage() {
       </h1>
       <p className="mt-3 text-sm leading-relaxed text-muted">
         LeapScore reads a repo against a written rubric of 102 indicators across
-        10 categories. Each indicator is scored to a four-level taxonomy (0–3),
-        every category rolls up, and the system score is the weighted sum —
-        exactly, no guestimates in the arithmetic.
+        10 categories. Up to 31 indicators have a detector today (25 on a local
+        scan); the rest are disclosed as not implemented. Each detector grades to
+        a four-level taxonomy (0–3), every category rolls up, and the system
+        score is the weighted sum — exactly, no guestimates in the arithmetic.
       </p>
 
       <section className="mt-10">
@@ -28,9 +29,25 @@ export default function MethodPage() {
             <dt className="font-medium text-foreground">Category score</dt>
             <dd className="mt-1 leading-relaxed">
               The sum of the applicable row scores, divided by (applicable rows
-              × 3), scaled to 100. Unknown (not-run) rows and N/A rows are
-              excluded from both the numerator and the denominator — a category
-              with everything unknown does not silently score zero.
+              × 3), scaled to 100. The sealed headline uses the frozen
+              denominator: <span className="font-mono text-xs">unknown</span>{" "}
+              rows stay in the denominator as disclosed-unscored, while{" "}
+              <span className="font-mono text-xs">not_applicable</span> and{" "}
+              <span className="font-mono text-xs">not_implemented</span> rows are
+              excluded from both sides. A category with everything unknown
+              therefore does not silently score zero — it lowers coverage, not
+              the reported quality.
+            </dd>
+          </div>
+          <div>
+            <dt className="font-medium text-foreground">Coverage floor</dt>
+            <dd className="mt-1 leading-relaxed">
+              If fewer than half of the attempted rows are gradeable (measured
+              plus estimated), the headline is suppressed with the{" "}
+              <span className="font-mono text-xs">insufficient-signal</span>{" "}
+              verdict instead of publishing a number. Reference scores stay in
+              the JSON for diagnosis; no band is shown, and the next step is the
+              coverage-limit sentence rather than a band CTA.
             </dd>
           </div>
           <div>
@@ -130,14 +147,26 @@ export default function MethodPage() {
             explicit unknowns.
           </li>
           <li>
-            Not proportional to fixing effort — remediation is ordered
-            separately, by score-points per hour.
+            Not proportional to fixing effort — remediation is ordered by score
+            impact, with a verify-effort tag on each row. The tag is verification
+            effort, not a remediation-hour estimate.
           </li>
           <li>
-            Not secret — every point links to its rationale; the rubric is
+            Not secret — every graded point links to its rationale; the rubric is
             public.
           </li>
         </ul>
+      </section>
+
+      <section className="mt-10">
+        <h2 className="text-lg font-semibold">Evidence surfaces</h2>
+        <p className="mt-3 text-sm leading-relaxed text-muted">
+          The JSON report carries evidence pointers — tool, file, line, and the
+          fact the row was graded from — so the number can be re-derived. The
+          HTML and Markdown reports carry human-readable summaries of the same
+          rows, meant to be pasted into a ticket or forwarded to a budget holder.
+          Neither surface invents evidence the other has.
+        </p>
       </section>
 
       <section className="mt-10">

@@ -15,8 +15,11 @@ import {
   tierForScore,
   tierLegacyFor,
   localSlugFromPath,
-  assessmentUrlForBand,
-  assessmentCtaForBand,
+  assessmentNextStep,
+  isSuppressedHeadline,
+  ASSESSMENT_BASE_URL,
+  ASSESSMENT_VERDICT,
+  SUPPRESSED_NEXT_STEP,
   POSITIONING_LINE,
   BAND_FLOORS,
   bandThresholdFor,
@@ -137,15 +140,49 @@ describe("positioning line", () => {
   });
 });
 
-describe("assessment funnel link", () => {
-  it("carries campaign + band and varies CTA by band", () => {
-    for (const band of ["low", "moderate", "high", "critical"]) {
-      const url = assessmentUrlForBand(band[0].toUpperCase() + band.slice(1));
-      expect(url).toContain("utm_campaign=cli-scan-v1");
-      expect(url).toContain(`band=${band}`);
+describe("assessment funnel next step", () => {
+  it("carries campaign + band for every public band and varies the sentence", () => {
+    for (const [tier, band] of [
+      ["Low", "low"],
+      ["Moderate", "moderate"],
+      ["High", "high"],
+      ["Critical", "critical"],
+    ] as const) {
+      const step = assessmentNextStep({ tier });
+      expect(step.url.startsWith(`${ASSESSMENT_BASE_URL}?`)).toBe(true);
+      expect(step.url).toContain("utm_campaign=cli-scan-v1");
+      expect(step.url).toContain(`band=${band}`);
+      expect(step.url).not.toContain("verdict=");
+      expect(step.sentence).toMatch(/\$0 Assessment/);
     }
-    expect(assessmentCtaForBand("Critical")).toMatch(/\$0 Assessment/);
-    expect(assessmentCtaForBand("Low")).toMatch(/keep.*in CI/i);
+    expect(new Set(["Low", "Moderate", "High", "Critical"].map((tier) => assessmentNextStep({ tier }).sentence)).size).toBeGreaterThan(1);
+    expect(assessmentNextStep({ tier: "Critical" }).sentence).toMatch(/\$0 Assessment/);
+    expect(assessmentNextStep({ tier: "Low" }).sentence).toMatch(/keep.*in CI/i);
+  });
+
+  it("never claims a peer benchmark in any band", () => {
+    for (const tier of ["Low", "Moderate", "High", "Critical"]) {
+      const { sentence } = assessmentNextStep({ tier });
+      expect(sentence).not.toMatch(/benchmark/i);
+      expect(sentence).not.toMatch(/peer/i);
+    }
+  });
+
+  it("suppressed runs carry the verdict and no band", () => {
+    const step = assessmentNextStep({ suppressed: true, verdict: ASSESSMENT_VERDICT, tier: "Critical" });
+    expect(step.sentence).toBe(SUPPRESSED_NEXT_STEP);
+    expect(step.sentence).toMatch(/coverage limit/i);
+    expect(step.url).toContain("utm_campaign=cli-scan-v1");
+    expect(step.url).toContain(`verdict=${ASSESSMENT_VERDICT}`);
+    expect(step.url).not.toContain("band=");
+    expect(step.url).not.toContain("critical");
+  });
+
+  it("an unknown or missing band fails loudly instead of falling back to Moderate", () => {
+    expect(() => assessmentNextStep({ tier: "Healthy" })).toThrow(/unknown or missing sealed band/i);
+    expect(() => assessmentNextStep({})).toThrow(/unknown or missing sealed band/i);
+    expect(isSuppressedHeadline({ tier: "Moderate" })).toBe(false);
+    expect(isSuppressedHeadline({ verdict: ASSESSMENT_VERDICT })).toBe(true);
   });
 });
 

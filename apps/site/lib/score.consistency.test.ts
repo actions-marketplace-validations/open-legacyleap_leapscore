@@ -1,8 +1,7 @@
 /*
- * Consistency invariant (AGENTS.md lint-by-hand): derived views must match the
- * canonical seed. This test recomputes the system score from lib/sample.ts and
- * asserts the headline lands on exactly 58.00 — if anyone edits a seed row,
- * this is the tripwire.
+ * Consistency invariant (AGENTS.md lint-by-hand): the site's sealed sample is
+ * the scanner's envelope, not a re-derived view. This test pins the committed
+ * v1.0.2 local scan and checks the site's scoring helpers agree with it.
  */
 
 import { describe, expect, it } from "vitest";
@@ -10,61 +9,41 @@ import { describe, expect, it } from "vitest";
 import { coverageCounts, scoreSystem, tierForScore } from "@/lib/scoring";
 import { getReportProvider } from "@/lib/provider";
 
-const CATEGORY_ROWS = {
-  ECOS: 8,
-  ARCH: 10,
-  TEST: 8,
-  SEC: 8,
-  DATA: 8,
-  API: 8,
-  VEL: 10,
-  PERF: 8,
-  DOCS: 8,
-} as const;
-
-describe("canonical sample (django/django)", () => {
-  it("recomputes the headline to exactly 58.00", async () => {
-    const report = await getReportProvider().getReport({
-      repo: "django/django",
-    });
-    expect(report.headline.score).toBe(58);
+describe("committed sample (synthetic Maven fixture)", () => {
+  it("returns the sealed headline the scanner produced", async () => {
+    const report = await getReportProvider().getReport({ repo: "maven-multi-module" });
+    expect(report.headline.score).toBe(5.71);
+    expect(report.headline.tier).toBe("Critical");
+    expect(report.sample).toBe(true);
   });
 
-  it("lands in the Moderate tier", async () => {
-    const tier = tierForScore(58);
-    expect(tier.label).toBe("Moderate");
+  it("carries the release's real engine and rubric versions", async () => {
+    const report = await getReportProvider().getReport({ repo: "maven-multi-module" });
+    expect(report.snapshot.engine_version).toBe("1.0.2");
+    expect(report.snapshot.rubric_version).toBe("docs/rubric@tranche-a");
+    expect(report.snapshot.repo).toBe("maven-multi-module");
   });
 
-  it("standard audit covers 76 rows at 49/19/8", async () => {
-    const report = await getReportProvider().getReport({
-      repo: "django/django",
-    });
+  it("lands in the Critical tier", () => {
+    expect(tierForScore(5.71).label).toBe("Critical");
+  });
+
+  it("coverage is the sealed coverage, not an authored count", async () => {
+    const report = await getReportProvider().getReport({ repo: "maven-multi-module" });
     const { coverage } = report;
-    expect(coverage.measured + coverage.estimated + coverage.unknown).toBe(76);
-    expect(coverage.measured).toBe(49);
-    expect(coverage.estimated).toBe(19);
-    expect(coverage.unknown).toBe(8);
-    expect(coverage.not_applicable).toBe(8);
-    // +18 deep-dive → 102 all-up
+    expect(coverage.measured).toBe(13);
+    expect(coverage.estimated).toBe(1);
+    expect(coverage.unknown).toBe(14);
+    expect(coverage.not_applicable).toBe(3);
+    expect(coverage.not_implemented).toBe(71);
     expect(report.full_table.length).toBe(102);
   });
 
-  it("101 of the 102 rows are accounted for by category denominators", () => {
-    const categories = Object.keys(CATEGORY_ROWS);
-    const reports = {
-      ECOS: CATEGORY_ROWS.ECOS,
-      ARCH: CATEGORY_ROWS.ARCH,
-      TEST: CATEGORY_ROWS.TEST,
-      SEC: CATEGORY_ROWS.SEC,
-      DATA: CATEGORY_ROWS.DATA,
-      API: CATEGORY_ROWS.API,
-      VEL: CATEGORY_ROWS.VEL,
-      PERF: CATEGORY_ROWS.PERF,
-      DOCS: CATEGORY_ROWS.DOCS,
-    };
-    const total = Object.values(reports).reduce((a, b) => a + b, 0);
-    expect(total).toBe(76);
-    expect(categories.length).toBe(9); // FE is the 10th, N/A here
+  it("every full-table row is accounted for by a category denominator or the deep-dive annex", async () => {
+    const report = await getReportProvider().getReport({ repo: "maven-multi-module" });
+    const inCategories = report.categories.reduce((sum, c) => sum + c.indicator_rows.length, 0);
+    expect(inCategories).toBe(102);
+    expect(report.categories.length).toBe(10);
   });
 });
 
@@ -135,10 +114,12 @@ describe("system score math", () => {
     expect(cats.categories[0].category_score).toBe(100);
   });
 
-  it("coverage counts match the canonical decision", async () => {
-    const report = await getReportProvider().getReport({
-      repo: "django/django",
-    });
-    expect(coverageCounts(report.categories).measured).toBe(49);
+  it("coverage counts agree with the sealed envelope", async () => {
+    const report = await getReportProvider().getReport({ repo: "maven-multi-module" });
+    const coverage = coverageCounts(report.categories);
+    expect(coverage.measured).toBe(report.coverage.measured);
+    expect(coverage.estimated).toBe(report.coverage.estimated);
+    expect(coverage.unknown).toBe(report.coverage.unknown);
+    expect(coverage.not_applicable).toBe(report.coverage.not_applicable);
   });
 });
