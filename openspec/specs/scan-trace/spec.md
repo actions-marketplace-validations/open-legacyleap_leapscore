@@ -35,20 +35,22 @@ The trace SHALL be exhaustive across all traceable seams for the requested indic
 - **WHEN** `SEC-07` times out with `cap`
 - **THEN** its trace entry carries `status:"unknown"` and `errorKind:"cap"` and the timeline shows the failure inline rather than silently omitting it
 
-### Requirement: Live timeline rendering with primary/secondary
+### Requirement: Scan trace rendering with primary/secondary
 
-The live page (`/live?repo=`) SHALL render trace frames live as an append-only timeline below the top progress bar. The timeline SHALL show milestone-phase rows (`phase` in `ingest|gh|clone|sniff|scoring|budget|seal`) as the primary list by default, and per-detector rows (`phase:"detector"`) SHALL be grouped behind an expandable secondary affordance (e.g. `Show detector trace (31)`) that toggles to reveal all detector rows without hiding milestones. The timeline SHALL remain visible while scanning and SHALL collapse to the same component in a collapsed state after Reveal (accessible via the sealed report's "Scan log" affordance). The retained trace SHALL be persisted verbatim as the file's `trace` array and re-rendered on `/reports/[runId]`.
+A rendered report detail SHALL render the stored `trace` as the scan log. The log SHALL show milestone-phase rows (`phase` in `ingest|gh|clone|sniff|scoring|budget|seal`) as the primary list by default, and per-detector rows (`phase:"detector"`) SHALL be grouped behind an expandable secondary affordance (e.g. `Show detector trace (31)`) that toggles to reveal all detector rows without hiding milestones. The retained trace SHALL be persisted verbatim as the file's `trace` array and re-rendered on the sample detail path.
 
-#### Scenario: Milestones primary live
-- **WHEN** a scan is mid-flight and 3 milestones + 5 detector finishes have streamed
-- **THEN** the timeline shows the 3 milestones by default, with an affordance `Show detector trace (5)` that on click reveals the 5 detector rows inline; milestones stay visible both before and after expand
+#### Scenario: Milestones primary
+
+- **WHEN** a sealed sample's trace carries 3 milestones + 5 detector finishes
+- **THEN** the scan log shows the 3 milestones by default, with an affordance `Show detector trace (5)` that on click reveals the 5 detector rows inline; milestones stay visible both before and after expand
 
 #### Scenario: Persisted trace reopens
-- **WHEN** the user navigates to `/reports/<runId>` for a prior scan
-- **THEN** the page renders the stored `trace` array with the same primary/secondary grouping as live, without invoking the engine
+
+- **WHEN** the user navigates to a sample detail path
+- **THEN** the page renders the stored `trace` array with the same primary/secondary grouping, without invoking the engine
 
 ### Requirement: Persistence and ordering
-The persisted envelope in the scanner's store SHALL include `trace: TraceEntry[]` ordered strictly by ascending `elapsedMs` (stable for equal `elapsedMs`). `trace` SHALL be written atomically with `meta` and `report` in the same write. A missing or malformed `trace` on read SHALL be treated as `[]` and SHALL not fail the report detail render or the run-history list.
+The sealed envelope SHALL include `trace: TraceEntry[]` ordered strictly by ascending `elapsedMs` (stable for equal `elapsedMs`). `trace` SHALL be written atomically with `meta` and `report` in the same write. A missing or malformed `trace` on read SHALL be treated as `[]` and SHALL not fail the report detail render or the sample gallery.
 
 #### Scenario: Ordering guarantee
 - **WHEN** trace frames were emitted as ingest (200ms), VEL-06 finish (900ms), clone start (1200ms)

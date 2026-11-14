@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
-import type { TraceEntry } from "@/lib/reports";
+import type { TraceEntry } from "@/lib/types";
 
 export function ScanTraceView({ trace }: { trace: TraceEntry[] }) {
   const [detectorOpen, setDetectorOpen] = useState(false);

@@ -1,5 +1,5 @@
 /** report-identity 5.1–5.8 — the identity card on the site: contents, placement,
- * commit forms, sample marker, absent/suppressed degradation, and the live page.
+ * commit forms, sample marker, and absent/suppressed degradation.
  * The committed sample is a real v1.0.2 scan of the checked-in synthetic Maven
  * fixture, so every value below is read from that envelope. */
 import { describe, it, expect } from "vitest";
@@ -7,8 +7,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 
 import { IdentityCard } from "@/components/identity-card";
 import { ReportView } from "@/components/report-view";
-import { SealedLiveReport } from "@/app/live/LiveReportClient";
-import sampleEnvelope from "@/lib/fixtures/maven-multi-module__bce7fc0__2026-11-12T155107-061Z.json";
+import sampleEnvelope from "@/lib/samples/maven-multi-module.json";
 import type { Report } from "@/lib/types";
 
 const fixture = structuredClone((sampleEnvelope as unknown as { report: Report }).report);
@@ -169,29 +168,5 @@ describe("5.5 / 5.6 / 5.7 sample, absent block, and suppression", () => {
     expect(html).toContain('data-testid="identity-card"');
     expect(html).toContain("64");
     expect(html).toContain("10");
-  });
-});
-
-describe("5.8 the live page puts the same card above the revealed headline", () => {
-  it("renders the subject band first in the revealed state", () => {
-    const html = renderToStaticMarkup(
-      <SealedLiveReport
-        report={fixture}
-        traces={[]}
-        elapsedMs={1_200}
-        indicatorCount={31}
-        runId="maven-multi-module__bce7fc0__2026-11-12T155107-061Z"
-      />,
-    );
-    const card = html.indexOf('data-testid="identity-card"');
-    const headline = html.indexOf("system score");
-    expect(card).toBeGreaterThanOrEqual(0);
-    expect(card).toBeLessThan(headline);
-    // The card and the chip both derive from the same sealed archetype; the
-    // live page adds no second "Detected:" line of its own.
-    expect(html.match(/Detected:/g) ?? []).toHaveLength(1);
-    expect(html.indexOf("SCHEMA")).toBeGreaterThan(headline);
-    // The repo title appears once: the report body owns it, not the header.
-    expect(html.match(/<h1/g) ?? []).toHaveLength(1);
   });
 });

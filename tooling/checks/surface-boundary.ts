@@ -38,7 +38,6 @@ const SCANNER_IMPL = /apps\/scanner|@leapscore\/scanner/;
 function isSiteExempt(rel: string): boolean {
   if (SITE_EXEMPT_DIRS.some((d) => rel.startsWith(d))) return true;
   if (isTestFile(rel)) return true;
-  if (rel === 'apps/site/lib/reports.ts') return true; // site-owned fixture-backed history reader
   return false;
 }
 

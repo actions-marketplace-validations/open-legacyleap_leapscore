@@ -1,23 +1,12 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-// UrlBox calls useRouter(); the homepage renders outside an App Router mount here.
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({
-    push: () => {},
-    replace: () => {},
-    prefetch: () => {},
-    back: () => {},
-    forward: () => {},
-    refresh: () => {},
-  }),
-}));
-
 import Home from "@/app/page";
 import MethodPage from "@/app/method/page";
 import { Footer } from "@/components/footer";
+import { SiteHeader } from "@/components/site-header";
 
 describe("funnel-landing chrome tells the current truth", () => {
   it("footer links the site rubric route and drops the unshipped-engine disclaimer", () => {
@@ -26,19 +15,34 @@ describe("funnel-landing chrome tells the current truth", () => {
     expect(html).not.toContain("../rubric");
     expect(html).not.toMatch(/until the live engine ships/i);
     expect(html).toMatch(/sample reports are illustrative/i);
+    expect(html).toMatch(/local CLI scans and CI scans/i);
     expect(html).toMatch(/available/i);
+    expect(html).not.toContain('href="/product"');
+    expect(html).not.toContain('href="/report/sample"');
   });
 
-  it("homepage rubric link targets /rubric", async () => {
-    const html = renderToStaticMarkup(await Home());
+  it("homepage rubric link targets /rubric", () => {
+    const html = renderToStaticMarkup(Home());
     expect(html).toContain('href="/rubric"');
     expect(html).not.toContain("../rubric");
   });
 
-  it("method page names the shipped scan paths", () => {
+  it("header carries exactly the samples, method, and rubric links", () => {
+    const html = renderToStaticMarkup(<SiteHeader />);
+    const nav = html.match(/<nav[^>]*>([\s\S]*?)<\/nav>/)?.[1] ?? "";
+    const hrefs = [...nav.matchAll(/href="([^"]+)"/g)].map((match) => match[1]);
+    expect(hrefs).toEqual(["/samples", "/method", "/rubric"]);
+    expect(html).not.toContain('href="/live');
+    expect(html).not.toContain('href="/reports');
+    expect(html).not.toMatch(/engine:\s*coming/i);
+  });
+
+  it("method page names only the local and CI scan paths", () => {
     const html = renderToStaticMarkup(MethodPage());
     expect(html).toMatch(/local CLI scan/i);
-    expect(html).toMatch(/live scan/i);
+    expect(html).toMatch(/CI scan/i);
+    expect(html).not.toMatch(/live scan/i);
+    expect(html).not.toContain('href="/live"');
     expect(html).not.toMatch(/in development behind the waitlist/i);
   });
 

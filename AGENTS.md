@@ -25,8 +25,9 @@ apps/scanner/          PRODUCE side — the engine, colocated with its two entry
   dist/leapscore-scan.mjs  the shipped artifact: one readable ESM bundle, zero runtime deps
   LICENSE                byte-copy of the root Apache-2.0 text (check:package-publish)
 apps/surface/          sealed envelope → GitHub issues (separate process, separate token)
-apps/site/             PRESENT side — Next.js static site: marketing, `/live` scan,
-                       `/reports` + `/reports/[runId]`, `/rubric` browser, `/method`
+apps/site/             PRESENT side — Next.js static export on GitHub Pages: marketing,
+                       `/samples` gallery + detail, `/rubric` browser, `/method`;
+                       no server and no scan runtime
 action/                checkout-first GitHub Action: src, scripts, and the committed dist
                        (metadata lives at the repository root, `action.yml`)
 action.yml             the single Action metadata file (`uses: <owner>/<repo>@<ref>`,
@@ -64,7 +65,7 @@ Root `package.json` workspaces: `apps/*`, `packages/*`, `action`. Run `npm run c
 - **Scan paths live:** `runUnifiedScan` (`src/scan/orchestrator.ts`) for remote targets — GH-API lane + shallow clone (`--filter=blob:none`) under one indicator-count-driven deadline (`budgetForIndicators`, clamp 10s–240s, plus a 240s wall-clock killer that fails the run without sealing). `runLocalScan` (`src/scan/local.ts`) scans a directory with the 25 clone-capable detectors — no clone, no GH-API. `orchestrator.phase1.ts` (`runPhase1Scan`) is the GH-API-only path, kept for back-compat.
 - **Coverage live:** 31 detectors (6 GH-API + 25 clone/local) of 102 indicators; the other 71 seal as `not_implemented` and render as honest stubs. The 19-row MVP slice is a **subset** of what ships (its rationale is historical).
 - **Terminal scoring is shared:** `src/scan/scoring/seal.ts` (`sealScan`) is the single composer for both the HTTP service and the CLI — score (frozen denominator by default), gates incl. the kill-switch cap, coverage, top blockers, derived next-band path, provenance manifest, `score_fingerprint`, `runId`.
-- **Presentation:** the site never executes a scan. `/live` streams the scanner's NDJSON cross-origin; `/reports` + `/reports/[runId]` render **site-owned** history (v1 = one committed static fixture, no request-time filesystem reads). There is **no `/api/scan` and no site-side live provider** — `lib/provider.ts` is the sample seam only, and `lib/provider.live.ts` / `LiveReportProvider` no longer exist.
+- **Presentation:** the site is a server-free static export and never executes a scan. `/samples` lists committed sealed envelopes and `/samples/[slug]` pre-renders one from the committed set; there is no live-scan surface, no run history, and no request-time filesystem read. `/methodology` and `/product` are forwarding documents, because the static host serves no redirects.
 - **Surfacing is a separate app:** `apps/surface` turns a sealed envelope into labeled issues, warn-only, with its own token (`SURFACE_TOKEN`) so the scanner keeps `contents:read` only.
 - **Release surface live:** the scanner publishes as the unscoped npm package `leapscore-scan` (package name = command name, so `npx leapscore-scan` needs no `-p`); `1.0.0` is the first public version and is stamped into the bundle, so the sealed `engine_version` equals the installed package version. The Action metadata is the single root `action.yml` (`runs.main: action/dist/index.js`, `using: node24`), so consumers write `uses: open-legacyleap/leapscore@v1`. `.github/workflows/release.yml` runs on `vX.Y.Z` tags: verify (every `check:*`, bundle parity, all suites, one `npm pack`) → publish (the exact tarball with OIDC provenance, the GitHub release + `SHA256SUMS`) → smoke (registry install, offline fixture scan) → move the major tag. `docs/releases/` carries the runbook and release notes.
 - **Decisions live in `openspec/`:** `openspec/changes/*` + `openspec/specs/*` carry everything built after the MVP (unified budget, deterministic scoring, measurement honesty, offline snapshots, legacy stacks, band path, baseline diff, score badge, release packaging, release publication). Superseded planning material survives only in git history.
@@ -111,7 +112,7 @@ Consequences: changing an indicator's thresholds/status → edit its canonical f
 
 ## Boundaries that CI enforces
 
-- **The site carries no scan runtime** (`check:site-boundary`): the site's served graph must not reach `apps/scanner`, and must not use `node:fs`/`child_process` outside build tooling. Exemptions are declared in the check itself (`lib/reports.ts`, build scripts, tests).
+- **The site carries no scan runtime** (`check:site-boundary`): the site's served graph must not reach `apps/scanner`, and must not use `node:fs`/`child_process` outside build tooling. Exemptions are declared in the check itself (build scripts, generated sample/rubric views, tests).
 - **Only `apps/scanner/src/scan/gh.ts` may call `fetch`** (`check:detector-isolation`); detectors get data through the read-only, byte-capped `readFile` and the injected GH client.
 - **The surface app is separate from the scanner** (`check:surface-boundary`): scan and issue-write never share a process or token.
 - **Every documented command must resolve after a clean install** (`check:bin-wiring`) and the committed Action dist must be byte-identical to its sources (`check:dist`). `check:dist` also requires the root `action.yml` to name the committed wrapper and refuses a second metadata copy.

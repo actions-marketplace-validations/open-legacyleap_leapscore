@@ -584,7 +584,7 @@ describe('8.6 no funnel or envelope regression with a baseline supplied', () => 
       expect(r.out[1]).not.toContain('utm_campaign');
       // Every existing envelope remains readable: this run's, the baseline's,
       // and the committed site fixture's.
-      const siteFixture = fileURLToPath(new URL('../../../../site/lib/fixtures/maven-multi-module__bce7fc0__2026-11-12T155107-061Z.json', import.meta.url));
+      const siteFixture = fileURLToPath(new URL('../../../../site/lib/samples/maven-multi-module.json', import.meta.url));
       for (const p of [join(outDir, 'report.json'), join(baseOut, 'report.json'), siteFixture]) {
         const env = readJson<StoredEnvelope>(p);
         expect(() => assertContractVersion(env)).not.toThrow();

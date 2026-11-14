@@ -14,22 +14,16 @@ export function Footer() {
         </div>
         <nav className="flex flex-wrap items-center gap-5">
           <Link
-            href="/product"
+            href="/samples"
             className="transition-colors hover:text-foreground"
           >
-            Product
+            Samples
           </Link>
           <Link
             href="/method"
             className="transition-colors hover:text-foreground"
           >
             Method
-          </Link>
-          <Link
-            href="/report/sample"
-            className="transition-colors hover:text-foreground"
-          >
-            Sample report
           </Link>
           <Link
             href="/rubric"
@@ -47,7 +41,7 @@ export function Footer() {
       </div>
       <div className="mx-auto max-w-5xl px-4 pb-6 text-xs text-faint">
         <p>
-          Sample reports are illustrative; local CLI scans and live scans are
+          Sample reports are illustrative; local CLI scans and CI scans are
           available today — see the Method page for what is and isn&apos;t
           measured.
         </p>

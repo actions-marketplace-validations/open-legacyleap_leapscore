@@ -21,9 +21,9 @@ The current scanner implements 31 of the rubric's 102 indicators: six GitHub API
 | Scanner service | Accepts public GitHub targets and streams a versioned NDJSON scan, including progress, trace, and the terminal report. |
 | CLI | Scans a local directory or public GitHub target and writes a report directory. `--strict` provides an explicit no-network mode for local scans. |
 | GitHub Action | Runs the CLI in a workflow and can optionally surface sealed findings as issues. |
-| Website | Presents the rubric, methodology, sample report, and live scan experience. `/live` streams from the scanner; `/reports` presents site-owned static history. The site does not run the scanner. |
+| Website | Presents the rubric, method, assessment destination, and a gallery of committed illustrative samples. It is a server-free static export: there is no live scan surface and no site-owned run history, and the site never runs the scanner. |
 
-The scanner is stateless: the terminal report frame is the scan artifact. If a caller does not retain that artifact, it cannot be fetched from the scanner later. The website's current report history is separate, site-owned content; it is not a store of live scanner runs.
+The scanner is stateless: the terminal report frame is the scan artifact. If a caller does not retain that artifact, it cannot be fetched from the scanner later. The website renders only committed sealed samples; it stores no visitor scans and exposes no per-run permalink.
 
 ## Reading a score
 

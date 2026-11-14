@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
 import { CATEGORIES, weightFor } from "@/lib/categories";
 import { TIERS } from "@/lib/scoring";
@@ -176,20 +175,14 @@ export default function MethodPage() {
           <span className="font-mono text-ink">local CLI scan</span> (runs
           against a checkout on your machine and writes the JSON, HTML, and
           Markdown reports) and the{" "}
-          <span className="font-mono text-ink">live scan</span> (a public GitHub
-          repo, via the{" "}
-          <Link
-            href="/live"
-            className="underline underline-offset-2 hover:text-foreground"
-          >
-            live page
-          </Link>
-          ). Sample surfaces on this site stay illustrative — the sample report
-          is stamped{" "}
+          <span className="font-mono text-ink">CI scan</span> (the GitHub Action
+          runs the same scanner in your pipeline and surfaces labelled issues).
+          Sample surfaces on this site stay illustrative — every sample is
+          stamped{" "}
           <span className="font-mono text-xs text-faint">
             illustrative sample
           </span>{" "}
-          on every view.
+          on every view, and the site itself never runs a scan.
         </p>
       </section>
     </div>

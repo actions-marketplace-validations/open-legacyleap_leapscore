@@ -10,12 +10,12 @@ The system SHALL perform all scan execution in a scanner service deployed indepe
 
 #### Scenario: Fresh scan executes outside the website
 
-- **WHEN** a user starts a scan for `vercel/next.js` from the live surface
+- **WHEN** a user starts a scan for `vercel/next.js` from the local CLI or CI
 - **THEN** the scan is executed by the scanner service, and no website process loads scanner code or performs clone or GH-API work
 
 #### Scenario: Website serves with the scanner unreachable
 
-- **WHEN** the scanner service is down and a user browses `/`, `/rubric`, or `/report/sample`
+- **WHEN** the scanner service is down and a user browses `/`, `/rubric`, or `/samples/<slug>`
 - **THEN** every one of those pages renders normally without contacting the scanner
 
 ### Requirement: Present side carries no engine runtime dependency
@@ -49,7 +49,7 @@ The scanner SHALL be the only component that reads `GH_TOKEN` or `GITHUB_TOKEN`.
 #### Scenario: Website runs without any token configured
 
 - **WHEN** the website is deployed with no GitHub token in its environment
-- **THEN** public scans still succeed because the token lives only in the scanner, and the live surface behaves identically
+- **THEN** public scans still succeed because the token lives only in the scanner, and the site's sample surfaces behave identically
 
 ### Requirement: Provenance from explicit engine reference
 
@@ -67,7 +67,7 @@ The scanner SHALL record the engine identity that produced a report from an expl
 
 #### Scenario: No consumer working directory is consulted
 
-- **WHEN** a scan is initiated from the website and the website's checkout differs from the scanner's
+- **WHEN** a scan is initiated by the CLI or CI and the website's checkout differs from the scanner's
 - **THEN** the recorded engine identity reflects the scanner's engine, never the website's commit
 
 ### Requirement: Stateless scanner with no permanent disk

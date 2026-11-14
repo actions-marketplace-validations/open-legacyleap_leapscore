@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 
-import { assessmentAttribution, assessmentBookingHref } from "@/lib/assessment";
-import { ASSESSMENT_BASE_URL } from "@leapscore/contracts";
+import { BookingPanel, UrlBooking } from "./booking";
 
 export const metadata: Metadata = {
   title: "The $0 Assessment",
@@ -13,24 +13,11 @@ export const metadata: Metadata = {
 /**
  * The assessment destination every report CTA points at. Data-handling copy
  * renders before the booking link, so a visitor knows what is asked for and how
- * it is handled before submitting anything.
+ * it is handled before submitting anything. Campaign/band/verdict attribution
+ * is read from the visitor's URL in the browser (design D5) — the static
+ * document carries the default attribution as its fallback.
  */
-export default async function AssessmentPage({
-  searchParams,
-}: {
-  searchParams?: Promise<Record<string, string | string[] | undefined>>;
-}) {
-  const params = (await searchParams) ?? {};
-  const attribution = assessmentAttribution(params);
-  const booking = assessmentBookingHref(params);
-  const attributionLabel = [
-    `campaign ${attribution.campaign}`,
-    attribution.band ? `band ${attribution.band}` : null,
-    attribution.verdict ? `verdict ${attribution.verdict}` : null,
-  ]
-    .filter(Boolean)
-    .join(" · ");
-
+export default function AssessmentPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-12">
       <p className="text-xs tracking-wider text-faint uppercase">Next step</p>
@@ -47,16 +34,20 @@ export default async function AssessmentPage({
       <section className="mt-8">
         <h2 className="text-lg font-semibold">The scan runs locally</h2>
         <p className="mt-2 text-sm leading-relaxed text-muted">
-          You run <span className="font-mono text-xs">npx leapscore-scan .</span>{" "}
-          on your own machine. The scanner makes no network requests for a local
+          You run{" "}
+          <span className="font-mono text-xs">npx leapscore-scan .</span> on
+          your own machine. The scanner makes no network requests for a local
           path scan, sends no code, paths, or repository names, and requires no
-          code upload. <span className="font-mono text-xs">--repo owner/repo</span>{" "}
-          is a separate, explicit public-repository scan; it is never implied.
+          code upload.{" "}
+          <span className="font-mono text-xs">--repo owner/repo</span> is a
+          separate, explicit public-repository scan; it is never implied.
         </p>
       </section>
 
       <section className="mt-8">
-        <h2 className="text-lg font-semibold">What we ask for, and how it is handled</h2>
+        <h2 className="text-lg font-semibold">
+          What we ask for, and how it is handled
+        </h2>
         <ul className="mt-2 list-disc space-y-2 pl-5 text-sm leading-relaxed text-muted">
           <li>
             A copy of the report you choose to share — the self-contained{" "}
@@ -83,7 +74,9 @@ export default async function AssessmentPage({
       </section>
 
       <section className="mt-8">
-        <h2 className="text-lg font-semibold">Deeper work needs separate consent</h2>
+        <h2 className="text-lg font-semibold">
+          Deeper work needs separate consent
+        </h2>
         <p className="mt-2 text-sm leading-relaxed text-muted">
           MCM (Modernisation and Capability Mapping) or any deeper engagement is
           separate from the $0 Assessment. It requires its own consent, scope,
@@ -92,34 +85,26 @@ export default async function AssessmentPage({
         </p>
       </section>
 
-      <section className="mt-10 rounded-lg border border-hairline bg-panel/30 p-5">
-        <h2 className="text-lg font-semibold">Book the assessment</h2>
-        <p className="mt-2 text-sm leading-relaxed text-muted">
-          {booking.kind === "mailto"
-            ? "The booking vendor is not configured yet, so this opens a pre-addressed email. Your attribution travels with the request; nothing is submitted until you send it."
-            : "This opens the booking page with your report's attribution attached. Nothing is submitted until you confirm there."}
-        </p>
-        {attributionLabel ? (
-          <p className="mt-1 text-xs text-faint">Attribution carried: {attributionLabel}</p>
-        ) : null}
-        <a
-          href={booking.href}
-          className="mt-4 inline-block rounded bg-foreground px-4 py-2 text-sm font-medium text-background hover:opacity-90"
+      <Suspense fallback={<BookingPanel params={{}} />}>
+        <UrlBooking />
+      </Suspense>
+      <p className="mt-3 text-xs text-faint">
+        You can also read the{" "}
+        <Link
+          href="/method"
+          className="underline underline-offset-2 hover:text-foreground"
         >
-          Book the $0 Assessment
-        </a>
-        <p className="mt-3 text-xs text-faint">
-          You can also read the{" "}
-          <Link href="/method" className="underline underline-offset-2 hover:text-foreground">
-            method
-          </Link>{" "}
-          or run the{" "}
-          <Link href="/report/sample" className="underline underline-offset-2 hover:text-foreground">
-            sample report
-          </Link>{" "}
-          first.
-        </p>
-      </section>
+          method
+        </Link>{" "}
+        or browse the{" "}
+        <Link
+          href="/samples"
+          className="underline underline-offset-2 hover:text-foreground"
+        >
+          illustrative samples
+        </Link>{" "}
+        first.
+      </p>
     </div>
   );
 }

@@ -44,6 +44,7 @@ The system SHALL bound every scan to a single wall-clock budget computed from it
 #### Scenario: Budget scales with selected indicators
 - **WHEN** requested IDs are 3 fast-only indicators
 - **THEN** budget is `~20s` (`5s base + 3*5s`) and bar reaches 100% at that deadline, not at 10s or 240s
+
 ### Requirement: VEL-06 bus factor fact (GH-API proxy)
 The system SHALL emit a VEL-06 fact derived without cloning: GH commits API sampled history (last 200 commits or 12mo window) plus `GET /repos/{o}/{r}/contributors` enrichment, computing bus-factor proxy and worst-module author share where file-level signals are unavailable.
 
@@ -108,6 +109,7 @@ The system SHALL roll up the requested MVP facts into the canonical scoring math
 #### Scenario: Budget expiry with partial facts
 - **WHEN** unified budget `~240s` expires with 15 of 19 detectors done
 - **THEN** final report shows `measured:15, unknown:87` with timed-out rows `unknown "budget-exceeded"`, status `degraded`, and no prior partial report was shown
+
 ### Requirement: Evidence and provenance per row
 The system SHALL attach to every `measured` row an `evidence` pointer (GH endpoint + key fields) and to every `unknown` row an `unknown_measure_path`; every fact SHALL carry `provenance: {tool: "gh-api", version, endpoint, durationMs}` and `evidencePointers` per the `openspec/specs/report-envelope/spec.md:122` envelope (no score/status/confidence inside the detector).
 
@@ -121,68 +123,6 @@ The system SHALL never let a detector crash or timeout fail the scan; `timeout`/
 #### Scenario: GH 500 on branch list
 - **WHEN** `GET /branches` returns 500
 - **THEN** VEL-10 fact carries `error:{kind:"cap", detail:"...500..."}` and row status resolves to `unknown`
-
-### Requirement: Dedicated live report page
-The system SHALL expose a dedicated page for live reports at `/live` (alias `/report/live`) that renders a live scan for `?repo={owner}/{repo}` without requiring `?live=1`, consuming the scanner service's scan API rather than a same-origin route. `/report/sample` SHALL remain fixture-only. The live page SHALL show a single unified progress bar at the top (percent, elapsed, time remaining derived from `budgetMs`) while scanning, plus an append-only scan timeline below it that streams milestones and per-indicator completions as `progress` frames arrive, with no "Phase 1" / "Phase 2" labels, no per-phase step list, and no intermediate `6/102` or `19/102` dials. The report SHALL be rendered exactly once when the scan seals (all detectors complete or budget expiry) and SHALL be revealed via an explicit "Reveal report" affordance rather than an automatic hard swap; the timeline SHALL remain accessible (collapsible) after reveal. At seal the page SHALL render the sealed report **in place** from the terminal `report` frame — which carries the report body, envelope `meta`, and ordered `trace` — so no navigation is required and no page needs to exist for a `runId` that the website has not yet ingested. The page SHALL additionally expose the scanner's stable permalink for that `runId` as the shareable URL. The live interstitial URL SHALL remain `/live?repo=...` while generation is in progress. A `runId` becomes addressable on the website at `/reports/<runId>` only after it has been ingested into a build.
-
-#### Scenario: Live page renders a real repo
-- **WHEN** user visits `/live?repo=vercel/next.js` with the scanner service reachable and configured with a GitHub token and 19 indicators requested (budget ~240s)
-- **THEN** page shows a single bar `0% → 100%` with `elapsed / remaining` countdown plus a timeline that appends entries (e.g. `Ingested vercel/next.js`, `GH detectors 6/6`, `Clone + sniff`, `ECOS-01 measured`, … `Scoring — 19 measured, gates evaluated`) as progress frames arrive; after seal the page shows `Report ready — Reveal report` and on click renders the full report in place (hero dial + coverage + gate cockpit + category tables) while keeping the timeline collapsible under the header, without navigating away
-
-#### Scenario: Sample page stays illustrative
-- **WHEN** user visits `/report/sample` (no `live` flag)
-- **THEN** page renders the django/django fixture (58/100, 49/19/8) regardless of any token and shows no progress bar or timeline
-
-#### Scenario: Invalid repo on live page
-- **WHEN** `?repo=gitlab.com/foo/bar` or missing repo on `/live`
-- **THEN** page shows the `refused` reason (`unsupported_host`/`not_found`, i.e. `snapshot_refused`) surfaced from the scan API without sealing a score and without a progress bar or timeline
-
-#### Scenario: Seal renders without requiring an ingested page
-- **WHEN** a scan seals with `meta.runId` `vercel__next.js__abc1234__2026-10-16T053000-123Z` and that `runId` has not been ingested into any build
-- **THEN** the sealed report renders in place and the page offers the scanner's permalink for that `runId` as the shareable URL, with no 404 and no reliance on `/reports/<runId>` existing yet
-
-#### Scenario: Reveal navigates to bookmarkable runId
-- **WHEN** a scan seals and `meta.runId` is `vercel__next.js__abc1234__2026-08-29T053000-123Z`
-- **THEN** the sealed report is revealed in place and the scanner's permalink for that `runId` is offered as the bookmarkable, shareable URL; reloading that permalink renders the same score/tier/coverage/trace without invoking a scan, whereas reloading `/live?repo=vercel/next.js` still starts a fresh scan
-
-#### Scenario: Ingested run becomes addressable on the website
-- **WHEN** an envelope for `vercel__next.js__abc1234__2026-10-16T053000-123Z` is ingested and the website is rebuilt
-- **THEN** `/reports/vercel__next.js__abc1234__2026-10-16T053000-123Z` renders that frozen report without re-running the engine, and reloading it never starts a scan
-
-### Requirement: Score-this-repo CTA → live scan with progress
-The system SHALL make "Score this repo" take the URL in the box, normalize it, navigate to `/live?repo={owner}/{repo}`, start the unified budgeted scan immediately against the scanner's scan API, show a single top progress bar with percent + elapsed + remaining plus a live timeline while detectors run, and at seal show a "Reveal report" affordance that on click renders the sealed report in place exactly once when complete (all done or budget expiry) with a fade/slide transition, offering the scanner's permalink for that run as the shareable URL. `snapshot_refused` (unsupported_host/not_found/private) and `rate-limited` SHALL surface as an actionable message, not a silent score. No Phase-specific step labels SHALL be shown in the bar; the timeline carries the narrative.
-
-#### Scenario: CTA redirects to live
-- **WHEN** user enters `https://github.com/vercel/next.js` and clicks "Score this repo"
-- **THEN** browser navigates to `/live?repo=vercel/next.js` (generation URL, shareable) and shows the unified bar + empty timeline that begins appending
-
-#### Scenario: Progress while scanning
-- **WHEN** `/live?repo=vercel/next.js` is loading (GH calls + clone + detectors in flight, up to budgetMs)
-- **THEN** page shows a single progress bar with percent and `elapsed / remaining` countdown plus a timeline that appends a new row per milestone/completed detector (not a blank screen and not a per-phase step list); the 200ms local tick keeps elapsed/remaining smooth between NDJSON frames
-
-#### Scenario: Report replaces progress
-- **WHEN** unified scan seals (status `complete` or `degraded`, either all detectors done or budgetMs reached)
-- **THEN** a `Report ready — Reveal report` affordance appears; on click the page renders hero dial + coverage + gate cockpit + 5-category table in place with a fade/slide transition (replacing the scanning state), the elapsed timer freezes at seal, the shareable permalink for the run is offered without requiring a website page for that `runId` to exist, and URL stays `/live?repo=...` (shareable)
-
-#### Scenario: Report reveals on user action
-- **WHEN** unified scan seals (status `complete` or `degraded`, either all detectors done or budgetMs reached)
-- **THEN** the timeline freezes, a `Report ready — Reveal report` button appears anchored below the timeline, and on click the hero dial + coverage `19/102` + gate cockpit + category tables animate in below the sticky bar; the timeline collapses to a compact `Show scan log (n steps)` link that re-expands on click; URL stays `/live?repo=...` (shareable); elapsed timer freezes at seal; background tabs auto-reveal after a short delay (≤3s) so returning users see the report without an extra click
-
-#### Scenario: Invalid/rate-limited shows refused with retry
-- **WHEN** `?repo=gitlab.com/foo/bar` or the scan API refuses with a rate-limit reason
-- **THEN** page shows the refused reason (`snapshot_refused` with reason `unsupported_host`/`rate-limited — set GH_TOKEN`) with a retry link, without a score, without a stale timer, and without a reveal button
-
-### Requirement: Scan timeline events
-
-The system SHALL stream scan narrative as timeline events derived from `GET /api/scan` NDJSON frames. Each `progress` frame MAY carry an optional `milestone` string and/or `completedIds` delta; the client SHALL append a timeline row for each new milestone or newly completed indicator without re-rendering prior rows. The `/api/scan` contract remains additive: existing `meta` (`budgetMs`, `indicatorCount`, `breakdown`) and `progress` (`pct`, `elapsedMs`, `remainingMs`, `completedIds`, `completedCost`, `totalCost`) fields are unchanged; `milestone` is optional. At minimum the timeline SHALL cover: ingest/normalize, GH fetch, GH detectors batch, clone (when requested), clone detectors batch, scoring/gate evaluation, seal (complete/degraded with measured count).
-
-#### Scenario: Milestone frames build the timeline
-- **WHEN** the orchestrator yields `meta` then `progress` with `completedIds: ["VEL-06","VEL-09"]` and `milestone: "GH detectors 2/6"`
-- **THEN** the client appends `GH detectors 2/6 — VEL-06, VEL-09` to the timeline; a subsequent frame with `completedIds: ["VEL-06","VEL-09","VEL-08"]` appends only the delta `VEL-08`
-
-#### Scenario: Sealed timeline shows status
-- **WHEN** scan seals with `degraded` and `measured:14`
-- **THEN** the terminal timeline entry reads `Sealed — degraded · 14/19 measured · 5 unknown (budget/degraded)` and the reveal button reads `Reveal partial report — 14/19 measured` rather than `Reveal report`
 
 ### Requirement: Gate handling in Phase 1
 
@@ -206,19 +146,19 @@ The system SHALL surface gates G1/G2/G3/G8 as `needs-verification` when a scan h
 
 ### Requirement: Two-phase orchestration (worker/queue)
 
-The system SHALL orchestrate a single unified scan covering all requested indicators under one indicator-driven budget (`cloneBaseMs + Σ per-indicator cost` as above). The scan SHALL be orchestrated inside the scanner service, not in the website process. GH-API and clone-based detectors SHALL share the same budget and abort signal; clone (`--filter=blob:none`) and manifest sniff SHALL run within the same budget when any clone-dependent indicator is requested, otherwise the scan skips clone. Progress SHALL stream via the scanner's scan API NDJSON as unified `progress` frames (pct/elapsed/remaining/completed cost) plus a single header frame with `budgetMs`/`indicatorCount`, without a separate Phase 1 / Phase 2 report. Phases SHALL NOT be surfaced in UI or API contract; they remain an internal build detail.
+The system SHALL orchestrate a single unified scan covering all requested indicators under one indicator-driven budget (`cloneBaseMs + Σ per-indicator cost` as above). The scan SHALL be orchestrated inside the scanner service, never in a presentation surface. GH-API and clone-based detectors SHALL share the same budget and abort signal; clone (`--filter=blob:none`) and manifest sniff SHALL run within the same budget when any clone-dependent indicator is requested, otherwise the scan skips clone. Progress SHALL stream via the scanner's scan API NDJSON as unified `progress` frames (pct/elapsed/remaining/completed cost) plus a single header frame with `budgetMs`/`indicatorCount`, without a separate Phase 1 / Phase 2 report. Phases SHALL NOT be surfaced in the API contract; they remain an internal build detail.
 
 #### Scenario: Phase 1 seals before Phase 2
-- **WHEN** user visits `/live?repo=vercel/next.js` with 19 requested indicators
-- **THEN** the scanner computes one unified `budgetMs` (~240s), runs GH and clone detectors under that deadline, streams unified progress, and the website renders the single final report once (no intermediate Phase 1 seal)
+- **WHEN** a unified scan is requested with 19 indicators
+- **THEN** the scanner computes one unified `budgetMs` (~240s), runs GH and clone detectors under that deadline, streams unified progress, and produces one terminal report (no intermediate Phase 1 seal)
 
 #### Scenario: Phase 2 budget exceeded degrades
 - **WHEN** unified budget expires with `ARCH-01` still running
-- **THEN** final report is `degraded` with completed rows `measured` and timed-out rows `unknown "budget-exceeded"` (or `estimated+scope-limited` for dissolvable), and no intermediate report was shown
+- **THEN** final report is `degraded` with completed rows `measured` and timed-out rows `unknown "budget-exceeded"` (or `estimated+scope-limited` for dissolvable), and no intermediate report was produced
 
 #### Scenario: Budget computed from requested list
 - **WHEN** requested IDs are the 19 MVP indicators (mix of fast/api/slow with clone)
-- **THEN** `budgetMs` ≈ 240s and the top progress bar advances via `elapsed/budgetMs` plus completed-cost weighting, reaching 100% only at seal
+- **THEN** `budgetMs` ≈ 240s and the emitted `progress` frames advance via `elapsed/budgetMs` plus completed-cost weighting, reaching 100% only at seal
 
 #### Scenario: Clone skipped when not needed
 - **WHEN** requested IDs are GH-only (e.g. 6 indicators)
@@ -226,5 +166,4 @@ The system SHALL orchestrate a single unified scan covering all requested indica
 
 #### Scenario: Orchestration is not hosted by the website
 - **WHEN** a unified scan is in flight
-- **THEN** the website holds no scan state, opens no clone, and performs no GH-API call; aborting the browser stops only the presentation, and the scanner persists the run if it seals
-
+- **THEN** no website process holds scan state, opens a clone, or performs a GH-API call; the scanner service completes or degrades the scan independently of whether any client is still listening

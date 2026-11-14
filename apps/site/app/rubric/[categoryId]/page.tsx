@@ -9,6 +9,14 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 
+// Static export needs every category path present at build time (design D1).
+// The tree is the source: one document per category the rubric parser returns.
+export function generateStaticParams(): { categoryId: string }[] {
+  return parseRubric().map((category) => ({ categoryId: category.id }));
+}
+
+export const dynamicParams = false;
+
 export default function CategoryPage({ params }: { params: Promise<{ categoryId: string }> }) {
   const { categoryId } = React.use(params);
   const rubric = parseRubric();

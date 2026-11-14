@@ -2,10 +2,7 @@
 // Fails when the website's served source graph reaches the scanner implementation
 // (apps/scanner) or Node filesystem/child-process builtins outside build tooling,
 // naming the offending module. Build tooling (tooling/, apps/site/scripts/,
-// apps/site/lib/generated/, *.test.ts) is exempt. apps/site/lib/reports.ts is
-// the site-owned history reader over a static fixture (no filesystem reads at
-// request time) and is exempt; apps/site/scripts/generate-sample.ts is the only
-// writer and it is build tooling.
+// apps/site/lib/generated/, *.test.ts) is exempt.
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -17,7 +14,6 @@ const EXEMPT_DIRS = ['tooling/', 'apps/site/scripts/', 'apps/site/lib/generated/
 function isExempt(rel: string): boolean {
   if (EXEMPT_DIRS.some((d) => rel.startsWith(d))) return true;
   if (rel.endsWith('.test.ts') || rel.endsWith('.test.tsx')) return true;
-  if (rel === 'apps/site/lib/reports.ts') return true; // site-owned fixture-backed history reader
   return false;
 }
 

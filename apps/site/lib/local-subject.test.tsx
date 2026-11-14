@@ -8,7 +8,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 
 import { ReportView } from "@/components/report-view";
 import { IdentityCard } from "@/components/identity-card";
-import sampleEnvelope from "@/lib/fixtures/maven-multi-module__bce7fc0__2026-11-12T155107-061Z.json";
+import sampleEnvelope from "@/lib/samples/maven-multi-module.json";
 import type { Report } from "@/lib/types";
 
 const fixture = structuredClone(

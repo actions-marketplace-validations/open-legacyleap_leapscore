@@ -2,10 +2,10 @@ import { describe, it, expect } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import MethodPage from "@/app/method/page";
-import ReportsPage from "@/app/reports/page";
+import SamplesPage from "@/app/samples/page";
 import { ReportView } from "@/components/report-view";
 import { TIERS, publicTierLabel } from "@/lib/scoring";
-import sampleEnvelope from "@/lib/fixtures/maven-multi-module__bce7fc0__2026-11-12T155107-061Z.json";
+import sampleEnvelope from "@/lib/samples/maven-multi-module.json";
 import type { Report } from "@/lib/types";
 
 const fixture = (sampleEnvelope as unknown as { report: Report }).report;
@@ -39,8 +39,8 @@ describe("public band vocabulary (Low/Moderate/High/Critical)", () => {
     expect(staleBandLabels(html)).toEqual([]);
   });
 
-  it("reports list prints a public label for a stored envelope", async () => {
-    const html = renderToStaticMarkup(await ReportsPage());
+  it("sample gallery prints a public label for a committed envelope", () => {
+    const html = renderToStaticMarkup(SamplesPage());
     expect(html).toContain(publicTierLabel(fixture.headline.tier));
     expect(staleBandLabels(html)).toEqual([]);
   });
