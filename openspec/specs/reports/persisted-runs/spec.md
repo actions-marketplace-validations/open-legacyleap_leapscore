@@ -65,16 +65,26 @@ The envelope contract `{ meta, report, trace }` SHALL have multiple producers on
 - **WHEN** the scanner seals a run and the CLI writes an artifact
 - **THEN** neither has written into any website directory — the scanner holds no store and the website has no build-input directory; the CLI file is a portable artifact and the scanner frame is a stream artefact
 
-### Requirement: Fresh-run routing semantics
+### Requirement: A fresh scan is executed, never replayed
 
-A fresh scan SHALL always be executed by the scanner service via the scan API and SHALL never be served from a previously sealed artefact. The website SHALL never execute a scan: no website route SHALL import scanner implementation code, and no website route SHALL accept a scan request. Revisiting a site-owned history entry, where one exists, SHALL render the frozen entry without invoking any scan.
+A fresh scan SHALL always be executed by the scanner service via its scan API and SHALL never be served from a previously sealed artefact. The website SHALL never execute a scan and SHALL never request one: no website route SHALL import scanner implementation code, no website route SHALL accept a scan request, and the built site SHALL contain no client that contacts a scanner. A sealed artefact SHALL be rendered only as itself — an immutable, labelled sample — and never as a fresh run.
 
-#### Scenario: Revisiting without runId triggers fresh scan
+#### Scenario: Repeat scan produces a distinct run
 
-- **WHEN** a user visits `/live?repo=vercel/next.js` twice in a row
-- **THEN** each visit starts a new scan on the scanner service and produces a distinct `runId`, and the website performs no scan work itself
+- **WHEN** the same repository is scanned twice
+- **THEN** each scan executes and produces a distinct `runId`, and no previously sealed artefact is reused as the result
 
 #### Scenario: Website exposes no scan endpoint
 
 - **WHEN** the website's route list is inspected
 - **THEN** no route accepts a scan request, and the boundary check from the `scanner-service` capability enforces this
+
+#### Scenario: Built site carries no scanner client
+
+- **WHEN** the built site artifact is inspected
+- **THEN** it contains no scanner origin, no scan request builder, and no build input that would enable one
+
+#### Scenario: Sealed artefact is never presented as fresh
+
+- **WHEN** a sealed envelope is rendered on the site
+- **THEN** it is labelled as a committed sample and its sealed values are displayed unchanged

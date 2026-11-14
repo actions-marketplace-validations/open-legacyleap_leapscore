@@ -6,6 +6,7 @@ import "./globals.css";
 
 import { Footer } from "@/components/footer";
 import { SiteHeader } from "@/components/site-header";
+import { SITE_BASE_URL } from "@/lib/base-path";
 
 // Self-hosted (was next/font/google). next/font/google downloads at build
 // time from fonts.googleapis.com, which fails offline / behind a proxy.
@@ -26,13 +27,13 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://leapscore.dev"),
+  metadataBase: new URL(SITE_BASE_URL),
   title: {
     default: "LeapScore — how bad is your codebase, and what's it cost to fix?",
     template: "%s · LeapScore",
   },
   description:
-    "Paste any GitHub repo. Get a maintainability score, the evidence behind every point, and the exact remediation to raise it.",
+    "Structural legacy risk, graded against a published 102-indicator rubric. Scan locally with the CLI or in CI, and read the evidence behind every graded point.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

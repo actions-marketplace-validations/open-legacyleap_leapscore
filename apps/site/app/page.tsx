@@ -1,21 +1,26 @@
 import Link from "next/link";
 
 import { DialGauge } from "@/components/dial-gauge";
-import { UrlBox } from "@/components/url-box";
+import { listSamples } from "@/lib/samples";
 import { tierForScore } from "@/lib/scoring";
-import { getReportProvider } from "@/lib/provider";
+import { SOURCE_URL } from "@/lib/source-links";
 
-export default async function Home() {
-  const report = await getReportProvider().getReport({ repo: "maven-multi-module" });
-  const tier = tierForScore(report.headline.score);
-  const suppressed = report.headline.suppressed === true;
+export default function Home() {
+  const [sample] = listSamples();
+  const report = sample?.envelope.report;
+  const suppressed = report?.headline.suppressed === true;
 
   return (
     <section className="dot-grid">
       <div className="mx-auto max-w-5xl px-4">
         <div className="flex flex-col items-center gap-6 py-20 text-center sm:py-28">
           <span className="rounded-full border border-hairline px-3 py-1 text-xs text-muted">
-            Local-first · Apache-2.0 · no telemetry
+            <a
+              href={SOURCE_URL}
+              className="underline underline-offset-2 transition-colors hover:text-foreground"
+            >
+              Local-first · Apache-2.0 · no telemetry
+            </a>
           </span>
           <h1 className="max-w-3xl text-4xl leading-tight font-semibold tracking-tight sm:text-5xl">
             How much legacy risk is your codebase carrying?
@@ -23,8 +28,8 @@ export default async function Home() {
           <p className="max-w-xl text-base text-muted sm:text-lg">
             Run the scan on your own machine. It grades structural legacy risk
             against a published rubric, discloses how much it could grade, and
-            writes JSON, HTML, and Markdown reports. Your code does not leave the
-            building.
+            writes JSON, HTML, and Markdown reports. Your code does not leave
+            the building.
           </p>
 
           <div className="w-full max-w-xl rounded-lg border border-hairline bg-panel/40 p-4 text-left">
@@ -42,10 +47,10 @@ export default async function Home() {
 
           <div className="flex flex-wrap items-center justify-center gap-3 text-sm">
             <Link
-              href="/report/sample"
+              href="/samples"
               className="rounded border border-hairline px-4 py-2 font-medium text-ink transition-colors hover:bg-panel"
             >
-              See a sample report
+              See illustrative samples
             </Link>
             <Link
               href="/rubric"
@@ -64,53 +69,67 @@ export default async function Home() {
         </div>
 
         <div className="grid items-center gap-8 pb-20 lg:grid-cols-[250px_minmax(0,1fr)]">
-          {suppressed ? (
-            <div className="instrument-panel rounded-lg p-4 text-center">
-              <p className="text-xs font-medium uppercase tracking-wider text-faint">
-                Sample verdict
-              </p>
-              <p className="mt-2 font-mono text-lg font-semibold">
-                insufficient signal
-              </p>
-            </div>
-          ) : (
-            <DialGauge
-              score={report.headline.score}
-              tierColor={tier.color}
-              label="system score"
-            />
-          )}
-          <div>
-            <div className="flex flex-wrap items-baseline gap-2">
-              <h2 className="text-lg font-semibold">{report.snapshot.repo}</h2>
-              <span className="rounded border border-hairline px-1.5 py-0.5 text-xs text-faint">
-                illustrative sample
-              </span>
-            </div>
-            <p className="mt-1 text-sm text-muted">
-              {suppressed
-                ? "This scan could not grade enough of the estate to publish a headline. That is a coverage limit, not a clean bill of health."
-                : `${report.headline.score}/100 — ${report.headline.tier}.`}{" "}
-              A real scan of a checked-in synthetic legacy fixture, produced by
-              the shipped scanner (engine {report.snapshot.engine_version},
-              rubric {report.snapshot.rubric_version}). Coverage:{" "}
-              {report.coverage.measured} measured, {report.coverage.estimated}{" "}
-              estimated, {report.coverage.unknown} unknown,{" "}
-              {report.coverage.not_applicable} not applicable.
-            </p>
-            {report.top_blockers.length ? (
-              <div className="mt-4 flex flex-wrap gap-2">
-                {report.top_blockers.slice(0, 3).map((b) => (
-                  <span
-                    key={b.row}
-                    className="rounded border border-hairline px-2 py-1 font-mono text-xs text-muted"
-                  >
-                    {b.row} · +{b.weight_pp}
+          {report ? (
+            <>
+              {suppressed ? (
+                <div className="instrument-panel rounded-lg p-4 text-center">
+                  <p className="text-xs font-medium tracking-wider text-faint uppercase">
+                    Sample verdict
+                  </p>
+                  <p className="mt-2 font-mono text-lg font-semibold">
+                    insufficient signal
+                  </p>
+                </div>
+              ) : (
+                <DialGauge
+                  score={report.headline.score}
+                  tierColor={tierForScore(report.headline.score).color}
+                  label="system score"
+                />
+              )}
+              <div>
+                <div className="flex flex-wrap items-baseline gap-2">
+                  <h2 className="text-lg font-semibold">
+                    {report.snapshot.repo}
+                  </h2>
+                  <span className="rounded border border-hairline px-1.5 py-0.5 text-xs text-faint">
+                    illustrative sample
                   </span>
-                ))}
+                </div>
+                <p className="mt-1 text-sm text-muted">
+                  {suppressed
+                    ? "This scan could not grade enough of the estate to publish a headline. That is a coverage limit, not a clean bill of health."
+                    : `${report.headline.score}/100 — ${report.headline.tier}.`}{" "}
+                  A real scan of a checked-in synthetic legacy fixture, produced
+                  by the shipped scanner (engine{" "}
+                  {report.snapshot.engine_version}, rubric{" "}
+                  {report.snapshot.rubric_version}). Coverage:{" "}
+                  {report.coverage.measured} measured,{" "}
+                  {report.coverage.estimated} estimated,{" "}
+                  {report.coverage.unknown} unknown,{" "}
+                  {report.coverage.not_applicable} not applicable.
+                </p>
+                {report.top_blockers.length ? (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {report.top_blockers.slice(0, 3).map((b) => (
+                      <span
+                        key={b.row}
+                        className="rounded border border-hairline px-2 py-1 font-mono text-xs text-muted"
+                      >
+                        {b.row} · +{b.weight_pp}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+                <Link
+                  href="/samples"
+                  className="mt-4 inline-block text-sm underline underline-offset-2 hover:text-foreground"
+                >
+                  See all illustrative samples
+                </Link>
               </div>
-            ) : null}
-          </div>
+            </>
+          ) : null}
         </div>
 
         <div className="border-t border-hairline py-16">
@@ -121,8 +140,8 @@ export default async function Home() {
               </h3>
               <p>
                 A graded row is traceable to a tool output, a file, or a stated
-                proxy. Unknown rows are listed with what it would take to measure
-                them.
+                proxy. Unknown rows are listed with what it would take to
+                measure them.
               </p>
             </div>
             <div>
@@ -162,23 +181,6 @@ export default async function Home() {
           </div>
         </div>
 
-        <div className="border-t border-hairline py-10">
-          <h2 className="text-lg font-semibold">
-            Public-repo demo{" "}
-            <span className="text-sm font-normal text-faint">
-              (secondary — public repositories only)
-            </span>
-          </h2>
-          <p className="mt-1 text-sm text-muted">
-            Want to see it before installing? Run a read-only scan of a public
-            GitHub repository. This is a demonstration of a public target; a
-            local scan is the primary path for your own code.
-          </p>
-          <div className="mt-4">
-            <UrlBox />
-          </div>
-        </div>
-
         <div className="flex flex-col gap-3 border-t border-hairline py-10 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-muted">
             Built on a written 102-indicator rubric — not a black box.
@@ -197,10 +199,10 @@ export default async function Home() {
               The method
             </Link>
             <Link
-              href="/reports"
+              href="/samples"
               className="text-ink transition-colors hover:text-foreground"
             >
-              Sample report
+              Samples
             </Link>
           </nav>
         </div>

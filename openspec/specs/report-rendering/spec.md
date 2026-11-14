@@ -8,17 +8,17 @@ Provides canonical indicator display for every report surface so titles, categor
 
 The system SHALL render every `IndicatorRow.name` and `IndicatorRow.category_id` display from a single rubric-derived registry (sourced from `docs/rubric/indicators/` + `docs/rubric/model/config.md` via `tooling/scripts/compile-rubric.ts` → `apps/scanner/src/scan/scoring/rubric.json` `indicators[]`). The raw indicator ID (e.g. `ECOS-01`) SHALL never be used as a title fallback. Category headers (e.g. `ECOS` → `Dependency & Ecosystem Health`) SHALL also be derived from the same registry.
 
-#### Scenario: Live placeholder row shows rubric title
-- **WHEN** `/live` renders `ECOS-01` as an `unknown` placeholder before its detector completes
+#### Scenario: Sealed placeholder row shows rubric title
+- **WHEN** a sample detail renders `ECOS-01` as an `unknown` placeholder
 - **THEN** the row title reads `Runtime/Language EOL` (from registry) and the left mono column shows `ECOS-01`; the title never reads `ECOS-01`.
 
 #### Scenario: MVP extra rows show rubric title
 - **WHEN** `apps/scanner/src/scan/scoring/scorer/mvp.ts` creates rows for the 13 clone-based MVP indicators
 - **THEN** each row's `name` is looked up from the registry (e.g. `ECOS-02` → `Major package drift`) and the UI at `apps/site/components/category-section.tsx:113` displays that name.
 
-#### Scenario: Sample and live share one source
-- **WHEN** the committed sample envelope at `apps/site/lib/fixtures/maven-multi-module__bce7fc0__2026-11-12T155107-061Z.json` carries the sample report's `IndicatorRow`s and the scanner service builds a live report's rows
-- **THEN** both import the same registry; a drift between them fails `npm run check:rubric-consistency`. The website SHALL NOT carry a separate live row-builder, because live rows now arrive already built over the scan API.
+#### Scenario: Sample surfaces share one source
+- **WHEN** the committed sample envelope at `apps/site/lib/samples/maven-multi-module.json` carries the sample report's `IndicatorRow`s
+- **THEN** the site renders those rows through the same registry; a drift fails `npm run check:rubric-consistency`. The website SHALL NOT carry its own row-builder, because sealed rows arrive already built.
 
 ### Requirement: No ID-as-title fallback
 
@@ -59,7 +59,7 @@ The system SHALL NOT render a category as evaluated when it has no indicator row
 
 #### Scenario: API with 0 rows is hidden
 - **WHEN** a 31-indicator scan has no API indicators (Tranche A) and `report.categories` would contain `API` with `indicator_rows: []`
-- **THEN** the engine omits `API` from `categories[]` and `apps/site/app/report/sample/page.tsx` renders 7-9 cards, not 10, with no `0 | Critical` card and headline not dragged by an empty 10% weight
+- **THEN** the engine omits `API` from `categories[]` and `apps/site/app/samples/[slug]/page.tsx` renders 7-9 cards, not 10, with no `0 | Critical` card and headline not dragged by an empty 10% weight
 
 #### Scenario: Guard renders Not evaluated if empty slips through
 - **WHEN** `CategorySection` receives a `category` with `category_score === null`
@@ -146,37 +146,6 @@ No provenance value SHALL be rendered above the verdict band. Provenance SHALL r
 - **WHEN** a reader needs the producing instrument's identity
 - **THEN** the provenance band is reachable below the evidence band, or in the raw JSON, without a second request
 
-### Requirement: Live report chrome is minimal and shows commit link
-
-The live report page (`/live` and alias `/report/live`) SHALL render the sealed report without a `schema · rubric · share: /live?repo=...` subtitle and without `see method` or `view sample` header links. The revealed sealed state SHALL render the target repo commit SHA inside the identity card as `commit <short7>` linked to `https://github.com/{owner}/{repo}/commit/{fullSha}` when `report.snapshot.scanned_commit` is present and not `unknown`; when `unknown`, the card SHALL render `commit unknown` as plain text. All live states (scanning, sealed-not-revealed, revealed, refused) SHALL omit the joined `schema · rubric · share` line from the header area.
-
-The run-provenance grid (schema, rubric, engine identity, run id, duration against budget, scan time) SHALL NOT appear above the headline in any state. It SHALL be reachable as a collapsed provenance detail below the evidence band, or through the raw-artifact affordance for a persisted run.
-
-#### Scenario: Revealed live shows commit link
-
-- **WHEN** a live scan for `django/django` seals with `snapshot.scanned_commit = abc1234567890`
-- **THEN** the identity card shows `commit abc1234` as a link to `https://github.com/django/django/commit/abc1234567890`, and no `schema` or `share: /live?repo=` text is present in the header
-
-#### Scenario: Unknown commit renders plain
-
-- **WHEN** `snapshot.scanned_commit` is `unknown` or missing
-- **THEN** the identity card shows `commit unknown` as plain text with no link
-
-#### Scenario: Header has no method/sample links
-
-- **WHEN** any live state renders
-- **THEN** the header right rail contains no links with text `see method` or `view sample`
-
-#### Scenario: No schema/share line in any live state
-
-- **WHEN** viewing scanning, sealed-not-revealed, revealed, or refused live states
-- **THEN** no element renders the joined subtitle pattern `schema <n> · rubric <v> · ... · share: /live?repo=`, while a labelled schema row inside the collapsed provenance detail is permitted
-
-#### Scenario: Provenance grid is not above the headline
-
-- **WHEN** a persisted run report renders with full run metadata available
-- **THEN** the schema/rubric/engine/run/duration/scan-time grid does not appear above the headline, and the first thing above the headline is the identity card
-
 ### Requirement: Collapsed kill-switch gates cockpit
 
 The system SHALL render the kill-switch gates (G1–G8) as a collapsed cockpit by default: a single summary strip showing counts and status dots per gate status (`proven` / `needs-verification` / `not-proven`) plus a peek of any `proven` gate(s), with full 8-row detail expandable on user click. The summary SHALL be one line on desktop and wrap to two lines on narrow viewports. `proven` gates SHALL be visually prominent even when collapsed (red dot + gate id + short note inline). Expanding SHALL reveal the full table (id, name, note, source_rows, status) without navigating or re-fetching; collapsing SHALL return to the strip.
@@ -197,9 +166,9 @@ The system SHALL render the kill-switch gates (G1–G8) as a collapsed cockpit b
 - **WHEN** user tabs to the cockpit toggle and presses Enter/Space
 - **THEN** the table expands/collapses, `aria-expanded` toggles, and the toggle has an accessible name `Show kill-switch gates (8)` / `Hide kill-switch gates`; status dots have text alternatives (not color-only)
 
-#### Scenario: Both report surfaces share the behavior
-- **WHEN** report is rendered on `/report/sample` or on live `/live` after reveal
-- **THEN** both use the same collapsed-by-default cockpit component; deep-linking or printing expands the table for print media
+#### Scenario: The sample detail uses the behavior
+- **WHEN** a report is rendered on a sample detail path
+- **THEN** it uses the same collapsed-by-default cockpit component; deep-linking or printing expands the table for print media
 
 ### Requirement: Gates summary counts are derived from report gates
 
@@ -331,3 +300,32 @@ The system SHALL surface per-deduction trace (file or dependency, rule, weight c
 #### Scenario: Top risk links to evidence
 - **WHEN** the top risk is EOL Java 8 in three files
 - **THEN** JSON holds the full `evidencePointers` and `provenance`, and HTML/Markdown name the files, the rule, and the weight contribution for that deduction
+
+### Requirement: Report detail chrome is minimal and shows commit link
+
+A rendered report detail page SHALL render the sealed report without a `schema · rubric · share: <url>` subtitle and without `see method` or `view sample` header links. The report SHALL render the target repository commit as `commit <short7>` inside the identity card, linked to `https://github.com/{owner}/{repo}/commit/{fullSha}` when the sealed snapshot carries a real commit, and as plain `commit unknown` text when it does not. The run-provenance grid (schema, rubric, engine identity, run id, duration against budget, scan time) SHALL NOT appear above the headline in any report state; the first element above the headline SHALL be the identity card.
+
+#### Scenario: Commit link renders
+
+- **WHEN** a report detail renders with a sealed `scanned_commit` of `abc1234567890` for `django/django`
+- **THEN** the identity card shows `commit abc1234` as a link to `https://github.com/django/django/commit/abc1234567890`, and no `schema` or `share:` text is present in the header
+
+#### Scenario: Unknown commit renders plain
+
+- **WHEN** the sealed `scanned_commit` is `unknown` or absent
+- **THEN** the identity card shows `commit unknown` as plain text with no link
+
+#### Scenario: Header has no method or sample links
+
+- **WHEN** any report detail renders
+- **THEN** the header right rail contains no links with text `see method` or `view sample`
+
+#### Scenario: No schema or share line in any state
+
+- **WHEN** a report detail renders in any state
+- **THEN** no element renders the joined subtitle pattern `schema <n> · rubric <v> · ... · share: <url>`, while a labelled schema row inside the collapsed provenance detail is permitted
+
+#### Scenario: Provenance grid is not above the headline
+
+- **WHEN** a report detail renders with full run metadata available
+- **THEN** the schema, rubric, engine, run, duration, and scan-time grid does not appear above the headline, and the first thing above the headline is the identity card

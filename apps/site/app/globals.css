@@ -90,8 +90,9 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* button affordance — consistent pointer cursor */
+/* interactive affordances — consistent pointer cursor */
 button,
-[role="button"] {
+[role="button"],
+summary {
   cursor: pointer;
 }

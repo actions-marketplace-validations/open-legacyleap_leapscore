@@ -1,6 +1,8 @@
 import type { DeepDiveScopeEntry, TopBlocker } from "@/lib/types";
 import { verifyEffortLabel } from "@leapscore/contracts";
+import Link from "next/link";
 import { INDICATOR_REGISTRY } from "@/lib/generated/rubric";
+import { tryIndicatorHref } from "@/lib/rubric-links";
 
 function truncateQuickWin(s: string, n = 110): string {
   if (!s) return "";
@@ -24,6 +26,7 @@ export function TopBlockers({ blockers }: { blockers?: TopBlocker[] }) {
           const effort = verifyEffortLabel(reg?.effort);
           const quickWin = (reg?.remediation?.quick_win ?? "").trim();
           const excerpt = truncateQuickWin(quickWin);
+          const href = tryIndicatorHref(b.row);
           return (
             <li key={b.row}>
               <a href={`#row-${b.row}`} className="block rounded p-1 -m-1 hover:bg-panel-raised/50 focus-visible:outline focus-visible:outline-1 focus-visible:outline-foreground/30">
@@ -49,6 +52,16 @@ export function TopBlockers({ blockers }: { blockers?: TopBlocker[] }) {
                   </p>
                 ) : null}
               </a>
+              {href ? (
+                <div className="mt-1 flex justify-end">
+                  <Link
+                    href={href}
+                    className="cursor-pointer rounded text-[11px] text-faint underline underline-offset-2 hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground/40"
+                  >
+                    rubric definition →
+                  </Link>
+                </div>
+              ) : null}
             </li>
           );
         })}
@@ -73,13 +86,25 @@ export function DeepDiveScope({ scope }: { scope?: DeepDiveScopeEntry[] }) {
         18 deep-dive rows fold into the category when you order one.
       </p>
       <ul className="mt-3 space-y-2">
-        {safe.map((s) => (
+        {safe.map((s) => {
+          const href = tryIndicatorHref(s.row);
+          return (
           <li key={s.row} className="text-xs">
-            <span className="font-mono text-faint">{s.row}</span>{" "}
+            {href ? (
+              <Link
+                href={href}
+                className="cursor-pointer rounded font-mono text-faint underline underline-offset-2 hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground/40"
+              >
+                {s.row}
+              </Link>
+            ) : (
+              <span className="font-mono text-faint">{s.row}</span>
+            )}{" "}
             <span className="text-muted">{s.name}</span>
             <span className="block pl-6 text-faint">{s.what_it_takes}</span>
           </li>
-        ))}
+          );
+        })}
         {safe.length === 0 && <li className="text-xs text-faint">No deep-dive scope — all rows measured in this phase.</li>}
       </ul>
     </div>

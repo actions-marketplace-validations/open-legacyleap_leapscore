@@ -10,12 +10,8 @@ import { IdentityCard } from "@/components/identity-card";
 import { ReportNextStep } from "@/components/report-next-step";
 import { SampleFullTable } from "@/components/sample-full-table";
 import { tierForScore } from "@/lib/scoring";
-import type { Report } from "@/lib/types";
-import type { ReportMeta } from "@/lib/reports";
-
-function rawJsonUrl(runId: string): string {
-  return `/reports/${encodeURIComponent(runId)}/raw`;
-}
+import { tryIndicatorHref } from "@/lib/rubric-links";
+import type { Report, EnvelopeMeta } from "@/lib/types";
 
 function tierLabel(color: ReturnType<typeof tierForScore>["color"]): string {
   const map: Record<string, string> = {
@@ -42,15 +38,27 @@ function SuppressedMeasurePaths({ report }: { report: Report }) {
         moves the scan above the coverage floor.
       </p>
       <ul className="mt-3 space-y-2">
-        {rows.map((r) => (
+        {rows.map((r) => {
+          const href = tryIndicatorHref(r.id);
+          return (
           <li key={r.id} className="text-xs">
-            <span className="font-mono text-faint">{r.id}</span>{" "}
+            {href ? (
+              <Link
+                href={href}
+                className="cursor-pointer rounded font-mono text-faint underline underline-offset-2 hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground/40"
+              >
+                {r.id}
+              </Link>
+            ) : (
+              <span className="font-mono text-faint">{r.id}</span>
+            )}{" "}
             <span className="text-muted">{r.name}</span>
             <span className="block pl-6 text-faint">
               {r.unknown_measure_path ?? r.reason ?? "Not measured in this run."}
             </span>
           </li>
-        ))}
+          );
+        })}
         {rows.length === 0 && (
           <li className="text-xs text-faint">
             Every attempted row was graded; the headline was withheld for another
@@ -75,7 +83,7 @@ export function ReportView({
   subtitle?: React.ReactNode;
   footerExtra?: React.ReactNode;
   headerActions?: React.ReactNode;
-  persistedMeta?: ReportMeta;
+  persistedMeta?: EnvelopeMeta;
 }) {
   // Suppression is a presentation state, not a reference score (design D2): a
   // suppressed headline never renders a dial, a number, a tier, or a CI band as
@@ -85,31 +93,17 @@ export function ReportView({
     String(report.headline.verdict ?? "").trim().toLowerCase() === "insufficient-signal";
   const tier = suppressed ? null : tierForScore(report.headline.score);
 
-  // Provenance is demoted, never deleted (report-rendering): the instrument's
-  // receipt renders in a collapsed band below the evidence sections. Only the
-  // header actions stay in the chrome.
+  // Report detail chrome (report-rendering): no `see method` / `view sample`
+  // header rail. The sample detail's only history-shaped affordance is its
+  // way back to the gallery.
   const effectiveHeaderActions = persistedMeta ? (
     <p className="text-xs text-muted">
-      <Link href="/reports" className="underline underline-offset-2 hover:text-foreground">
-        ← all reports
-      </Link>
-      <span> · </span>
-      <Link href="/method" className="underline underline-offset-2 hover:text-foreground">
-        see method
+      <Link href="/samples" className="underline underline-offset-2 hover:text-foreground">
+        ← all samples
       </Link>
     </p>
   ) : (
-    headerActions ?? (
-      <p className="text-xs text-muted">
-        <Link key="method" className="underline underline-offset-2 hover:text-foreground" href="/method">
-          see method
-        </Link>
-        <span key="sep"> · </span>
-        <Link key="sample" className="underline underline-offset-2 hover:text-foreground" href="/report/sample">
-          view sample
-        </Link>
-      </p>
-    )
+    (headerActions ?? null)
   );
 
   const perRoot = (report.snapshot as unknown as { perRoot?: Array<{ root: string; archetype: string }> }).perRoot;
@@ -295,14 +289,7 @@ export function ReportView({
             )}
           </div>
           <div className="flex shrink-0 items-start gap-2 lg:flex-col lg:items-end">
-            {persistedMeta ? (
-              <>
-                <a href={rawJsonUrl(persistedMeta.runId)} className="rounded border border-hairline bg-background px-2.5 py-1 font-mono text-xs text-muted hover:text-foreground">raw JSON</a>
-                <Link href={`/live?repo=${encodeURIComponent(persistedMeta.repo)}`} className="rounded bg-foreground px-2.5 py-1 text-xs font-medium text-background hover:opacity-90">rerun</Link>
-              </>
-            ) : (
-              footerExtra
-            )}
+            {footerExtra}
           </div>
         </div>
         {subtitle ? <div className="mt-2 text-xs text-faint">{subtitle}</div> : null}

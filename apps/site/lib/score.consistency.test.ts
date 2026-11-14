@@ -7,18 +7,18 @@
 import { describe, expect, it } from "vitest";
 
 import { coverageCounts, scoreSystem, tierForScore } from "@/lib/scoring";
-import { getReportProvider } from "@/lib/provider";
+import { getSample } from "@/lib/samples";
 
 describe("committed sample (synthetic Maven fixture)", () => {
   it("returns the sealed headline the scanner produced", async () => {
-    const report = await getReportProvider().getReport({ repo: "maven-multi-module" });
+    const report = getSample("maven-multi-module")!.envelope.report;
     expect(report.headline.score).toBe(5.71);
     expect(report.headline.tier).toBe("Critical");
     expect(report.sample).toBe(true);
   });
 
   it("carries the release's real engine and rubric versions", async () => {
-    const report = await getReportProvider().getReport({ repo: "maven-multi-module" });
+    const report = getSample("maven-multi-module")!.envelope.report;
     expect(report.snapshot.engine_version).toBe("1.0.2");
     expect(report.snapshot.rubric_version).toBe("docs/rubric@tranche-a");
     expect(report.snapshot.repo).toBe("maven-multi-module");
@@ -29,7 +29,7 @@ describe("committed sample (synthetic Maven fixture)", () => {
   });
 
   it("coverage is the sealed coverage, not an authored count", async () => {
-    const report = await getReportProvider().getReport({ repo: "maven-multi-module" });
+    const report = getSample("maven-multi-module")!.envelope.report;
     const { coverage } = report;
     expect(coverage.measured).toBe(13);
     expect(coverage.estimated).toBe(1);
@@ -40,7 +40,7 @@ describe("committed sample (synthetic Maven fixture)", () => {
   });
 
   it("every full-table row is accounted for by a category denominator or the deep-dive annex", async () => {
-    const report = await getReportProvider().getReport({ repo: "maven-multi-module" });
+    const report = getSample("maven-multi-module")!.envelope.report;
     const inCategories = report.categories.reduce((sum, c) => sum + c.indicator_rows.length, 0);
     expect(inCategories).toBe(102);
     expect(report.categories.length).toBe(10);
@@ -115,7 +115,7 @@ describe("system score math", () => {
   });
 
   it("coverage counts agree with the sealed envelope", async () => {
-    const report = await getReportProvider().getReport({ repo: "maven-multi-module" });
+    const report = getSample("maven-multi-module")!.envelope.report;
     const coverage = coverageCounts(report.categories);
     expect(coverage.measured).toBe(report.coverage.measured);
     expect(coverage.estimated).toBe(report.coverage.estimated);

@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useState } from "react";
 
 import { verifyEffortLabel } from "@leapscore/contracts";
@@ -11,6 +12,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { tierForScore } from "@/lib/scoring";
+import { tryIndicatorHref } from "@/lib/rubric-links";
 
 function tierBadge(score: number) {
   const t = tierForScore(score);
@@ -276,9 +278,10 @@ function displayName(r: IndicatorRow): string {
 }
 
 function Row({ r }: { r: IndicatorRow }) {
+  const href = tryIndicatorHref(r.id);
   return (
-    <div id={`row-${r.id}`} className="border-b border-hairline last:border-0 scroll-mt-16">
-      <Accordion>
+    <div id={`row-${r.id}`} className="flex items-stretch border-b border-hairline last:border-0 scroll-mt-16">
+      <Accordion className="min-w-0 flex-1">
         <AccordionItem value={r.id} className="border-0">
           <AccordionTrigger className="gap-3 px-3 py-2.5 hover:no-underline">
             <div className="flex flex-1 items-center gap-3 text-left">
@@ -307,6 +310,15 @@ function Row({ r }: { r: IndicatorRow }) {
           </AccordionContent>
         </AccordionItem>
       </Accordion>
+      {href ? (
+        <Link
+          href={href}
+          aria-label={`Open the rubric definition for ${r.id}`}
+          className="flex shrink-0 cursor-pointer items-center border-l border-hairline px-2.5 text-[11px] text-faint hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-foreground/40"
+        >
+          rubric
+        </Link>
+      ) : null}
     </div>
   );
 }

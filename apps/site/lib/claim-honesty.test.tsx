@@ -2,40 +2,19 @@
  * Claim honesty (launch-surface): the public surfaces may not publish a
  * pre-launch or prohibited claim. One list, every route.
  */
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({
-    push: () => {},
-    replace: () => {},
-    prefetch: () => {},
-    back: () => {},
-    forward: () => {},
-    refresh: () => {},
-  }),
-  permanentRedirect: () => {
-    const error = new Error("NEXT_REDIRECT") as Error & { digest: string };
-    error.digest = "NEXT_REDIRECT;replace;/method;308;";
-    throw error;
-  },
-  notFound: () => {
-    const error = new Error("NEXT_NOT_FOUND") as Error & { digest: string };
-    error.digest = "NEXT_NOT_FOUND";
-    throw error;
-  },
-}));
-
 import Home from "@/app/page";
 import MethodPage from "@/app/method/page";
-import ReportsPage from "@/app/reports/page";
-import ReportDetailPage from "@/app/reports/[runId]/page";
 import ProductPage from "@/app/product/page";
-import sampleEnvelope from "@/lib/fixtures/maven-multi-module__bce7fc0__2026-11-12T155107-061Z.json";
+import SamplesPage from "@/app/samples/page";
+import SampleDetailPage from "@/app/samples/[slug]/page";
+import sampleEnvelope from "@/lib/samples/maven-multi-module.json";
 
-const SAMPLE_RUN_ID = "maven-multi-module__bce7fc0__2026-11-12T155107-061Z";
+const SAMPLE_SLUG = "maven-multi-module";
 
 /** Prohibited claims from the GTM claim register §5.4 and the P0 list. */
 const BANNED: Array<{ pattern: RegExp; why: string }> = [
@@ -48,7 +27,7 @@ const BANNED: Array<{ pattern: RegExp; why: string }> = [
   { pattern: /\bscores each one\b/i, why: "not all 102 indicators are scored" },
   { pattern: /\b102 inputs\b/i, why: "102 is a rubric denominator, not an input count" },
   { pattern: /live engine:\s*coming/i, why: "the engine is live" },
-  { pattern: /past scans appear here/i, why: "the reports page stores no visitor scans" },
+  { pattern: /past scans appear here/i, why: "the gallery stores no visitor scans" },
 ];
 
 function assertClean(surface: string, text: string): void {
@@ -58,30 +37,40 @@ function assertClean(surface: string, text: string): void {
 }
 
 describe("6.5 public claim register", () => {
-  it("home page", async () => {
-    assertClean("/", renderToStaticMarkup(await Home()));
+  it("home page", () => {
+    assertClean("/", renderToStaticMarkup(Home()));
+  });
+
+  it("home page offers no repository input or scan surface", () => {
+    const html = renderToStaticMarkup(Home());
+    expect(html).not.toMatch(/<input\b/i);
+    expect(html).not.toMatch(/score this repo/i);
+    expect(html).not.toContain('href="/live');
+    expect(html).not.toContain('href="/reports');
   });
 
   it("method page", () => {
     assertClean("/method", renderToStaticMarkup(MethodPage()));
   });
 
-  it("reports index", async () => {
-    assertClean("/reports", renderToStaticMarkup(await ReportsPage()));
+  it("sample gallery", () => {
+    assertClean("/samples", renderToStaticMarkup(SamplesPage()));
   });
 
   it("sample report body", async () => {
     const html = renderToStaticMarkup(
-      await ReportDetailPage({ params: Promise.resolve({ runId: SAMPLE_RUN_ID }) }),
+      await SampleDetailPage({ params: Promise.resolve({ slug: SAMPLE_SLUG }) }),
     );
-    assertClean("/reports/[runId]", html);
+    assertClean("/samples/[slug]", html);
     expect(html).toContain("Illustrative sample");
   });
 
-  it("product page is a permanent redirect with no published copy", () => {
-    expect(() => ProductPage()).toThrow(/NEXT_REDIRECT/);
+  it("product page is a forwarding document with no published copy", () => {
+    const html = renderToStaticMarkup(ProductPage());
+    expect(html).toContain('href="../method/"');
+    expect(html).not.toMatch(/waitlist|coming/i);
     const source = readFileSync(join(process.cwd(), "app", "product", "page.tsx"), "utf8");
-    expect(source).toContain('permanentRedirect("/method")');
+    expect(source).not.toContain("permanentRedirect");
     assertClean("/product", source);
   });
 

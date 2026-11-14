@@ -3,11 +3,9 @@ import Link from "next/link";
 import { BrandMark } from "@/components/brand-mark";
 
 const NAV = [
-  { href: "/reports", label: "Reports" },
-  { href: "/product", label: "Product" },
+  { href: "/samples", label: "Samples" },
   { href: "/method", label: "Method" },
   { href: "/rubric", label: "Rubric" },
-  { href: "/report/sample", label: "Sample report" },
 ];
 
 export function SiteHeader() {
