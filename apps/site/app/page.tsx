@@ -3,6 +3,7 @@ import Link from "next/link";
 import { DialGauge } from "@/components/dial-gauge";
 import { listSamples } from "@/lib/samples";
 import { tierForScore } from "@/lib/scoring";
+import { SOURCE_URL } from "@/lib/source-links";
 
 export default function Home() {
   const [sample] = listSamples();
@@ -14,7 +15,12 @@ export default function Home() {
       <div className="mx-auto max-w-5xl px-4">
         <div className="flex flex-col items-center gap-6 py-20 text-center sm:py-28">
           <span className="rounded-full border border-hairline px-3 py-1 text-xs text-muted">
-            Local-first · Apache-2.0 · no telemetry
+            <a
+              href={SOURCE_URL}
+              className="underline underline-offset-2 transition-colors hover:text-foreground"
+            >
+              Local-first · Apache-2.0 · no telemetry
+            </a>
           </span>
           <h1 className="max-w-3xl text-4xl leading-tight font-semibold tracking-tight sm:text-5xl">
             How much legacy risk is your codebase carrying?

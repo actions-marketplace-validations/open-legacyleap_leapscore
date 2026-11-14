@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { BrandMark } from "@/components/brand-mark";
+import { SOURCE_LABEL, SOURCE_URL } from "@/lib/source-links";
 
 export function Footer() {
   return (
@@ -36,6 +37,12 @@ export function Footer() {
             className="transition-colors hover:text-foreground"
           >
             hello@leapscore.dev
+          </a>
+          <a
+            href={SOURCE_URL}
+            className="transition-colors hover:text-foreground"
+          >
+            {SOURCE_LABEL}
           </a>
         </nav>
       </div>

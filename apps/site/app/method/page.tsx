@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { CATEGORIES, weightFor } from "@/lib/categories";
 import { TIERS } from "@/lib/scoring";
+import { SOURCE_URL } from "@/lib/source-links";
 
 export const metadata: Metadata = {
   title: "Method",
@@ -183,6 +184,17 @@ export default function MethodPage() {
             illustrative sample
           </span>{" "}
           on every view, and the site itself never runs a scan.
+        </p>
+        <p className="mt-3 text-sm leading-relaxed text-muted">
+          Everything that produces this number is public: the scanner, the
+          canonical rubric catalog, and the report schema all live in the{" "}
+          <a
+            href={SOURCE_URL}
+            className="text-ink underline underline-offset-2 hover:text-foreground"
+          >
+            open source repository
+          </a>
+          .
         </p>
       </section>
     </div>
