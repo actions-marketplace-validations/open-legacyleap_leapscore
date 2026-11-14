@@ -10,6 +10,7 @@ import { IdentityCard } from "@/components/identity-card";
 import { ReportNextStep } from "@/components/report-next-step";
 import { SampleFullTable } from "@/components/sample-full-table";
 import { tierForScore } from "@/lib/scoring";
+import { tryIndicatorHref } from "@/lib/rubric-links";
 import type { Report, EnvelopeMeta } from "@/lib/types";
 
 function tierLabel(color: ReturnType<typeof tierForScore>["color"]): string {
@@ -37,15 +38,27 @@ function SuppressedMeasurePaths({ report }: { report: Report }) {
         moves the scan above the coverage floor.
       </p>
       <ul className="mt-3 space-y-2">
-        {rows.map((r) => (
+        {rows.map((r) => {
+          const href = tryIndicatorHref(r.id);
+          return (
           <li key={r.id} className="text-xs">
-            <span className="font-mono text-faint">{r.id}</span>{" "}
+            {href ? (
+              <Link
+                href={href}
+                className="cursor-pointer rounded font-mono text-faint underline underline-offset-2 hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground/40"
+              >
+                {r.id}
+              </Link>
+            ) : (
+              <span className="font-mono text-faint">{r.id}</span>
+            )}{" "}
             <span className="text-muted">{r.name}</span>
             <span className="block pl-6 text-faint">
               {r.unknown_measure_path ?? r.reason ?? "Not measured in this run."}
             </span>
           </li>
-        ))}
+          );
+        })}
         {rows.length === 0 && (
           <li className="text-xs text-faint">
             Every attempted row was graded; the headline was withheld for another

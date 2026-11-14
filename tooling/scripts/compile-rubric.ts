@@ -54,6 +54,41 @@ type DocFacts = {
   red_flag: string;
 };
 
+/** The four-level 0–3 criteria, split so a page can render a ladder instead of a paragraph. */
+type Criteria = { '3': string; '2': string; '1': string; '0': string };
+
+/**
+ * Everything the site's rubric browser renders (design D2). These fields go to
+ * `apps/site/lib/generated/rubric.ts` only — never into `rubric.json`, whose payload is
+ * inlined into the shipped scanner bundle and has no use for prose.
+ */
+type SiteFacts = {
+  v1: 'YES' | 'NO' | 'PART';
+  rollup: 'standard' | 'deep-dive';
+  gates: string[];
+  definition: string;
+  why: string;
+  manifests: string;
+  detection: string;
+  yellow: string;
+  red: string;
+  yellow_rationale: string;
+  red_rationale: string;
+  criteria: Criteria;
+  scope: string;
+  applicability: string | null;
+  statusing: string;
+  score_mapping: string;
+  fact_schema: string;
+  budget_class: string | null;
+  evidence: string;
+};
+
+type SiteEntry = Indicator & SiteFacts;
+
+/** One category charter's authored prose, read from `indicators/<NN>/README.md`. */
+type Charter = { thesis: string; summary: string };
+
 /** A row of `model/config.md` §3's canonical gate roster. */
 type GateRow = { id: string; name: string; trigger: string; sources: string[] };
 /** A row of `model/config.md` §3's canonical band table. */
@@ -192,6 +227,81 @@ function isReducedForm(text: string): boolean {
   return !/^## 3\. Scoring semantics/m.test(text);
 }
 
+/** The body of `## <n>. <heading>` up to the next level-2 heading (or EOF). */
+function section(text: string, heading: string, path: string): string {
+  const marker = `## ${heading}`;
+  const start = text.indexOf(marker);
+  if (start === -1) throw new Error(`${path}: missing "${marker}" section`);
+  const rest = text.slice(start + marker.length);
+  const next = rest.search(/\n## /);
+  return (next === -1 ? rest : rest.slice(0, next)).trim();
+}
+
+/** The body of `### <heading>` up to the next level-2 or level-3 heading (or EOF). */
+function subsection(text: string, heading: string, path: string): string {
+  const marker = `### ${heading}`;
+  const start = text.indexOf(marker);
+  if (start === -1) throw new Error(`${path}: missing "${marker}" section`);
+  const rest = text.slice(start + marker.length);
+  const next = rest.search(/\n#{2,3} /);
+  return (next === -1 ? rest : rest.slice(0, next)).trim();
+}
+
+/** The first fenced block inside `text`, with its language fence removed. */
+function fenced(text: string, path: string, field: string): string {
+  const match = text.match(/^```[a-zA-Z]*\n([\s\S]*?)\n```/m);
+  if (!match || !match[1].trim()) {
+    throw new Error(`${path}: ${field} has no fenced block`);
+  }
+  return match[1].trim();
+}
+
+/** One `- **Label:** value` bullet's value, or null when the canonical file omits it. */
+function bulletValue(text: string, label: string): string | null {
+  const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = text.match(new RegExp(`^- \\*\\*${escaped}:\\*\\*\\s*(.+)$`, 'm'));
+  return match ? match[1].trim() : null;
+}
+
+/** Split the uniform `3 = …; 2 = …; 1 = …; 0 = …` criteria string into four levels. */
+function parseCriteria(text: string, path: string): Criteria {
+  const line = text.split('\n').find((candidate) => candidate.startsWith('- **Scoring criteria'));
+  if (!line) throw new Error(`${path}: missing "- **Scoring criteria …" bullet`);
+  const raw = line
+    .replace(/^- \*\*Scoring criteria[^*]*\*\*+\s*/, '')
+    .replace(/^\([^)]*\)\s*/, '')
+    .trim();
+  const parts = raw.split(/(?:^|\s)(?=[3210]\s*=\s)/).filter(Boolean);
+  const levels: Record<string, string> = {};
+  for (const part of parts) {
+    const match = part.match(/^([3210])\s*=\s*([\s\S]*)$/);
+    if (match) levels[match[1]] = match[2].trim().replace(/\s+/g, ' ').replace(/;\s*$/, '');
+  }
+  for (const level of ['3', '2', '1', '0'] as const) {
+    if (!levels[level]) {
+      throw new Error(`${path}: Scoring criteria is missing the ${level} level`);
+    }
+  }
+  if (Object.keys(levels).length !== 4) {
+    throw new Error(`${path}: Scoring criteria must carry exactly four levels (3, 2, 1, 0)`);
+  }
+  return { '3': levels['3'], '2': levels['2'], '1': levels['1'], '0': levels['0'] };
+}
+
+/** Split a flag bullet into its criterion and its trailing `*(Rationale: …)*` clause. */
+function parseFlag(text: string, label: string, path: string): { value: string; rationale: string } {
+  const line = text.split('\n').find((candidate) => candidate.startsWith(`- **${label}:**`));
+  if (!line) throw new Error(`${path}: missing "- **${label}:**" bullet`);
+  const value = line.replace(new RegExp(`^- \\*\\*${label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}:\\*\\*\\s*`), '');
+  const rationale = value.match(/\*\(Rationale:\s*([\s\S]*)\)\*\s*$/);
+  if (!rationale || !rationale[1].trim()) {
+    throw new Error(`${path}: "${label}" is missing its trailing *(Rationale: …)* clause`);
+  }
+  const stripped = value.replace(/\s*\*\(Rationale:[\s\S]*\)\*\s*$/, '').trim();
+  if (!stripped) throw new Error(`${path}: "${label}" is empty after removing the rationale`);
+  return { value: stripped, rationale: rationale[1].trim() };
+}
+
 /** Escape a value for a Markdown table cell. */
 function cell(value: string): string {
   return value.replace(/\|/g, '\\|');
@@ -232,8 +342,97 @@ function parseDocFacts(): Map<string, DocFacts> {
   return facts;
 }
 
-/** Read the canonical G1–G8 roster from `model/config.md` §3. */
-function readGateRoster(configText: string): GateRow[] {
+/**
+ * Parse the fields the site renders (design D2). Every field the browser requires and
+ * that the catalog states universally is fail-closed: a missing bullet, level, rationale,
+ * or fenced block names the indicator and field instead of emitting an empty value.
+ * `applicability` and `budget_class` are null when the canonical file omits that clause;
+ * the document then says the catalog does not state one rather than inventing a value.
+ */
+function parseSiteFacts(): Map<string, SiteFacts> {
+  const facts = new Map<string, SiteFacts>();
+  for (const { indicators: canonical } of CATEGORIES) {
+    for (const { path, text } of canonical) {
+      const pathLabel = path.slice(INDICATORS_DIR.length + 1);
+      const heading = text.match(/^#\s+([A-Z]+-\d+)\s+[—-]\s+([^\n]+)$/m);
+      if (!heading) throw new Error(`${pathLabel}: missing "# <ID> — <Name>" heading`);
+      const id = heading[1].trim();
+
+      const v1Value = identityField(text, 'v1 flag');
+      if (!v1Value) throw new Error(`${pathLabel}: identity table is missing "v1 flag"`);
+      const v1Token = v1Value.replace(/\*/g, '').match(/^(YES|NO|PART)\b/)?.[1];
+      if (!v1Token) {
+        throw new Error(`${pathLabel}: "v1 flag" must start with YES, NO, or PART, got "${v1Value}"`);
+      }
+      const rollupValue = identityField(text, 'Rollup / deep-dive');
+      if (!/^(standard|deep-dive)\b/.test(rollupValue)) {
+        throw new Error(`${pathLabel}: "Rollup / deep-dive" must start with "standard" or "deep-dive"`);
+      }
+
+      const definition = bulletValue(text, 'Definition');
+      if (!definition) throw new Error(`${pathLabel}: missing "Definition" bullet`);
+      const why = bulletValue(text, 'Why it signals obsolescence');
+      if (!why) throw new Error(`${pathLabel}: missing "Why it signals obsolescence" bullet`);
+      const manifests = bulletValue(text, 'Where it manifests');
+      if (!manifests) throw new Error(`${pathLabel}: missing "Where it manifests" bullet`);
+      const detection = bulletValue(text, 'Detection method');
+      if (!detection) throw new Error(`${pathLabel}: missing "Detection method" bullet`);
+
+      const yellow = parseFlag(text, FLAG_LABELS.yellow, pathLabel);
+      const red = parseFlag(text, FLAG_LABELS.red, pathLabel);
+
+      const budgetMatch = text.match(/^- Budget class:\s*(.+)$/m);
+      const budgetToken = budgetMatch?.[1].match(/^`([^`]+)`/)?.[1];
+
+      const scope = subsection(text, 'Scope/overlaps', pathLabel);
+      if (!scope) throw new Error(`${pathLabel}: "Scope/overlaps" is empty`);
+
+      const factsEntry: SiteFacts = {
+        v1: v1Token as 'YES' | 'NO' | 'PART',
+        rollup: rollupValue.startsWith('deep-dive') ? 'deep-dive' : 'standard',
+        gates: gateTokens(identityField(text, 'Gates fed')),
+        definition,
+        why,
+        manifests,
+        detection,
+        yellow: yellow.value,
+        red: red.value,
+        yellow_rationale: yellow.rationale,
+        red_rationale: red.rationale,
+        criteria: parseCriteria(text, pathLabel),
+        scope,
+        applicability: bulletValue(text, 'Applicability'),
+        statusing: fenced(subsection(text, 'Statusing rules', pathLabel), pathLabel, 'Statusing rules'),
+        score_mapping: subsection(text, 'Score mapping predicates', pathLabel),
+        fact_schema: fenced(section(text, '7. Fact schema', pathLabel), pathLabel, 'Fact schema'),
+        budget_class: budgetToken ?? null,
+        evidence: fenced(subsection(text, 'Evidence string', pathLabel), pathLabel, 'Evidence string'),
+      };
+      if (!factsEntry.statusing) throw new Error(`${pathLabel}: "Statusing rules" is empty`);
+      if (!factsEntry.score_mapping) throw new Error(`${pathLabel}: "Score mapping predicates" is empty`);
+      if (facts.has(id)) throw new Error(`duplicate ID ${id} while reading the site contract`);
+
+      facts.set(id, factsEntry);
+    }
+  }
+  return facts;
+}
+
+/** Read each category charter's thesis and summary, verbatim after the bold label. */
+function parseCharters(): Map<string, Charter> {
+  const charters = new Map<string, Charter>();
+  for (const { code, charterPath, charter } of CATEGORIES) {
+    const relative = charterPath.slice(ROOT.length + 1);
+    const thesis = charter.match(/^\*\*Thesis:\*\*\s*(.+)$/m)?.[1]?.trim();
+    const summary = charter.match(/^\*\*Category summary:\*\*\s*(.+)$/m)?.[1]?.trim();
+    if (!thesis) throw new Error(`${relative}: missing "**Thesis:**" line`);
+    if (!summary) throw new Error(`${relative}: missing "**Category summary:**" line`);
+    charters.set(code, { thesis, summary });
+  }
+  return charters;
+}
+
+/** Read the canonical G1–G8 roster from `model/config.md` §3. */function readGateRoster(configText: string): GateRow[] {
   const heading = '### Gate roster (G1–G8)';
   const start = configText.indexOf(heading);
   if (start === -1) {
@@ -522,27 +721,72 @@ function writeJson(payload: ReturnType<typeof buildPayload>) {
   console.log(`wrote ${OUT_JSON} (${payload.indicators.length} indicators, version ${payload.rubricVersion})`);
 }
 
-function writeGeneratedTs(indicators: Indicator[]) {
-  const dir = dirname(OUT_TS);
-  mkdirSync(dir, { recursive: true });
-  const esc = (s: string) => s.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
+function buildGeneratedTs(indicators: SiteEntry[], charters: Map<string, Charter>): string {
   const lines: string[] = [];
   lines.push('// Generated by tooling/scripts/compile-rubric.ts — do not hand-edit. Source: docs/rubric/indicators/** + docs/rubric/model/config.md');
   lines.push('export type RemediationMeta = { quick_win: string; structural: string; gold_standard: string; effort: string };');
-  lines.push('export type IndicatorMeta = { id: string; category: string; name: string; tier: string; default_status: string; effort: string; remediation: RemediationMeta };');
+  lines.push('export type Criteria = { "3": string; "2": string; "1": string; "0": string };');
+  lines.push('export type IndicatorMeta = {');
+  lines.push('  id: string; category: string; name: string; tier: string; default_status: string; effort: string;');
+  lines.push('  v1: "YES" | "NO" | "PART"; rollup: "standard" | "deep-dive"; gates: string[];');
+  lines.push('  definition: string; why: string; manifests: string; detection: string;');
+  lines.push('  yellow: string; red: string; yellow_rationale: string; red_rationale: string;');
+  lines.push('  criteria: Criteria; scope: string;');
+  lines.push('  applicability: string | null; statusing: string; score_mapping: string;');
+  lines.push('  fact_schema: string; budget_class: string | null; evidence: string;');
+  lines.push('  remediation: RemediationMeta;');
+  lines.push('};');
   lines.push('export const INDICATOR_REGISTRY: Record<string, IndicatorMeta> = {');
   for (const ind of indicators) {
-    lines.push(`  "${ind.id}": { id: "${ind.id}", category: "${ind.category}", name: "${esc(ind.name)}", tier: "${ind.tier}", default_status: "${ind.default_status}", effort: "${esc(ind.effort)}", remediation: { quick_win: "${esc(ind.remediation.quick_win)}", structural: "${esc(ind.remediation.structural)}", gold_standard: "${esc(ind.remediation.gold_standard)}", effort: "${esc(ind.remediation.effort)}" } },`);
+    const entry = {
+      id: ind.id,
+      category: ind.category,
+      name: ind.name,
+      tier: ind.tier,
+      default_status: ind.default_status,
+      effort: ind.effort,
+      v1: ind.v1,
+      rollup: ind.rollup,
+      gates: ind.gates,
+      definition: ind.definition,
+      why: ind.why,
+      manifests: ind.manifests,
+      detection: ind.detection,
+      yellow: ind.yellow,
+      red: ind.red,
+      yellow_rationale: ind.yellow_rationale,
+      red_rationale: ind.red_rationale,
+      criteria: ind.criteria,
+      scope: ind.scope,
+      applicability: ind.applicability,
+      statusing: ind.statusing,
+      score_mapping: ind.score_mapping,
+      fact_schema: ind.fact_schema,
+      budget_class: ind.budget_class,
+      evidence: ind.evidence,
+      remediation: ind.remediation,
+    };
+    lines.push(`  ${JSON.stringify(ind.id)}: ${JSON.stringify(entry)},`);
   }
   lines.push('};');
   lines.push('');
   lines.push('export const CATEGORY_LABELS: Record<string, string> = {');
   for (const [k, v] of Object.entries(CATEGORY_LABELS)) {
-    lines.push(`  "${k}": "${v.replace(/"/g, '\\"')}",`);
+    lines.push(`  ${JSON.stringify(k)}: ${JSON.stringify(v)},`);
   }
   lines.push('};');
   lines.push('');
   lines.push(`export const CATEGORY_ORDER = [${CATEGORIES.map((category) => `"${category.code}"`).join(',')}] as const;`);
+  lines.push('');
+  lines.push('export type CategoryCharter = { thesis: string; summary: string };');
+  lines.push('// Authored in docs/rubric/indicators/<NN-slug>/README.md, emitted verbatim.');
+  lines.push('export const CATEGORY_CHARTERS: Record<string, CategoryCharter> = {');
+  for (const { code } of CATEGORIES) {
+    const charter = charters.get(code);
+    if (!charter) throw new Error(`compile:rubric — no charter parsed for category ${code}`);
+    lines.push(`  ${JSON.stringify(code)}: ${JSON.stringify(charter)},`);
+  }
+  lines.push('};');
   lines.push('');
   lines.push('export type CategoryWeight = { base: number | null; feActive: number | null };');
   lines.push('// Canonical source: docs/rubric/model/config.md §1. `base: null` marks a conditional category.');
@@ -563,7 +807,13 @@ function writeGeneratedTs(indicators: Indicator[]) {
   lines.push('export function getIndicatorEffort(id: string): string { return INDICATOR_REGISTRY[id]?.effort ?? "⚡ ≤30 min"; }');
   lines.push('export function getIndicatorRemediation(id: string) { return INDICATOR_REGISTRY[id]?.remediation ?? { quick_win: "", structural: "", gold_standard: "", effort: "⚡ ≤30 min" }; }');
   lines.push('export function getCategoryName(id: string): string { return CATEGORY_LABELS[id] ?? id; }');
-  writeFileSync(OUT_TS, lines.join('\n') + '\n', 'utf-8');
+  return lines.join('\n') + '\n';
+}
+
+function writeGeneratedTs(indicators: SiteEntry[], charters: Map<string, Charter>) {
+  const dir = dirname(OUT_TS);
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(OUT_TS, buildGeneratedTs(indicators, charters), 'utf-8');
   console.log(`wrote ${OUT_TS} (${indicators.length} entries)`);
 }
 
@@ -803,13 +1053,24 @@ function writeDerivedDocs(docs: DerivedDoc[]) {
   }
 }
 
+/** Join the identity/remediation row with the site-only prose facts, preserving IDs. */
+function joinSiteEntries(indicators: Indicator[], siteFacts: Map<string, SiteFacts>): SiteEntry[] {
+  return indicators.map((indicator) => {
+    const facts = siteFacts.get(indicator.id);
+    if (!facts) throw new Error(`${indicator.id}: no site contract parsed`);
+    return { ...indicator, ...facts };
+  });
+}
+
 function loadCanonical() {
   const indicators = parseIndicators();
   const facts = parseDocFacts();
+  const siteFacts = parseSiteFacts();
+  const charters = parseCharters();
   const configText = readConfig();
   const gates = readGateRoster(configText);
   const tiers = readTierRows(configText);
-  return { indicators, facts, gates, tiers, configText };
+  return { indicators, facts, siteFacts, charters, gates, tiers, configText };
 }
 
 function doCompile() {
@@ -829,7 +1090,7 @@ function doCompile() {
   }
   const payload = buildPayload(sources.indicators);
   writeJson(payload);
-  writeGeneratedTs(sources.indicators);
+  writeGeneratedTs(joinSiteEntries(sources.indicators, sources.siteFacts), sources.charters);
   writeDerivedDocs(buildDerivedDocs(sources.indicators, sources.facts, sources.gates, sources.tiers, payload.weights));
 }
 
@@ -843,6 +1104,9 @@ function doCheck() {
   }
   const indicators = sources.indicators;
   const sourceProblems = validateSources(indicators, sources.facts, sources.gates, sources.tiers);
+  if (sources.siteFacts.size !== indicators.length) {
+    sourceProblems.push(`site contract parsed for ${sources.siteFacts.size} indicators, expected ${indicators.length}`);
+  }
   if (sourceProblems.length) {
     console.error('check:rubric-consistency failed — canonical source validation:');
     for (const problem of sourceProblems.slice(0, 40)) console.error('  - ' + problem);
@@ -878,17 +1142,23 @@ function doCheck() {
     if (mismatches.length > 20) console.error(`  ... and ${mismatches.length - 20} more`);
     process.exit(1);
   }
-  // also check generated TS exists and matches
+  // The compiled site registry is generated, not authored: byte-equality against a
+  // fresh compile. A hand edit fails here, naming the file and the first differing line.
   if (!existsSync(OUT_TS)) {
     console.error('check:rubric-consistency failed — generated rubric.ts missing; run npm run compile:rubric');
     process.exit(1);
   }
+  const expectedTs = buildGeneratedTs(joinSiteEntries(indicators, sources.siteFacts), sources.charters);
   const genText = readFileSync(OUT_TS, 'utf-8');
-  for (const ind of expected.indicators) {
-    if (!genText.includes(`"${ind.id}":`) || !genText.includes(`"${ind.name.replace(/"/g, '\\"')}"`)) {
-      console.error(`check failed — generated rubric.ts missing ${ind.id} "${ind.name}"`);
-      process.exit(1);
-    }
+  if (genText !== expectedTs) {
+    const wanted = expectedTs.split('\n');
+    const found = genText.split('\n');
+    let line = 0;
+    while (line < wanted.length && line < found.length && wanted[line] === found[line]) line++;
+    console.error(`check:rubric-consistency failed — apps/site/lib/generated/rubric.ts:${line + 1}: hand-edited or stale — run npm run compile:rubric`);
+    console.error(`    expected: ${(wanted[line] ?? '<end of file>').slice(0, 160)}`);
+    console.error(`    actual:   ${(found[line] ?? '<end of file>').slice(0, 160)}`);
+    process.exit(1);
   }
   // Derived documents are generated, not authored: byte-equality against a fresh compile.
   // A hand edit fails here, naming the file and the first differing line (design D5).

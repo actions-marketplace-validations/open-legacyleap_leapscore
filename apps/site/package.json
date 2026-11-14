@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "tsx scripts/build-samples-manifest.ts",
+    "prebuild": "tsx scripts/build-samples-manifest.ts && tsx scripts/build-coverage-manifest.ts",
     "build": "next build",
     "postbuild": "tsx scripts/write-nojekyll.ts && tsx scripts/assert-export.ts",
     "check:export": "tsx scripts/assert-export.ts",
